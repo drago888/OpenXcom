@@ -291,6 +291,42 @@ void ProjectileFlyBState::init()
 }
 
 /**
+ * Checks for funny corner cases.
+ * 1/ Throwing any item straight up (or 8 tiles around it) while having a solid floor directly above the head.
+ * 2/ Firing an area-of-effect arcing-shot weapon straight up (or 8 tiles around it) while having a solid floor directly above the head.
+ * @param throwing Are we throwing or shooting from an arcing-shot weapon?
+ * @return True, if a corner case is found.
+ */
+bool ProjectileFlyBState::checkForCornerCases(bool throwing)
+{
+	Position diff = _action.target - _origin;
+	if (diff.z != 1 || diff.x > 1 || diff.x < -1 || diff.y > 1 || diff.y < -1)
+	{
+		return false;
+	}
+
+	Position directlyAboveHead = _origin + Position(0, 0, 1);
+	Tile *tile = _parent->getSave()->getTile(directlyAboveHead);
+	if (tile && tile->getMapData(O_FLOOR) && !tile->getMapData(O_FLOOR)->isNoFloor())
+	{
+		if (throwing)
+		{
+			return true;
+		}
+		else
+		{
+			// shooting from an arcing-shot weapon
+			if (_ammo->getRules()->getExplosionRadius() != 0)
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+/**
  * Tries to create a projectile sprite and add it to the map,
  * calculating its trajectory.
  * @return True, if the projectile was successfully created.
@@ -321,6 +357,10 @@ bool ProjectileFlyBState::createNewProjectile()
 	if (_action.type == BA_THROW)
 	{
 		_projectileImpact = projectile->calculateThrow(_unit->getThrowingAccuracy() / accuracyDivider);
+		if (checkForCornerCases(true))
+		{
+			_projectileImpact = V_OUTOFBOUNDS;
+		}
 		if (_projectileImpact == V_FLOOR || _projectileImpact == V_UNIT || _projectileImpact == V_OBJECT)
 		{
 			if (_unit->getFaction() != FACTION_PLAYER && _projectileItem->getRules()->getBattleType() == BT_GRENADE)
@@ -347,6 +387,10 @@ bool ProjectileFlyBState::createNewProjectile()
 	else if (_action.weapon->getRules()->getArcingShot()) // special code for the "spit" trajectory
 	{
 		_projectileImpact = projectile->calculateThrow(_unit->getFiringAccuracy(_action.type, _action.weapon) / accuracyDivider);
+		if (checkForCornerCases(false))
+		{
+			_projectileImpact = V_OUTOFBOUNDS;
+		}
 		if (_projectileImpact != V_EMPTY && _projectileImpact != V_OUTOFBOUNDS)
 		{
 			// set the soldier in an aiming position

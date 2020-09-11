@@ -39,6 +39,8 @@ private:
 	BattleItem *_projectileItem;
 	Position _origin, _targetVoxel, _originVoxel;
 	int _projectileImpact;
+	/// Checks for funny corner cases.
+	bool checkForCornerCases(bool throwing);
 	/// Tries to create a projectile sprite.
 	bool createNewProjectile();
 	bool _initialized, _targetFloor;

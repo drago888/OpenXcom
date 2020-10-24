@@ -677,7 +677,15 @@ void Zoom::flipWithZoom(SDL_Surface *src, SDL_Surface *dst, int topBlackBand, in
 	}
 	else if (topBlackBand <= 0 && bottomBlackBand <= 0 && leftBlackBand <= 0 && rightBlackBand <= 0)
 	{
-		_zoomSurfaceY(src, dst, 0, 0);
+		if (src->format->BitsPerPixel == 8)
+		{
+			_zoomSurfaceY<Uint8>(src, dst, 0, 0);
+		}
+		else
+		{
+			_zoomSurfaceY<Uint32>(src, dst, 0, 0);
+		}
+
 	}
 	else if (dstWidth == src->w && dstHeight == src->h)
 	{
@@ -687,7 +695,15 @@ void Zoom::flipWithZoom(SDL_Surface *src, SDL_Surface *dst, int topBlackBand, in
 	else
 	{
 		SDL_Surface *tmp = SDL_CreateRGBSurface(dst->flags, dstWidth, dstHeight, dst->format->BitsPerPixel, 0, 0, 0, 0);
-		_zoomSurfaceY(src, tmp, 0, 0);
+		if (src->format->BitsPerPixel == 8)
+		{
+			_zoomSurfaceY<Uint8>(src, tmp, 0, 0);
+		}
+		else
+		{
+			_zoomSurfaceY<Uint32>(src, tmp, 0, 0);
+		}
+
 		if (src->format->palette != NULL)
 		{
 			SDL_SetPalette(tmp, SDL_LOGPAL|SDL_PHYSPAL, src->format->palette->colors, 0, src->format->palette->ncolors);
@@ -713,13 +729,14 @@ void Zoom::flipWithZoom(SDL_Surface *src, SDL_Surface *dst, int topBlackBand, in
  * @param flipy Flag indicating if the image should be vertically flipped.
  * @return 0 for success or -1 for error.
  */
-int Zoom::_zoomSurfaceY(SDL_Surface * src, SDL_Surface * dst, int flipx, int flipy)
+template<typename Pixel>
+int Zoom::_zoomSurfaceY(SDL_Surface* src, SDL_Surface* dst, int flipx, int flipy)
 {
 	int x, y;
-	static Uint32 *sax, *say;
-	Uint32 *csax, *csay;
+	static Uint32* sax, * say;
+	Uint32* csax, * csay;
 	int csx, csy;
-	Uint8 *sp, *dp, *csp;
+	Pixel* sp, * dp, * csp;
 	int dgap;
 	static bool proclaimed = false;
 
@@ -787,10 +804,8 @@ int Zoom::_zoomSurfaceY(SDL_Surface * src, SDL_Surface * dst, int flipx, int fli
 	/*
 	if (src->format->BytesPerPixel == 1 && dst->format->BytesPerPixel == 1)
 	{
-
 #ifdef __SSE2__
 		static bool _haveSSE2 = haveSSE2();
-
 		if (_haveSSE2 &&
 			!((ptrdiff_t)src->pixels % 16) &&
 			!((ptrdiff_t)dst->pixels % 16)) // alignment check
@@ -800,7 +815,6 @@ int Zoom::_zoomSurfaceY(SDL_Surface * src, SDL_Surface * dst, int flipx, int fli
 		} else
 		{
 			static bool complained = false;
-
 			if (!complained)
 			{
 				complained = true;
@@ -808,7 +822,6 @@ int Zoom::_zoomSurfaceY(SDL_Surface * src, SDL_Surface * dst, int flipx, int fli
 			}
 		}
 #endif
-
 // __WORDSIZE is defined on Linux, SIZE_MAX on Windows
 #if defined(__WORDSIZE) && (__WORDSIZE == 64) || defined(SIZE_MAX) && (SIZE_MAX > 0xFFFFFFFF)
 		if (dst->w == src->w * 2 && dst->h == src->h * 2) return  zoomSurface2X_64bit(src, dst);
@@ -825,7 +838,6 @@ int Zoom::_zoomSurfaceY(SDL_Surface * src, SDL_Surface * dst, int flipx, int fli
 			else if (dst->w == src->w * 4 && dst->h == src->h * 4) return  zoomSurface4X_32bit(src, dst);
 		}
 #endif
-
 		// maybe X is scaled by 2 or 4 but not Y?
 		if (dst->w == src->w * 4) return zoomSurface4X_XAxis_32bit(src, dst);
 		else if (dst->w == src->w * 2) return zoomSurface2X_XAxis_32bit(src, dst);
@@ -840,11 +852,11 @@ int Zoom::_zoomSurfaceY(SDL_Surface * src, SDL_Surface * dst, int flipx, int fli
 	/*
 	* Allocate memory for row increments
 	*/
-	if ((sax = (Uint32 *) realloc(sax, (dst->w + 1) * sizeof(Uint32))) == NULL) {
+	if ((sax = (Uint32*)realloc(sax, (dst->w + 1) * sizeof(Uint32))) == NULL) {
 		sax = 0;
 		return (-1);
 	}
-	if ((say = (Uint32 *) realloc(say, (dst->h + 1) * sizeof(Uint32))) == NULL) {
+	if ((say = (Uint32*)realloc(say, (dst->h + 1) * sizeof(Uint32))) == NULL) {
 		say = 0;
 		//free(sax);
 		return (-1);
@@ -853,12 +865,12 @@ int Zoom::_zoomSurfaceY(SDL_Surface * src, SDL_Surface * dst, int flipx, int fli
 	/*
 	* Pointer setup
 	*/
-	sp = csp = (Uint8 *) src->pixels;
-	dp = (Uint8 *) dst->pixels;
-	dgap = dst->pitch - dst->w;
+	sp = csp = (Pixel*)src->pixels;
+	dp = (Pixel*)dst->pixels;
+	dgap = dst->pitch - dst->w * dst->format->BytesPerPixel;
 
-	if (flipx) csp += (src->w-1);
-	if (flipy) csp  = ( (Uint8*)csp + src->pitch*(src->h-1) );
+	if (flipx) csp += (src->w - 1);
+	if (flipy) csp = ((Pixel*)csp + src->pitch * (src->h - 1) / src->format->BytesPerPixel);
 
 	/*
 	* Precalculate row increments
@@ -884,9 +896,10 @@ int Zoom::_zoomSurfaceY(SDL_Surface * src, SDL_Surface * dst, int flipx, int fli
 			csy -= dst->h;
 			(*csay)++;
 		}
-		(*csay) *= src->pitch * (flipy ? -1 : 1);
+		(*csay) *= src->pitch / src->format->BytesPerPixel * (flipy ? -1 : 1);
 		csay++;
 	}
+
 	/*
 	* Draw
 	*/
@@ -916,7 +929,7 @@ int Zoom::_zoomSurfaceY(SDL_Surface * src, SDL_Surface * dst, int flipx, int fli
 		csay++;
 
 		/*
-		* Advance destination pointers
+		* Advance destination pointers by number of bytes for the paddings
 		*/
 		dp += dgap;
 	}

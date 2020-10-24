@@ -58,6 +58,7 @@ protected:
 
 	SDL_Color _palette[256];
 	Uint8 _cursorColor;
+	bool _firstBlit;
 public:
 	/// Creates a new state linked to a game.
 	State();

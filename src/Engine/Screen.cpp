@@ -53,7 +53,7 @@ static const char* SDL_VIDEO_WINDOW_POS_UNSET = "SDL_VIDEO_WINDOW_POS=";
  * Sets up all the internal display flags depending on
  * the current video settings.
  */
-void Screen::makeVideoFlags()
+void Screen::makeVideoFlags(int forcedBpp)
 {
 	_flags = SDL_HWSURFACE|SDL_DOUBLEBUF|SDL_HWPALETTE;
 	if (Options::asyncBlit)
@@ -102,7 +102,19 @@ void Screen::makeVideoFlags()
 		_flags |= SDL_NOFRAME;
 	}
 
-	_bpp = (use32bitScaler() || useOpenGL()) ? 32 : 8;
+	if (use32bitScaler() || useOpenGL())
+	{
+		_bpp = 32;
+	}
+	else if (forcedBpp != 0)
+	{
+		_bpp = forcedBpp;
+	}
+	else
+	{
+		_bpp = 8;
+	}
+
 	_baseWidth = Options::baseXResolution;
 	_baseHeight = Options::baseYResolution;
 }
@@ -320,26 +332,29 @@ int Screen::getHeight() const
  * as they don't automatically take effect.
  * @param resetVideo Reset display surface.
  */
-void Screen::resetDisplay(bool resetVideo, bool noShaders)
+void Screen::resetDisplay(bool resetVideo, bool noShaders, int pwidth, int pheight, int forcedBpp)
 {
 	int width = Options::displayWidth;
 	int height = Options::displayHeight;
 #ifdef __linux__
 	Uint32 oldFlags = _flags;
 #endif
-	makeVideoFlags();
+	makeVideoFlags(forcedBpp);
 
 	if (!_surface || (_surface->format->BitsPerPixel != _bpp ||
 		_surface->w != _baseWidth ||
-		_surface->h != _baseHeight)) // don't reallocate _surface if not necessary, it's a waste of CPU cycles
+		_surface->h != _baseHeight ||
+		_baseWidth != width || _baseHeight != height)) // don't reallocate _surface if not necessary, it's a waste of CPU cycles
 	{
 		if (_bpp == 32)
 		{
-			std::tie(_buffer, _surface) = Surface::NewPair32Bit(_baseWidth, _baseHeight);
+			//std::tie(_buffer, _surface) = Surface::NewPair32Bit(_baseWidth, _baseHeight);
+			std::tie(_buffer, _surface) = Surface::NewPair32Bit(pwidth, pheight);
 		}
 		else
 		{
-			std::tie(_buffer, _surface) = Surface::NewPair8Bit(_baseWidth, _baseHeight);
+			//std::tie(_buffer, _surface) = Surface::NewPair8Bit(_baseWidth, _baseHeight);
+			std::tie(_buffer, _surface) = Surface::NewPair8Bit(pwidth, pheight);
 		}
 
 		if (_surface->format->BitsPerPixel == 8)

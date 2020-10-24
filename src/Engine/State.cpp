@@ -49,7 +49,7 @@ Game* State::_game = 0;
  * By default states are full-screen.
  * @param game Pointer to the core game.
  */
-State::State() : _screen(true), _soundPlayed(false), _modal(0), _ruleInterface(0), _ruleInterfaceParent(0)
+State::State() : _screen(true), _soundPlayed(false), _modal(0), _ruleInterface(0), _ruleInterfaceParent(0), _firstBlit(true)
 {
 	// initialize palette to all black
 	memset(_palette, 0, sizeof(_palette));
@@ -324,6 +324,14 @@ void State::handle(Action *action)
  */
 void State::blit()
 {
+	if (_firstBlit)
+	{
+		_firstBlit = !_firstBlit;
+
+		_game->getScreen()->resetDisplay(true, false, _surfaces.size() > 0 ? _surfaces.at(0)->getWidth() : Screen::ORIGINAL_WIDTH,
+									                  _surfaces.size() > 0 ? _surfaces.at(0)->getHeight() : Screen::ORIGINAL_HEIGHT,
+			                                          _surfaces.size()>0?_surfaces.at(0)->getSurface()->format->BitsPerPixel : 0);
+	}
 	for (std::vector<Surface*>::iterator i = _surfaces.begin(); i != _surfaces.end(); ++i)
 		(*i)->blit(_game->getScreen()->getSurface());
 }

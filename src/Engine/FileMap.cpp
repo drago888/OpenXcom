@@ -176,6 +176,36 @@ namespace OpenXcom
 namespace FileMap
 {
 
+/**
+* Check if the file is a png file
+* @param filename filename of the image.
+*/
+	bool isPng(SDL_RWops* file)
+	{
+		Uint8 first8[8];
+		Uint8 png[8] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+
+		if (file != NULL) {
+			SDL_RWread(file, first8, sizeof(first8), 1);
+			//  reset to beginning of file
+			SDL_RWseek(file, 0, RW_SEEK_SET);
+		}
+		else
+		{
+			return false;
+		}
+
+		for (int i = 0; i < sizeof(first8); i++)
+		{
+			if (first8[i] != png[i])
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 static inline std::string concatPaths(const std::string& basePath, const std::string& relativePath)
 {
 	if(basePath.size() == 0) throw Exception("Need correct basePath");

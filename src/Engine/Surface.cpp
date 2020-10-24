@@ -248,9 +248,17 @@ Surface::Surface() : _x{ }, _y{ }, _width{ }, _height{ }, _pitch{ }, _visible(tr
  * @param y Y position in pixels.
  * @param bpp Bits-per-pixel depth.
  */
-Surface::Surface(int width, int height, int x, int y) : _x(x), _y(y), _visible(true), _hidden(false), _redraw(false)
+Surface::Surface(int width, int height, int x, int y, int bpp) : _x(x), _y(y), _visible(true), _hidden(false), _redraw(false)
 {
-	std::tie(_alignedBuffer, _surface) = Surface::NewPair8Bit(width, height);
+	if (bpp == 8)
+	{
+		std::tie(_alignedBuffer, _surface) = Surface::NewPair8Bit(width, height);
+	}
+	else
+	{
+		std::tie(_alignedBuffer, _surface) = Surface::NewPair32Bit(width, height);
+	}
+
 	_width = _surface->w;
 	_height = _surface->h;
 	_pitch = _surface->pitch;
@@ -340,6 +348,90 @@ void Surface::loadRaw(const std::vector<char> &bytes)
 	rawCopy(bytes);
 	unlock();
 }
+/**
+ * Copy into the current Surface from dest with RGBA 32bits
+ * Only support 24 and 32 bits bpps
+ * @param image the source surface
+ * @size the size in bytes to copy
+ * @bpp the bits per pixel of src
+ * @Rmask the red mask of src
+ * @Gmask the green mask of src
+ * @Bmask the blue mask of src
+ * @Amask the alpha mask of src
+ * @
+ */
+void Surface::convertToRGBA(const void* image, int size, int width, int height, Uint8 bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask, Uint32 endian)
+{
+	if (bpp != 24 && bpp != 32)
+	{
+		return;
+	}
+
+	Uint32 temp[4];
+	size_t bytesPerPixel = bpp / 8;
+	enum { RED_MASK, GREEN_MASK, BLUE_MASK, ALPHA_MASK };
+	int noOfPixels = (size - 1) / bytesPerPixel; // noOfPixels is minus 1 from actual pixels
+	Uint32 colorMaskIndex[4] = { (Rmask == 0x00ff0000) | (Rmask == 0x0000ff00) * 2 | (Rmask == 0x000000ff) * 3,
+							  (Gmask == 0x00ff0000) | (Gmask == 0x0000ff00) * 2 | (Gmask == 0x000000ff) * 3,
+							  (Bmask == 0x00ff0000) | (Bmask == 0x0000ff00) * 2 | (Bmask == 0x000000ff) * 3,
+							  (Amask == 0x00ff0000) | (Amask == 0x0000ff00) * 2 | (Amask == 0x000000ff) * 3 };
+
+	int maxIndex = *std::max_element(colorMaskIndex, colorMaskIndex + 4);
+	if (bpp == 24 && maxIndex == 3)
+	{
+		for (int i = 0; i < 4; i++)
+		{
+			if (colorMaskIndex[i] > 0)
+			{
+				colorMaskIndex[i]--;
+			}
+		}
+	}
+
+	if (endian == SDL_LIL_ENDIAN)
+	{
+		maxIndex = *std::max_element(colorMaskIndex, colorMaskIndex + 4);
+		for (int i = 0; i < 4; i++)
+		{
+			colorMaskIndex[i] = abs((int)colorMaskIndex[i] - maxIndex);
+		}
+	}
+
+	std::vector<Uint32> image32;
+
+	// noOfPixels is minus one from actual pixels
+	for (size_t i = 0; i <= noOfPixels; i++)
+	{
+		temp[3] = ((Uint8*)image)[i * bytesPerPixel + colorMaskIndex[RED_MASK]];
+		temp[2] = ((Uint8*)image)[i * bytesPerPixel + colorMaskIndex[GREEN_MASK]];
+		temp[1] = ((Uint8*)image)[i * bytesPerPixel + +colorMaskIndex[BLUE_MASK]];
+
+		if (bpp != 32)
+		{
+			temp[0] = SDL_ALPHA_OPAQUE;
+		}
+		else
+		{
+			temp[0] = ((Uint8*)image)[i * bytesPerPixel + +colorMaskIndex[ALPHA_MASK]];
+		}
+
+
+		image32.push_back(temp[0] << 24 | temp[1] << 16 | temp[2] << 8 | temp[3]);
+	}
+
+	*this = Surface(width, height, 0, 0, 32);
+	lock();
+	ShaderDrawFunc(
+		[](Uint32& dest, Uint32& src)
+		{
+			dest = src;
+		},
+		ShaderSurface((SurfaceRaw<Uint32>)this),
+			ShaderSurface(SurfaceRaw<Uint32>(image32, width, height))
+			);
+	unlock();
+}
+
 
 /**
  * Loads the contents of an X-Com SCR image file into
@@ -371,7 +463,8 @@ void Surface::loadImage(const std::string &filename)
 	if (!rw) { return; } // relevant message gets logged in FileMap.
 
 	// Try loading with LodePNG first
-	if (CrossPlatform::compareExt(filename, "png"))
+	//if (CrossPlatform::compareExt(filename, "png"))
+	if (FileMap::isPng(rw))
 	{
 		size_t size;
 		void *data = SDL_LoadFile_RW(rw, &size, SDL_FALSE);
@@ -419,6 +512,15 @@ void Surface::loadImage(const std::string &filename)
 						Log(LOG_WARNING) << "Image " << filename << " (from lodepng) has incorrect transparent color index " << transparent << " (instead of 0).";
 					}
 				}
+				else if (bpp == 24 || bpp == 32)// 24 & 32bits
+				{
+					convertToRGBA(image.data(), image.size(), width, height, bpp, 0xff000000, 0x00ff0000, 0x0000ff00, 0x00000000);
+				}
+				else // other than 8, 24 and 32 bits
+				{
+					std::string err = filename + ": OpenXcom does not support " + std::to_string(bpp) + " bits png images.";
+					throw Exception(err);
+				}
 			} else {
 				Log(LOG_ERROR) << "Image " << filename << " lodepng failed:" << lodepng_error_text(error);
 			}
@@ -438,19 +540,36 @@ void Surface::loadImage(const std::string &filename)
 			std::string err = filename + ":" + IMG_GetError();
 			throw Exception(err);
 		}
-		if (surface->format->BitsPerPixel != 8)
+		if (surface->format->BitsPerPixel != 8 && surface->format->BitsPerPixel != 24 && surface->format->BitsPerPixel != 32)
 		{
-			std::string err = filename + ": OpenXcom supports only 8bit images.";
+			std::string err = filename + ": OpenXcom does not support " + std::to_string(surface->format->BitsPerPixel) + " bits non-png images.";
 			throw Exception(err);
 		}
 
-		*this = Surface(surface->w, surface->h, 0, 0);
-		setPalette(surface->format->palette->colors, 0, surface->format->palette->ncolors);
-		RawCopySurf(_surface, surface);
-		FixTransparent(_surface, surface->format->colorkey);
-		if (surface->format->colorkey != 0)
+		if (surface->format->BitsPerPixel == 8)
 		{
-			Log(LOG_WARNING) << "Image " << filename << " (from SDL) has incorrect transparent color index " << surface->format->colorkey << " (instead of 0).";
+			*this = Surface(surface->w, surface->h, 0, 0);
+			setPalette(surface->format->palette->colors, 0, surface->format->palette->ncolors);
+			RawCopySurf(_surface, surface);
+			FixTransparent(_surface, surface->format->colorkey);
+			if (surface->format->colorkey != 0)
+			{
+				Log(LOG_WARNING) << "Image " << filename << " (from SDL) has incorrect transparent color index " << surface->format->colorkey << " (instead of 0).";
+			}
+		}
+		else
+		{
+			convertToRGBA(surface.get()->pixels,
+				surface.get()->w * surface.get()->h * surface.get()->format->BytesPerPixel,
+				surface.get()->w,
+				surface.get()->h,
+				surface.get()->format->BitsPerPixel,
+				surface.get()->format->Rmask,
+				surface.get()->format->Gmask,
+				surface.get()->format->Bmask,
+				surface.get()->format->Amask,
+				SDL_BYTEORDER
+			);
 		}
 	}
 }

@@ -106,7 +106,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>yaml-cppd.lib;SDL_image.lib;SDL_mixer.lib;SDL_gfx.lib;SDLmain.lib;SDL.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\deps\lib\$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\deps\lib\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
@@ -118,7 +118,7 @@
       <IgnoreSpecificDefaultLibraries>MSVCRT</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(ProjectDir)..\deps\lib\$(Platform)\*.dll" "$(ProjectDir)..\bin\$(Platform)\"</Command>
+      <Command>copy /y "$(ProjectDir)..\deps\lib\$(Platform)\$(Configuration)\*.dll" "$(ProjectDir)..\bin\$(Platform)\$(Configuration)\"</Command>
     </PostBuildEvent>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
@@ -144,7 +144,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>yaml-cppd.lib;SDL_image.lib;SDL_mixer.lib;SDL_gfx.lib;SDLmain.lib;SDL.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\deps\lib\$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\deps\lib\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
@@ -154,7 +154,7 @@
       <MapExports>false</MapExports>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(ProjectDir)..\deps\lib\$(Platform)\*.dll" "$(ProjectDir)..\bin\$(Platform)\"</Command>
+      <Command>copy /y "$(ProjectDir)..\deps\lib\$(Platform)\$(Configuration)\*.dll" "$(ProjectDir)..\bin\$(Platform)\$(Configuration)\"</Command>
     </PostBuildEvent>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
@@ -181,7 +181,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>yaml-cpp.lib;SDL_image.lib;SDL_mixer.lib;SDL_gfx.lib;SDLmain.lib;SDL.lib;SDL_gfx.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\deps\lib\$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\deps\lib\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -193,7 +193,7 @@
       <Profile>false</Profile>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(ProjectDir)..\deps\lib\$(Platform)\*.dll" "$(ProjectDir)..\bin\$(Platform)\"</Command>
+      <Command>copy /y "$(ProjectDir)..\deps\lib\$(Platform)\$(Configuration)\*.dll" "$(ProjectDir)..\bin\$(Platform)\$(Configuration)\"</Command>
     </PostBuildEvent>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
@@ -220,7 +220,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>yaml-cpp.lib;SDL_image.lib;SDL_mixer.lib;SDL_gfx.lib;SDLmain.lib;SDL.lib;SDL_gfx.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\deps\lib\$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\deps\lib\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -231,7 +231,7 @@
       <Profile>false</Profile>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(ProjectDir)..\deps\lib\$(Platform)\*.dll" "$(ProjectDir)..\bin\$(Platform)\"</Command>
+      <Command>copy /y "$(ProjectDir)..\deps\lib\$(Platform)\$(Configuration)\*.dll" "$(ProjectDir)..\bin\$(Platform)\$(Configuration)\"</Command>
     </PostBuildEvent>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>

@@ -95,11 +95,13 @@ protected:
 	void rawCopy(const std::vector<T> &bytes);
 	/// Resizes the surface.
 	void resize(int width, int height);
+    /// Convert to 32bits RGBA
+	void convertToRGBA(const void* image, int size, int width, int height, Uint8 bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask, Uint32 endian = SDL_BIG_ENDIAN);
 public:
 	/// Default empty surface.
 	Surface();
 	/// Creates a new surface with the specified size and position.
-	Surface(int width, int height, int x = 0, int y = 0);
+	Surface(int width, int height, int x = 0, int y = 0, int bpp = 8);
 	/// Creates a new surface from an existing one.
 	Surface(const Surface& other);
 	/// Move surface to another place.
@@ -169,6 +171,10 @@ public:
 	 */
 	SDL_Color *getPalette() const
 	{
+		if (!_surface || !_surface->format->palette)
+		{
+			return nullptr;
+		}
 		return _surface->format->palette->colors;
 	}
 	/// Sets the X position of the surface.
@@ -298,7 +304,7 @@ public:
 		return _pitch;
 	}
 	/// Get pointer to buffer
-	Uint8* getBuffer()
+	void* getBuffer()
 	{
 		return _alignedBuffer.get();
 	}
@@ -374,7 +380,7 @@ public:
 	{
 		if (surf)
 		{
-			*this = SurfaceRaw{ surf->getBuffer(), surf->getWidth(), surf->getHeight(), surf->getPitch() };
+			*this = SurfaceRaw{ (Pixel*)surf->getBuffer(), surf->getWidth(), surf->getHeight(), surf->getPitch() };
 		}
 	}
 

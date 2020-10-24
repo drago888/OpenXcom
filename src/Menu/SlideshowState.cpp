@@ -35,6 +35,7 @@ namespace OpenXcom
 SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std::vector<SlideshowSlide> *slideshowSlides)
 		: _slideshowHeader(slideshowHeader), _slideshowSlides(slideshowSlides), _curScreen(-1)
 {
+	resetScreen = true;
 	setStandardPalette("PAL_GEOSCAPE");
 	_wasLetterboxed = CutsceneState::initDisplay();
 
@@ -137,6 +138,8 @@ void SlideshowState::screenClick(Action *action)
  */
 void SlideshowState::screenSkip(Action *)
 {
+	// reset display back to 8 bits ORIGINAL SCREEN
+	_game->getScreen()->resetDisplay(true, false, Screen::ORIGINAL_WIDTH, Screen::ORIGINAL_HEIGHT, 8);
 	// slideshow is over.  restore the screen scale and pop the state
 	_game->getCursor()->setVisible(true);
 	CutsceneState::resetDisplay(_wasLetterboxed);

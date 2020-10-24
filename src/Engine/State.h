@@ -58,8 +58,9 @@ protected:
 
 	SDL_Color _palette[256];
 	Uint8 _cursorColor;
-	bool _firstBlit;
+
 public:
+	bool resetScreen;
 	/// Creates a new state linked to a game.
 	State();
 	/// Cleans up the state.

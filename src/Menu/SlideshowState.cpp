@@ -35,8 +35,8 @@ namespace OpenXcom
 SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std::vector<SlideshowSlide> *slideshowSlides)
 		: _slideshowHeader(slideshowHeader), _slideshowSlides(slideshowSlides), _curScreen(-1)
 {
-	resetScreen = true;
-	setStandardPalette("PAL_GEOSCAPE");
+	resetScreen = true; // resetDisplay at firstBlit
+	//setStandardPalette("PAL_GEOSCAPE");
 	_wasLetterboxed = CutsceneState::initDisplay();
 
 	// pre-render and queue up all the frames
@@ -57,7 +57,7 @@ SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std
 
 		// initialize with default rect; may get overridden by
 		// category/id definition
-		Text *caption = new Text(it->w, it->h, it->x, it->y);
+		Text *caption = new Text(it->w, it->h, it->x, it->y, slide->getSurface()->format->BitsPerPixel);
 		caption->setColor(it->color);
 		caption->setText(tr(it->caption));
 		caption->setAlign(it->align);

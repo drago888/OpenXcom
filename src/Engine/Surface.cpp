@@ -522,7 +522,7 @@ void Surface::loadImage(const std::string &filename)
 				}
 				else if (bpp == 24 || bpp == 32)// 24 & 32bits
 				{
-					convertToRGBA(image.data(), image.size(), width, height, bpp, 0xff000000, 0x00ff0000, 0x0000ff00, 0x000000ff);
+					convertToRGBA(image.data(), image.size(), width, height, bpp, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
 				}
 				else // other than 8, 24 and 32 bits
 				{

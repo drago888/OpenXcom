@@ -77,24 +77,15 @@ void State::genDefPal()
 {
 	_palette[0].r = 0, _palette[0].g = 0, _palette[0].b = 0, _palette[0].unused = SDL_ALPHA_OPAQUE;
 	_palette[1].r = 0x10, _palette[1].g = 0x20, _palette[1].b = 0x20, _palette[1].unused = SDL_ALPHA_OPAQUE;
-	Uint8 r = 0x2B, g = 0x3B, b = 0x3B;
+	Uint8 r, g, b, i = 2;
 
-	for (int i = 2; i < 254;i++)
-	{
-		_palette[i].r = r, _palette[i].g = g, _palette[i].b = b, _palette[i].unused = SDL_ALPHA_OPAQUE;
-		switch (i % 3)
-		{
-		case 2:
-			r += 0x1B;
-			break;
-		case 0:
-			g += 0x1B;
-			break;
-		case 1:
-			b += 0x1B;
-			break;
-		}
-	}
+
+	for (r = 0x2B; r < 0xEF; r+=0x1B)
+	for (g = 0x3B; g < 0xDF; g+=0x1B)
+	for (b = 0x3B; b < 0xDF; b+=0x1B)
+			_palette[i].r = r, _palette[i].g = g, _palette[i].b = b, _palette[i++].unused = SDL_ALPHA_OPAQUE;
+
+
 
 	_palette[254].r = 0xef, _palette[254].g = 0xdf, _palette[254].b = 0xdf, _palette[254].unused = SDL_ALPHA_OPAQUE;
 	_palette[255].r = 0xff, _palette[255].g = 0xff, _palette[255].b = 0xff, _palette[255].unused = SDL_ALPHA_OPAQUE;

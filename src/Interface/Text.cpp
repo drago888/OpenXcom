@@ -446,9 +446,9 @@ namespace
 							(format->Amask == 0xff000000) * 24 | (format->Amask == 0x00ff0000) * 16 | (format->Amask == 0x0000ff00) * 8 };
 		SDL_Color color32 = statePalette[offset];
 		color32.unused = src == 0 ? SDL_ALPHA_TRANSPARENT : SDL_ALPHA_OPAQUE;
-		color32.r = std::min(static_cast<Uint16>(0xff), static_cast<Uint16>(color32.r/2 + 20 * (5 - src) + (mid ? 20 * (mid - src) : 0)));
-		color32.g = std::min(static_cast<Uint16>(0xff), static_cast<Uint16>(color32.g/2 + 20 * (5 - src) + (mid ? 20 * (mid - src) : 0)));
-		color32.b = std::min(static_cast<Uint16>(0xff), static_cast<Uint16>(color32.b/2 + 20 * (5 - src) + (mid ? 20 * (mid - src) : 0)));
+		color32.r = std::min(static_cast<Uint16>(0xff), static_cast<Uint16>(color32.r/1.5 + 20 * (5 - src) + (mid ? 20 * (mid - src) : 0)));
+		color32.g = std::min(static_cast<Uint16>(0xff), static_cast<Uint16>(color32.g/1.5 + 20 * (5 - src) + (mid ? 20 * (mid - src) : 0)));
+		color32.b = std::min(static_cast<Uint16>(0xff), static_cast<Uint16>(color32.b/1.5 + 20 * (5 - src) + (mid ? 20 * (mid - src) : 0)));
 
 		if (mul)
 		{

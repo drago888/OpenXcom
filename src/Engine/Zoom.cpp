@@ -694,7 +694,7 @@ void Zoom::flipWithZoom(SDL_Surface *src, SDL_Surface *dst, int topBlackBand, in
 	}
 	else
 	{
-		SDL_Surface *tmp = SDL_CreateRGBSurface(dst->flags, dstWidth, dstHeight, dst->format->BitsPerPixel, 0, 0, 0, 0);
+		SDL_Surface *tmp = SDL_CreateRGBSurface(dst->flags, dstWidth, dstHeight, dst->format->BitsPerPixel, dst->format->Rmask, dst->format->Gmask, dst->format->Bmask, dst->format->Amask);
 		if (src->format->BitsPerPixel == 8)
 		{
 			_zoomSurfaceY<Uint8>(src, tmp, 0, 0);

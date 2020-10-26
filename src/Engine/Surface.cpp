@@ -181,7 +181,7 @@ Surface::UniqueSurfacePtr Surface::NewSdlSurface(const Surface::UniqueBufferPtr&
 	}
 	else
 	{
-		surface = SDL_CreateRGBSurfaceFrom((Uint32*)buffer.get(), width, height, bpp, GetPitch(bpp, width), 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+		surface = SDL_CreateRGBSurfaceFrom((Uint32*)buffer.get(), width, height, bpp, GetPitch(bpp, width), 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
 	}
 	if (!surface)
 	{
@@ -486,9 +486,9 @@ void Surface::convertToRGBA(const void* image, int size, int width, int height, 
 	// noOfPixels is minus one from actual pixels
 	for (size_t i = 0; i <= noOfPixels; i++)
 	{
-		temp[3] = ((Uint8*)image)[i * bytesPerPixel + colorMaskIndex[RED_MASK]];
+		temp[1] = ((Uint8*)image)[i * bytesPerPixel + colorMaskIndex[RED_MASK]];
 		temp[2] = ((Uint8*)image)[i * bytesPerPixel + colorMaskIndex[GREEN_MASK]];
-		temp[1] = ((Uint8*)image)[i * bytesPerPixel + +colorMaskIndex[BLUE_MASK]];
+		temp[3] = ((Uint8*)image)[i * bytesPerPixel + +colorMaskIndex[BLUE_MASK]];
 
 		if (bpp != 32)
 		{
@@ -598,7 +598,7 @@ void Surface::loadImage(const std::string &filename)
 				}
 				else if (bpp == 24 || bpp == 32)// 24 & 32bits
 				{
-					convertToRGBA(image.data(), image.size(), width, height, bpp, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+					convertToRGBA(image.data(), image.size(), width, height, bpp, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
 				}
 				else // other than 8, 24 and 32 bits
 				{

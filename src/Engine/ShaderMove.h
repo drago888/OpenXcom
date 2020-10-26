@@ -127,6 +127,17 @@ inline ShaderMove<Uint8> ShaderSurface(SurfaceRaw<Uint8> s, int x, int y)
 }
 
 /**
+ * Create warper from Surface and provided offset
+ * @param s standard 32bit OpenXcom surface
+ * @param x offset on x
+ * @param y offset on y
+ * @return
+ */
+inline ShaderMove<Uint32> ShaderSurface(SurfaceRaw<Uint32> s, int x, int y)
+{
+	return ShaderMove<Uint32>(s, x, y);
+}
+/**
  * Create warper from cropped Surface and provided offset
  * @param s standard 8bit OpenXcom surface
  * @param x offset on x

@@ -81,6 +81,8 @@ public:
 	/// Zero whole surface.
 	static void CleanSdlSurface(SDL_Surface* surface);
 
+	SDL_Color* statePalette;
+
 protected:
 	UniqueBufferPtr _alignedBuffer;
 	UniqueSurfacePtr _surface;
@@ -89,6 +91,7 @@ protected:
 	Uint8 _visible: 1;
 	Uint8 _hidden: 1;
 	Uint8 _redraw: 1;
+	double _scaleX, _scaleY;
 
 	/// Copies raw pixels.
 	template <typename T>
@@ -98,6 +101,14 @@ protected:
     /// Convert to 32bits RGBA
 	void convertToRGBA(const void* image, int size, int width, int height, Uint8 bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask, Uint32 endian = SDL_BIG_ENDIAN);
 public:
+	/// Set the scaleX and scaleY
+	void setScale(double x, double y);
+	/// Scale the surface
+	void doScale(bool useInt = false);
+	/// get the scaleX
+	double getScaleX() { return _scaleX; };
+	/// get the scaleY
+	double getScaleY() { return _scaleY; };
 	/// Default empty surface.
 	Surface();
 	/// Creates a new surface with the specified size and position.

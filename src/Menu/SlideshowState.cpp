@@ -37,7 +37,11 @@ SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std
 {
 	resetScreen = true; // resetDisplay at firstBlit
 	//setStandardPalette("PAL_GEOSCAPE");
+	genDefPal(); // generate default palette
 	_wasLetterboxed = CutsceneState::initDisplay();
+
+	int scaleX = Options::cutsceneResolutionX/Screen::ORIGINAL_WIDTH;
+	int scaleY = Options::cutsceneResolutionY/Screen::ORIGINAL_HEIGHT;
 
 	// pre-render and queue up all the frames
 	for (std::vector<SlideshowSlide>::const_iterator it = _slideshowSlides->begin(); it != _slideshowSlides->end(); ++it)
@@ -57,7 +61,8 @@ SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std
 
 		// initialize with default rect; may get overridden by
 		// category/id definition
-		Text *caption = new Text(it->w, it->h, it->x, it->y, slide->getSurface()->format->BitsPerPixel);
+		Text *caption = new Text(it->w*scaleX, it->h*scaleY, it->x*scaleX, it->y*scaleY, slide->getSurface()->format->BitsPerPixel);
+		caption->setScale(scaleX, scaleY);
 		caption->setColor(it->color);
 		caption->setText(tr(it->caption));
 		caption->setAlign(it->align);

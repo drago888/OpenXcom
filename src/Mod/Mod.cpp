@@ -106,6 +106,7 @@
 #include "RuleConverter.h"
 #include "RuleSoldierTransformation.h"
 #include "RuleSoldierBonus.h"
+#include "../Engine/Screen.h"
 
 #define ARRAYLEN(x) (std::size(x))
 
@@ -747,9 +748,9 @@ T *Mod::getRule(const std::string &id, const std::string &name, const std::map<s
  * @param name Name of the font.
  * @return Pointer to the font.
  */
-Font *Mod::getFont(const std::string &name, bool error) const
+Font *Mod::getFont(const std::string &name, bool error, int scaleX, int scaleY) const
 {
-	return getRule(name, "Font", _fonts, error);
+	return getRule(name +","+std::to_string(scaleX)+","+std::to_string(scaleY), "Font", _fonts, error);
 }
 
 /**
@@ -4986,15 +4987,37 @@ void Mod::loadBattlescapeResources()
  */
 void Mod::loadExtraResources()
 {
+	std::set<std::pair<int, int>> scales = { {
+		std::make_pair(Options::cutsceneResolutionX / Screen::ORIGINAL_WIDTH, Options::cutsceneResolutionY / Screen::ORIGINAL_HEIGHT),
+	} };
+
 	// Load fonts
 	YAML::Node doc = FileMap::getYAML("Language/" + _fontName);
 	Log(LOG_INFO) << "Loading fonts... " << _fontName;
 	for (YAML::const_iterator i = doc["fonts"].begin(); i != doc["fonts"].end(); ++i)
 	{
-		std::string id = (*i)["id"].as<std::string>();
+		std::string id = (*i)["id"].as<std::string>()+",1,1";
 		Font *font = new Font();
 		font->load(*i);
 		_fonts[id] = font;
+
+		for (std::set<std::pair<int, int>>::iterator it = scales.begin(); it != scales.end(); it++)
+		{
+			// scale the fonts
+			Font* font2 = new Font(*font);
+			for (std::vector<FontImage>::iterator iter = font2->getFontImages()->begin(); iter != font2->getFontImages()->end(); iter++)
+			{
+				iter->width = iter->width * it->first, iter->height = iter->height * it->second, iter->spacing = iter->spacing * it->first;
+				iter->surface->setScale(it->first, it->second);
+				iter->surface->doScale(true);
+			}
+			for (std::unordered_map< UCode, std::pair<size_t, SDL_Rect> >::iterator iter = font2->getCharsList()->begin(); iter != font2->getCharsList()->end(); iter++)
+			{
+				iter->second.second.w = iter->second.second.w * it->first, iter->second.second.h = iter->second.second.h * it->second,
+					iter->second.second.x = iter->second.second.x * it->first, iter->second.second.y = iter->second.second.y * it->second;
+			}
+			_fonts[(*i)["id"].as<std::string>() + "," + std::to_string(it->first) + "," + std::to_string(it->second)] = font2;
+		}
 	}
 
 #ifndef __NO_MUSIC

@@ -415,6 +415,51 @@ void Text::processText()
 
 namespace
 {
+	/**
+	 * Obtain the color for both 8 bits and 32 bits
+	 * @param src the source image color
+	 * @param offset the offset to modify the color.
+	 * @param format the pixel format of the destination
+	 * @param statePalette the statePalette to be used if palette is null
+	 * @param mid mid
+	 * @param mul the multiplier to brighten the color. Each integer above 1 will be 10% increase in all color. Thus 5 will be 40% increase and 11 will be 100% increase
+	 * @return the color code
+	 */
+	Uint32 getColor32(const Uint8& src, const Uint8 offset, const SDL_PixelFormat* format, const SDL_Color* statePalette, const int mid, const int mul) 
+	{
+		if ((format->palette == nullptr && statePalette == nullptr))
+		{
+			return 0;
+		}
+
+
+		if (format->palette != nullptr)
+		{
+			int inverseOffset = mid ? 2 * (mid - src) : 0;
+			return offset + src * mul + inverseOffset;
+		}
+
+		// 32 bits colors
+		Uint32 shift[4] = { (format->Rmask == 0xff000000) * 24 | (format->Rmask == 0x00ff0000) * 16 | (format->Rmask == 0x0000ff00) * 8,
+							(format->Gmask == 0xff000000) * 24 | (format->Gmask == 0x00ff0000) * 16 | (format->Gmask == 0x0000ff00) * 8,
+							(format->Bmask == 0xff000000) * 24 | (format->Bmask == 0x00ff0000) * 16 | (format->Bmask == 0x0000ff00) * 8,
+							(format->Amask == 0xff000000) * 24 | (format->Amask == 0x00ff0000) * 16 | (format->Amask == 0x0000ff00) * 8 };
+		SDL_Color color32 = statePalette[offset];
+		color32.unused = src == 0 ? SDL_ALPHA_TRANSPARENT : SDL_ALPHA_OPAQUE;
+		color32.r = std::min(static_cast<Uint16>(0xff), static_cast<Uint16>(color32.r/2 + 20 * (5 - src) + (mid ? 20 * (mid - src) : 0)));
+		color32.g = std::min(static_cast<Uint16>(0xff), static_cast<Uint16>(color32.g/2 + 20 * (5 - src) + (mid ? 20 * (mid - src) : 0)));
+		color32.b = std::min(static_cast<Uint16>(0xff), static_cast<Uint16>(color32.b/2 + 20 * (5 - src) + (mid ? 20 * (mid - src) : 0)));
+
+		if (mul)
+		{
+			color32.r = std::min(static_cast<Uint16>(0xff), static_cast<Uint16>(color32.r * (1.0 + static_cast<double>((mul - 1) / 10))));
+			color32.g = std::min(static_cast<Uint16>(0xff), static_cast<Uint16>(color32.g * (1.0 + static_cast<double>((mul - 1) / 10))));
+			color32.b = std::min(static_cast<Uint16>(0xff), static_cast<Uint16>(color32.b * (1.0 + static_cast<double>((mul - 1) / 10))));
+
+		}
+
+		return ((Uint32)color32.r  << shift[0] | (Uint32)color32.g << shift[1] | (Uint32)color32.b << shift[2] | (Uint32)color32.unused << shift[3]);
+	}
 
 struct PaletteShift
 {
@@ -428,6 +473,17 @@ struct PaletteShift
 	}
 };
 
+struct PaletteShift32
+{
+	static inline void func(Uint32& dest, const SDL_PixelFormat* format, const Uint8& src, Uint8 offset, int mul, int mid, const SDL_Color* statePalette)
+	{
+		if (src)
+		{
+			Uint32 finalColor = getColor32(src, offset, format, statePalette, mid, mul);
+			dest = finalColor;
+		}
+	}
+};
 } //namespace
 
 /**
@@ -470,7 +526,6 @@ int Text::getLineX(int line) const
 	}
 	return x;
 }
-
 /**
  * Draws all the characters in the text with a really
  * nasty complex gritty text rendering algorithm logic stuff.
@@ -501,7 +556,7 @@ void Text::draw()
 
 	int x = 0, y = 0, line = 0, height = 0;
 	Font *font = _font;
-	int color = _color;
+	Uint32 color = _color;
 	const UString &s = _processedText;
 
 	for (std::vector<int>::iterator i = _lineHeight.begin(); i != _lineHeight.end(); ++i)
@@ -560,7 +615,7 @@ void Text::draw()
 		}
 		else if (*c == Unicode::TOK_COLOR_FLIP)
 		{
-			color = (color == _color ? _color2 : _color);
+			color = color == _color ? _color2 : _color;
 		}
 		else
 		{
@@ -569,7 +624,14 @@ void Text::draw()
 			auto chr = font->getChar(*c);
 			chr.setX(x);
 			chr.setY(y);
-			ShaderDraw<PaletteShift>(ShaderSurface(this, 0, 0), ShaderCrop(chr), ShaderScalar(color), ShaderScalar(mul), ShaderScalar(mid));
+			if (_surface->format->BitsPerPixel == 8)
+			{
+				ShaderDraw<PaletteShift>(ShaderSurface(SurfaceRaw<Uint8>(this), 0, 0), ShaderCrop(chr), ShaderScalar(color), ShaderScalar(mul), ShaderScalar(mid));
+			}
+			else
+			{
+				ShaderDraw<PaletteShift32>(ShaderSurface(SurfaceRaw<Uint32>(this), 0, 0), ShaderScalar((SDL_PixelFormat*)_surface->format), ShaderCrop(chr), ShaderScalar(color), ShaderScalar(mul), ShaderScalar(mid), ShaderScalar(statePalette));
+			}
 			if (dir > 0)
 				x += dir * font->getCharSize(*c).w;
 		}

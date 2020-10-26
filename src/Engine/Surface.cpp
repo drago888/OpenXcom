@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include "SDL2Helpers.h"
 #include "FileMap.h"
+#include <SDL_rotozoom.h>
 #ifdef _WIN32
 #include <malloc.h>
 #endif
@@ -239,7 +240,7 @@ void Surface::UniqueSurfaceDeleter::operator ()(SDL_Surface* surf)
 /**
  * Default empty surface.
  */
-Surface::Surface() : _x{ }, _y{ }, _width{ }, _height{ }, _pitch{ }, _visible(true), _hidden(false), _redraw(false)
+Surface::Surface() : _x{ }, _y{ }, _width{ }, _height{ }, _pitch{ }, _visible(true), _hidden(false), _redraw(false), _scaleX(1.0), _scaleY(1.0), statePalette(nullptr)
 {
 
 }
@@ -256,7 +257,7 @@ Surface::Surface() : _x{ }, _y{ }, _width{ }, _height{ }, _pitch{ }, _visible(tr
  * @param y Y position in pixels.
  * @param bpp Bits-per-pixel depth.
  */
-Surface::Surface(int width, int height, int x, int y, int bpp) : _x(x), _y(y), _visible(true), _hidden(false), _redraw(false)
+Surface::Surface(int width, int height, int x, int y, int bpp) : _x(x), _y(y), _visible(true), _hidden(false), _redraw(false), _scaleX(1.0), _scaleY(1.0), statePalette(nullptr)
 {
 	if (bpp == 8)
 	{
@@ -296,8 +297,83 @@ Surface::Surface(const Surface& other) : Surface{ }
 	_visible = other._visible;
 	_hidden = other._hidden;
 	_redraw = other._redraw;
+	_scaleX = other._scaleX;
+	_scaleY = other._scaleY;
+	statePalette = other.statePalette;
 }
 
+/**
+ * Set the scaling (>1 to zoom), (<1 to shrink)
+ * @param x the x scale
+ * @param y the y scale
+ */
+void Surface::setScale(double x, double y)
+{
+	if (x > 0)
+	{
+		_scaleX = x;
+	}
+
+	if (y > 0)
+	{
+		_scaleY = y;
+	}
+}
+
+/**
+ * Scale the surface
+ */
+void Surface::doScale(bool useInt)
+{
+	if (_scaleX == 1 && _scaleY == 1)
+	{
+		return;
+	}
+
+	double zoomX = 1, zoomY = 1, shrinkX = 1, shrinkY = 1;
+
+	if (_scaleX > 1)
+	{
+		zoomX = (useInt? (int)_scaleX : _scaleX);
+	}
+	else if (_scaleX < 1)
+	{
+		shrinkX = (useInt? (int)(1.0/_scaleX) : 1.0/_scaleX);
+	}
+
+	if (_scaleY > 1)
+	{
+		zoomY = (useInt? (int)_scaleY : _scaleY);
+	}
+	else if (_scaleY < 1)
+	{
+		zoomY = (useInt? (int)(1.0/_scaleY) : 1.0/_scaleY);
+	}
+
+	SDL_Surface* newSurf = _surface.get();
+
+	if (zoomX != 1 || zoomY != 1) 
+	{
+		newSurf = zoomSurface(newSurf, zoomX, zoomY, SMOOTHING_ON);
+	}
+
+	if (shrinkX != 1 || shrinkY != 1)
+	{
+		newSurf = shrinkSurface(newSurf, zoomX, zoomY);
+	}
+
+	UniqueSurfacePtr surface = NewSdlSurface(newSurf);
+
+	if (surface)
+	{
+		*this = Surface(surface->w, surface->h, 0, 0);
+		setPalette(surface->format->palette->colors, 0, surface->format->palette->ncolors);
+		RawCopySurf(_surface, surface);
+		FixTransparent(_surface, surface->format->colorkey);
+	}
+
+	_x*=_scaleX, _y*=_scaleY, _width=_surface->w, _height=_surface->h, _pitch=_surface->pitch;
+}
 /**
  * Deletes the surface from memory.
  */

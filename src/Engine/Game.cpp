@@ -45,7 +45,6 @@
 
 namespace OpenXcom
 {
-
 const double Game::VOLUME_GRADIENT = 10.0;
 
 /**

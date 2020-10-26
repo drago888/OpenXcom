@@ -389,7 +389,7 @@ public:
 	const std::map<std::string, int> &getUfopaediaSections() const { return _ufopaediaSections; }
 
 	/// Gets a particular font.
-	Font *getFont(const std::string &name, bool error = true) const;
+	Font *getFont(const std::string &name, bool error = true, int scaleX=1, int scaleY=1) const;
 	/// Gets a particular surface.
 	Surface *getSurface(const std::string &name, bool error = true);
 	/// Gets a particular surface set.

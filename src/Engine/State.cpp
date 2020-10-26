@@ -67,6 +67,39 @@ State::~State()
 	}
 }
 
+
+/**
+* Generate the default palette
+* Red will have 7 choice (each increment is 1B) - 0x2B, 0x46, 0x61, 0x7C, 0x97, 0xB2, 0xCD
+* Green and blue will have 6 choices (each increment is 1B) - 0x3B, 0x56, 0x71, 0x8C, 0xA7, 0xC2
+*/
+void State::genDefPal()
+{
+	_palette[0].r = 0, _palette[0].g = 0, _palette[0].b = 0, _palette[0].unused = SDL_ALPHA_OPAQUE;
+	_palette[1].r = 0x10, _palette[1].g = 0x20, _palette[1].b = 0x20, _palette[1].unused = SDL_ALPHA_OPAQUE;
+	Uint8 r = 0x2B, g = 0x3B, b = 0x3B;
+
+	for (int i = 2; i < 254;i++)
+	{
+		_palette[i].r = r, _palette[i].g = g, _palette[i].b = b, _palette[i].unused = SDL_ALPHA_OPAQUE;
+		switch (i % 3)
+		{
+		case 2:
+			r += 0x1B;
+			break;
+		case 0:
+			g += 0x1B;
+			break;
+		case 1:
+			b += 0x1B;
+			break;
+		}
+	}
+
+	_palette[254].r = 0xef, _palette[254].g = 0xdf, _palette[254].b = 0xdf, _palette[254].unused = SDL_ALPHA_OPAQUE;
+	_palette[255].r = 0xff, _palette[255].g = 0xff, _palette[255].b = 0xff, _palette[255].unused = SDL_ALPHA_OPAQUE;
+}
+
 /**
  * Set interface data from the ruleset, also sets the palette for the state.
  * @param category Name of the interface set.
@@ -145,10 +178,13 @@ void State::add(Surface *surface)
 {
 	// Set palette
 	surface->setPalette(_palette);
+	surface->statePalette = _palette;
 
 	// Set default text resources
 	if (_game->getLanguage() && _game->getMod())
-		surface->initText(_game->getMod()->getFont("FONT_BIG"), _game->getMod()->getFont("FONT_SMALL"), _game->getLanguage());
+		surface->initText(_game->getMod()->getFont("FONT_BIG",true,(int)surface->getScaleX(),(int)surface->getScaleY()),
+			              _game->getMod()->getFont("FONT_SMALL",true,(int)surface->getScaleX(),(int)surface->getScaleY()),
+			              _game->getLanguage());
 
 	_surfaces.push_back(surface);
 }

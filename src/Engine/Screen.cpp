@@ -109,6 +109,7 @@ void Screen::makeVideoFlags(int forcedBpp)
 	else if (forcedBpp != 0)
 	{
 		_bpp = forcedBpp;
+		forcedBpp = 0;
 	}
 	else
 	{

@@ -382,6 +382,8 @@ void create()
 #endif
 	_info.push_back(OptionInfo("cutsceneResolutionX", &cutsceneResolutionX, 320));
 	_info.push_back(OptionInfo("cutsceneResolutionY", &cutsceneResolutionY, 200));
+	_info.push_back(OptionInfo("pediaBgResolutionX", &pediaBgResolutionX, 320));
+	_info.push_back(OptionInfo("pediaBgResolutionY", &pediaBgResolutionY, 200));
 }
 
 // we can get fancier with these detection routines, but for now just look for

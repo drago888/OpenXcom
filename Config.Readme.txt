@@ -1,8 +1,10 @@
 To use xpiratez,
 
 set the below to 
-cutsceneResolutionX : 2560
-cutsceneResolutionY : 1600
+cutsceneResolutionX : 1280
+cutsceneResolutionY : 800
+pediaBgResolutionX : 1280
+pediaBgResolutionY : 800
 
 
 To use back the original game,

@@ -92,6 +92,14 @@ void State::genDefPal()
 }
 
 /**
+* Generate the cutscene palette
+*/
+void State::genCutPal()
+{
+	setStatePalette(_game->getMod()->getPalettes().find("PAL_UFOPAEDIA")->second->getColors());
+}
+
+/**
  * Set interface data from the ruleset, also sets the palette for the state.
  * @param category Name of the interface set.
  * @param alterPal Should we swap out the backpal colors?

@@ -28,6 +28,7 @@
 #include "../Mod/Mod.h"
 #include "../Engine/Options.h"
 #include "../Interface/Cursor.h"
+#include "../Engine/Palette.h"
 
 namespace OpenXcom
 {
@@ -36,8 +37,7 @@ SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std
 		: _slideshowHeader(slideshowHeader), _slideshowSlides(slideshowSlides), _curScreen(-1)
 {
 	resetScreen = true; // resetDisplay at firstBlit
-	//setStandardPalette("PAL_GEOSCAPE");
-	genDefPal(); // generate default palette
+	genCutPal(); // generate cutscene palette
 	_wasLetterboxed = CutsceneState::initDisplay();
 
 	int scaleX = Options::cutsceneResolutionX/Screen::ORIGINAL_WIDTH;

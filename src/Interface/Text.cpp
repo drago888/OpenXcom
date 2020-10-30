@@ -475,12 +475,14 @@ struct PaletteShift
 
 struct PaletteShift32
 {
-	static inline void func(Uint32& dest, const SDL_PixelFormat* format, const Uint8& src, Uint8 offset, int mul, int mid, const SDL_Color* statePalette)
+	static inline void func(Uint32& dest, const Uint8& src, int off, int mul, int mid, SDL_Color* palette)
 	{
 		if (src)
 		{
-			Uint32 finalColor = getColor32(src, offset, format, statePalette, mid, mul);
-			dest = finalColor;
+			Uint8 dst;
+			int inverseOffset = mid ? 2 * (mid - src) : 0;
+			dst = off + src * mul + inverseOffset;
+			dest = palette[dst].r << 16 | palette[dst].g << 8 | palette[dst].b | SDL_ALPHA_OPAQUE << 24;
 		}
 	}
 };
@@ -630,7 +632,7 @@ void Text::draw()
 			}
 			else
 			{
-				ShaderDraw<PaletteShift32>(ShaderSurface(SurfaceRaw<Uint32>(this), 0, 0), ShaderScalar((SDL_PixelFormat*)_surface->format), ShaderCrop(chr), ShaderScalar(color), ShaderScalar(mul), ShaderScalar(mid), ShaderScalar(statePalette));
+				ShaderDraw<PaletteShift32>(ShaderSurface(SurfaceRaw<Uint32>(this), 0, 0), ShaderCrop(chr), ShaderScalar(color), ShaderScalar(mul), ShaderScalar(mid), ShaderScalar(statePalette));
 			}
 			if (dir > 0)
 				x += dir * font->getCharSize(*c).w;

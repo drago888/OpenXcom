@@ -131,6 +131,8 @@ public:
 	virtual void recenter(int dX, int dY);
 	/// Generate default Palette
 	void genDefPal();
+	/// Generate cutscene Palette
+	void genCutPal();
 };
 
 }

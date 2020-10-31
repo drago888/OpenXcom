@@ -42,6 +42,7 @@
 #include "../Menu/TestState.h"
 #include <algorithm>
 #include "../fallthrough.h"
+#include "../Ufopaedia/ArticleState.h"
 
 namespace OpenXcom
 {
@@ -87,6 +88,9 @@ Game::Game(const std::string &title) : _screen(0), _cursor(0), _lang(0), _save(0
 
 	// Create cursor
 	_cursor = new Cursor(9, 13);
+	ArticleState::_smallCursor = _cursor;
+	ArticleState::_bigCursor = new Cursor(9 * Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH, 13 * Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT);
+	ArticleState::_bigCursor->scale = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 
 	// Create invisible hardware cursor to workaround bug with absolute positioning pointing devices
 	SDL_ShowCursor(SDL_ENABLE);

@@ -32,6 +32,8 @@
 
 namespace OpenXcom
 {
+	Cursor* ArticleState::_bigCursor = nullptr;
+	Cursor* ArticleState::_smallCursor = nullptr;
 	/**
 	 * Change index position to next article.
 	 */
@@ -121,6 +123,7 @@ namespace OpenXcom
 		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
 		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+		_game->changeCursor(_bigCursor);
 
 		// init background and navigation elements
 		_bg = new Surface(Options::pediaBgResolutionX, Options::pediaBgResolutionY, 0 * scaleX, 0 * scaleY, bpp);
@@ -139,7 +142,9 @@ namespace OpenXcom
 	 * Destructor
 	 */
 	ArticleState::~ArticleState()
-	{}
+	{
+		_game->changeCursor(_smallCursor);
+	}
 
 	std::string ArticleState::getDamageTypeText(ItemDamageType dt) const
 	{

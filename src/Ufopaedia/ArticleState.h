@@ -21,6 +21,7 @@
 #include "../Mod/RuleItem.h"
 #include <string>
 #include <memory>
+#include "../Interface/Cursor.h"
 
 namespace OpenXcom
 {
@@ -75,11 +76,14 @@ namespace OpenXcom
 
 	class ArticleState : public State
 	{
+		friend Game;
 	protected:
 		/// constructor (protected, so it can only be instantiated by derived classes)
 		ArticleState(const std::string &article_id, std::shared_ptr<ArticleCommonState> state);
 		/// destructor
 		virtual ~ArticleState();
+		static Cursor* _smallCursor;
+		static Cursor* _bigCursor;
 
 	public:
 		/// return the article id

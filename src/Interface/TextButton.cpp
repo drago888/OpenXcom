@@ -37,9 +37,10 @@ Sound *TextButton::soundPress;
  * @param x X position in pixels.
  * @param y Y position in pixels.
  */
-TextButton::TextButton(int width, int height, int x, int y) : InteractiveSurface(width, height, x, y), _color(0), _group(0), _contrast(false), _geoscapeButton(false), _comboBox(0)
+TextButton::TextButton(int width, int height, int x, int y, int bpp, int scaleX, int scaleY) : InteractiveSurface(width, height, x, y, bpp), _color(0), _group(0), _contrast(false), _geoscapeButton(false), _comboBox(0)
 {
-	_text = new Text(width, height, 0, 0);
+	_text = new Text(width * scaleX, height * scaleY, 0, 0, bpp);
+	_text->setScale(scaleX, scaleY);
 	_text->setSmall();
 	_text->setAlign(ALIGN_CENTER);
 	_text->setVerticalAlign(ALIGN_MIDDLE);
@@ -86,6 +87,14 @@ Uint8 TextButton::getColor() const
 	return _color;
 }
 
+/**
+* Set the palette for the text
+* @param palette
+*/
+void TextButton::setTextPalette(SDL_Color* palette)
+{
+		_text->statePalette = palette;
+}
 /**
  * Changes the color for the text only.
  * @param color Color value.
@@ -216,7 +225,13 @@ void TextButton::draw()
 
 	for (int i = 0; i < 5; ++i)
 	{
-		drawRect(&square, color);
+		SDL_Color col = { 0, 0, 0, 0 };
+		if (statePalette)
+		{
+			col = statePalette[color];
+		}
+
+		_surface->format->BitsPerPixel == 8 ? drawRect(&square, color) : drawRect32(&square, col.r << 16 | col.g << 8 | col.r | col.unused << 24);
 
 		if (i % 2 == 0)
 		{
@@ -230,14 +245,22 @@ void TextButton::draw()
 		{
 		case 0:
 			color = _color + 5 * mul;
-			setPixel(square.w, 0, color);
+			if (statePalette)
+			{
+				col = statePalette[color];
+			}
+			_surface->format->BitsPerPixel == 8 ? setPixel(square.w, 0, color) : setPixel32(square.w, 0, col.r << 16 | col.g << 8 | col.r | col.unused << 24);
 			break;
 		case 1:
 			color = _color + 2 * mul;
 			break;
 		case 2:
 			color = _color + 4 * mul;
-			setPixel(square.w+1, 1, color);
+			if (statePalette)
+			{
+				col = statePalette[color];
+			}
+			_surface->format->BitsPerPixel == 8 ? setPixel(square.w+1, 1, color) : setPixel32(square.w + 1, 1, col.r << 16 | col.g << 8 | col.r | col.unused << 24);
 			break;
 		case 3:
 			color = _color + 3 * mul;
@@ -245,8 +268,12 @@ void TextButton::draw()
 		case 4:
 			if (_geoscapeButton)
 			{
-				setPixel(0, 0, _color);
-				setPixel(1, 1, _color);
+				if (statePalette)
+				{
+					col = statePalette[color];
+				}
+				_surface->format->BitsPerPixel == 8 ? setPixel(0, 0, _color) : setPixel32(0, 0, col.r << 16 | col.g << 8 | col.r | col.unused << 24);
+				_surface->format->BitsPerPixel == 8 ? setPixel(1, 1, _color) : setPixel32(1, 1, col.r << 16 | col.g << 8 | col.r | col.unused << 24);
 			}
 			break;
 		}
@@ -262,11 +289,11 @@ void TextButton::draw()
 	{
 		if (_geoscapeButton)
 		{
-			this->invert(_color + 2 * mul);
+			_surface->format->BitsPerPixel == 8 ? this->invert(_color + 2 * mul) : this->invert32(_color + 2 * mul, statePalette);
 		}
 		else
 		{
-			this->invert(_color + 3 * mul);
+			_surface->format->BitsPerPixel == 8 ? this->invert(_color + 3 * mul) : this->invert32(_color + 3 * mul, statePalette);
 		}
 	}
 	_text->setInvert(press);

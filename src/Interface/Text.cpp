@@ -477,7 +477,7 @@ struct PaletteShift32
 {
 	static inline void func(Uint32& dest, const Uint8& src, int off, int mul, int mid, SDL_Color* palette)
 	{
-		if (src)
+		if (src && palette)
 		{
 			Uint8 dst;
 			int inverseOffset = mid ? 2 * (mid - src) : 0;

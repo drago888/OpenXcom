@@ -20,6 +20,7 @@
 #include <yaml-cpp/yaml.h>
 #include <string>
 #include <map>
+#include "../Engine/Screen.h"
 
 namespace OpenXcom
 {
@@ -69,7 +70,7 @@ public:
 	/// Checks if a filename is a valid image file.
 	static bool isImageFile(const std::string &filename);
 	/// Load the external sprite into a surface.
-	Surface *loadSurface(Surface *surface);
+	Surface *loadSurface(Surface *surface, int width = Screen::ORIGINAL_WIDTH, int height = Screen::ORIGINAL_HEIGHT);
 	/// Load the external sprite into a surface set.
 	SurfaceSet *loadSurfaceSet(SurfaceSet *set);
 	/// Gets mod data that define this surface.

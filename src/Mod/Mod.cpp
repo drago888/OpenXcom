@@ -758,7 +758,7 @@ Font *Mod::getFont(const std::string &name, bool error, int scaleX, int scaleY) 
  * it's first requested.
  * @param name Surface name.
  */
-void Mod::lazyLoadSurface(const std::string &name)
+void Mod::lazyLoadSurface(const std::string &name, int width, int height)
 {
 	if (Options::lazyLoadResources)
 	{
@@ -767,7 +767,7 @@ void Mod::lazyLoadSurface(const std::string &name)
 		{
 			for (std::vector<ExtraSprites*>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
-				loadExtraSprite(*j);
+				loadExtraSprite(*j, width, height);
 			}
 		}
 	}
@@ -778,9 +778,9 @@ void Mod::lazyLoadSurface(const std::string &name)
  * @param name Name of the surface.
  * @return Pointer to the surface.
  */
-Surface *Mod::getSurface(const std::string &name, bool error)
+Surface *Mod::getSurface(const std::string &name, bool error, int width, int height)
 {
-	lazyLoadSurface(name);
+	lazyLoadSurface(name, width, height);
 	return getRule(name, "Sprite", _surfaces, error);
 }
 
@@ -4990,6 +4990,7 @@ void Mod::loadExtraResources()
 	std::set<std::pair<int, int>> scales = { {
 		std::make_pair(Options::cutsceneResolutionX / Screen::ORIGINAL_WIDTH, Options::cutsceneResolutionY / Screen::ORIGINAL_HEIGHT),
 		std::make_pair(Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH, Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT),
+		std::make_pair(Options::pediaBgResolutionX * Options::pediaTitleScale / Screen::ORIGINAL_WIDTH, Options::pediaBgResolutionY * Options::pediaTitleScale / Screen::ORIGINAL_HEIGHT),
 	} };
 
 	// Load fonts
@@ -5184,7 +5185,7 @@ void Mod::loadExtraResources()
 	Window::soundPopup[2] = getSound("GEO.CAT", Mod::WINDOW_POPUP[2]);
 }
 
-void Mod::loadExtraSprite(ExtraSprites *spritePack)
+void Mod::loadExtraSprite(ExtraSprites *spritePack, int width, int height)
 {
 	if (spritePack->isLoaded())
 		return;
@@ -5198,7 +5199,7 @@ void Mod::loadExtraSprite(ExtraSprites *spritePack)
 			surface = i->second;
 		}
 
-		_surfaces[spritePack->getType()] = spritePack->loadSurface(surface);
+		_surfaces[spritePack->getType()] = spritePack->loadSurface(surface, width, height);
 		if (_statePalette)
 		{
 			if (spritePack->getType().find("_CPAL") == std::string::npos)

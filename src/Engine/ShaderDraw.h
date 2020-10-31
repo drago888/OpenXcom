@@ -171,6 +171,25 @@ struct ColorReplace
 
 };
 
+struct ColorReplace32
+{
+	/**
+	* Function used by ShaderDraw in Surface::blitNShade
+	* set shade and replace color in that surface
+	* @param dest destination pixel
+	* @param src source pixel
+	* @param shade value of shade of this surface
+	* @param newColor new color to set (it should be offset by 4)
+	*/
+	static inline void func(Uint32& dest, const int& shade, const SDL_Color newColor)
+	{
+			const Uint8 newShade = 20 * shade;
+			SDL_Color color;
+			color.r = newColor.r - newShade, color.g = newColor.g - newShade, color.b = newColor.b - newShade;
+			dest = color.r << 16 | color.g << 8 | color.b | color.unused << 24;
+	}
+
+};
 /**
  * help class used for Surface::blitNShade
  */
@@ -213,6 +232,30 @@ struct StandardShade
 #endif
 	}
 
+};
+
+struct StandardShade32
+{
+	/**
+	* Function used by ShaderDraw in Surface::blitNShade
+	* set shade
+	* @param dest destination pixel
+	* @param src source pixel
+	* @param shade value of shade of this surface
+	* @param not used
+	* @param not used
+	*/
+	static inline void func(Uint32& dest, const Uint32& src, const SDL_PixelFormat* format, const int& shade)
+	{
+		if (src)
+		{
+			int newShade = 20 * shade;
+			SDL_Color newColor;
+			SDL_GetRGBA(src, format, &newColor.r, &newColor.g, &newColor.b, &newColor.unused);
+			newColor.r = std::max(0x00, (int)newColor.r - newShade), newColor.g = std::max(0x00, (int)newColor.g - newShade), newColor.b = std::max(0x00, (int)newColor.b - newShade);
+			dest = newColor.r << 16 | newColor.g << 8 | newColor.b  | newColor.unused << 24;
+		}
+	}
 };
 /**
  * helper class used for blitting dying unit with overkill

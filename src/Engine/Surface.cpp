@@ -878,6 +878,39 @@ void Surface::invert(Uint8 mid)
 }
 
 /**
+ * Inverts all the colors in the surface according to a middle point.
+ * Used for effects like shifting a button between pressed and unpressed.
+ * @param mid Middle point.
+ * @param palette the palette to use
+ */
+void Surface::invert32(Uint8 mid, SDL_Color* palette)
+{
+	if (!palette)
+	{
+		return;
+	}
+
+	// Lock the surface
+	lock();
+
+	for (int x = 0, y = 0; x < getWidth() && y < getHeight();)
+	{
+		Uint8 pixel = getPixel(x, y);
+		if (pixel > 0)
+		{
+			SDL_Color col = palette[pixel + 2 * ((int)mid - (int)pixel)];
+			setPixelIterative32(&x, &y, col.r << 16 | col.g << 8 | col.b | col.unused << 24);
+		}
+		else
+		{
+			setPixelIterative32(&x, &y, 0);
+		}
+	}
+
+	// Unlock the surface
+	unlock();
+}
+/**
  * Runs any code the surface needs to keep updating every
  * game cycle, like animations and other real-time elements.
  */
@@ -967,6 +1000,17 @@ void Surface::drawRect(SDL_Rect *rect, Uint8 color)
 {
 	SDL_FillRect(_surface.get(), rect, color);
 }
+
+/**
+ * Draws a filled rectangle on the surface.
+ * @param rect Pointer to Rect.
+ * @param color Color of the rectangle.
+ */
+void Surface::drawRect32(SDL_Rect* rect, Uint32 color)
+{
+	SDL_FillRect(_surface.get(), rect, color);
+}
+
 
 /**
  * Draws a filled rectangle on the surface.
@@ -1163,7 +1207,24 @@ void Surface::blitRaw(SurfaceRaw<Uint8> destSurf, SurfaceRaw<const Uint8> srcSur
 		ShaderDraw<helper::StandardShade>(ShaderSurface(destSurf), src, ShaderScalar(shade));
 	}
 }
-
+void Surface::blitRaw(SurfaceRaw<Uint32> destSurf, SurfaceRaw<const Uint32> srcSurf, SDL_PixelFormat* format, int x, int y, int shade, bool half, SDL_Color newBaseColor)
+{
+	ShaderMove<const Uint32> src(srcSurf, x, y);
+	if (half)
+	{
+		GraphSubset g = src.getDomain();
+		g.beg_x = g.end_x / 2;
+		src.setDomain(g);
+	}
+	if (!(newBaseColor.r == 0 && newBaseColor.g == 0 && newBaseColor.b == 0 && newBaseColor.unused == 0))
+	{
+		ShaderDraw<helper::ColorReplace32>(ShaderSurface(destSurf), ShaderScalar(shade), ShaderScalar(newBaseColor));
+	}
+	else
+	{
+		ShaderDraw<helper::StandardShade32>(ShaderSurface(destSurf), src, ShaderScalar(format) , ShaderScalar(shade));
+	}
+}
 /**
  * Specific blit function to blit battlescape terrain data in different shades in a fast way.
  * Notice there is no surface locking here - you have to make sure you lock the surface yourself
@@ -1178,6 +1239,10 @@ void Surface::blitRaw(SurfaceRaw<Uint8> destSurf, SurfaceRaw<const Uint8> srcSur
 void Surface::blitNShade(SurfaceRaw<Uint8> surface, int x, int y, int shade, bool half, int newBaseColor) const
 {
 	blitRaw(surface, SurfaceRaw<const Uint8>(this), x, y, shade, half, newBaseColor);
+}
+void Surface::blitNShade32(SurfaceRaw<Uint32> surface, int x, int y, int shade, bool half, SDL_Color newBaseColor) const
+{
+	blitRaw(surface, SurfaceRaw<const Uint32>(this), _surface->format, x, y, shade, half, newBaseColor);
 }
 
 /**

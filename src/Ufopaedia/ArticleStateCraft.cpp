@@ -29,6 +29,7 @@
 #include "../Engine/Unicode.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextButton.h"
+#include "../Engine/Screen.h"
 
 namespace OpenXcom
 {
@@ -37,47 +38,85 @@ namespace OpenXcom
 	{
 		RuleCraft *craft = _game->getMod()->getCraft(defs->id, true);
 
+		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
+		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
+		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
+		int titleAddHeight = 32;
+
 		// add screen elements
-		_txtTitle = new Text(210, 32, 5, 24);
+		_txtTitle = new Text(210 * scaleX * Options::pediaTitleScale, 32 * scaleY * Options::pediaTitleScale, 5 * scaleX, 24 * scaleY, bpp);
+		
+		_txtTitle->setScale(scaleX * Options::pediaTitleScale, scaleY * Options::pediaTitleScale);
 
 		// Set palette
-		if (defs->customPalette)
+		if (defs->customPalette && bpp == 8)
 		{
 			setCustomPalette(_game->getMod()->getSurface(defs->image_id)->getPalette(), Mod::UFOPAEDIA_CURSOR);
 		}
-		else
+		else if (bpp == 8)
 		{
 			setStandardPalette("PAL_UFOPAEDIA");
 		}
+		else
+		{
+			genPediaPal();
+			_cursorColor = Mod::UFOPAEDIA_CURSOR;
+		}
 
-		ArticleState::initLayout();
+		ArticleState::initLayout(false);
 
 		// add other elements
-		add(_txtTitle);
+		//add(_txtTitle);
 
 		// Set up objects
-		_game->getMod()->getSurface(defs->image_id)->blitNShade(_bg, 0, 0);
+		if (Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH)
+		{
+			_game->getMod()->getSurface(defs->image_id)->blitNShade(_bg, 0, 0);
+		}
+		else
+		{
+			_game->getMod()->getSurface(defs->image_id, Options::pediaBgResolutionX, Options::pediaBgResolutionY)->blitNShade32(_bg, 0, 0, 3);
+		}
 		_btnOk->setColor(Palette::blockOffset(15)-1);
+		_btnOk->statePalette = _palette;
+		_btnOk->setTextPalette(buttonTextPalette);
 		_btnPrev->setColor(Palette::blockOffset(15)-1);
+		_btnPrev->statePalette = _palette;
+		_btnPrev->setTextPalette(buttonTextPalette);
 		_btnNext->setColor(Palette::blockOffset(15)-1);
+		_btnNext->statePalette = _palette;
+		_btnNext->setTextPalette(buttonTextPalette);
 		_btnInfo->setColor(Palette::blockOffset(15)-1);
 		_btnInfo->setVisible(_game->getMod()->getShowPediaInfoButton());
+		_btnInfo->statePalette = _palette;
+		_btnInfo->setTextPalette(buttonTextPalette);
+		add(_bg);
+		add(_btnOk);
+		add(_btnPrev);
+		add(_btnNext);
+		add(_btnInfo);
+
 
 		_txtTitle->setColor(Palette::blockOffset(14)+15);
 		_txtTitle->setBig();
 		_txtTitle->setWordWrap(true);
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
+		add(_txtTitle);
 
-		_txtInfo = new Text(defs->rect_text.width, defs->rect_text.height, defs->rect_text.x, defs->rect_text.y);
-		add(_txtInfo);
+		_txtInfo = new Text(defs->rect_text.width * scaleX, defs->rect_text.height * scaleY, defs->rect_text.x * scaleX, defs->rect_text.y * scaleY + titleAddHeight, bpp);
+		_txtInfo->setScale(scaleX, scaleY);
+		//add(_txtInfo);
 
 		_txtInfo->setColor(Palette::blockOffset(14)+15);
 		_txtInfo->setSecondaryColor(Palette::blockOffset(15) + 4);
 		_txtInfo->setWordWrap(true);
 		_txtInfo->setText(tr(defs->getTextForPage(_state->current_page)));
+		add(_txtInfo);
 
-		_txtStats = new Text(defs->rect_stats.width, defs->rect_stats.height, defs->rect_stats.x, defs->rect_stats.y);
-		add(_txtStats);
+		_txtStats = new Text(defs->rect_stats.width * scaleX, defs->rect_stats.height * scaleY, defs->rect_stats.x * scaleX, defs->rect_stats.y * scaleY + titleAddHeight, bpp);
+		_txtStats->setScale(scaleX, scaleY);
+		//add(_txtStats);
 
 		_txtStats->setColor(Palette::blockOffset(14)+15);
 		_txtStats->setSecondaryColor(Palette::blockOffset(15)+4);
@@ -142,6 +181,7 @@ namespace OpenXcom
 		}
 		ss << tr("STR_HWP_CAPACITY").arg(craft->getVehicles());
 		_txtStats->setText(ss.str());
+		add(_txtStats);
 
 		centerAllSurfaces();
 	}

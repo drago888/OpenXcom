@@ -28,6 +28,7 @@
 #include "../Mod/RuleItem.h"
 #include "../Mod/Mod.h"
 #include "../Savegame/SavedGame.h"
+#include "../Engine/Screen.h"
 
 namespace OpenXcom
 {
@@ -116,12 +117,17 @@ namespace OpenXcom
 	 */
 	ArticleState::ArticleState(const std::string &article_id, std::shared_ptr<ArticleCommonState> state) : _id(article_id)
 	{
+		resetScreen = true;
+		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
+		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
+		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+
 		// init background and navigation elements
-		_bg = new Surface(320, 200, 0, 0);
-		_btnOk = new TextButton(30, 14, 5, 5);
-		_btnPrev = new TextButton(30, 14, 40, 5);
-		_btnNext = new TextButton(30, 14, 75, 5);
-		_btnInfo = new TextButton(40, 14, 110, 5);
+		_bg = new Surface(Options::pediaBgResolutionX, Options::pediaBgResolutionY, 0 * scaleX, 0 * scaleY, bpp);
+		_btnOk = new TextButton(30 * scaleX, 14 * scaleY, 5 * scaleX, 5 * scaleY, bpp);
+		_btnPrev = new TextButton(30 * scaleX, 14 * scaleY, 40 * scaleX, 5 * scaleY, bpp);
+		_btnNext = new TextButton(30 * scaleX, 14 * scaleY, 75 * scaleX, 5 * scaleY, bpp);
+		_btnInfo = new TextButton(40 * scaleX, 14 * scaleY, 110 * scaleX, 5 * scaleY, bpp);
 
 		_state = std::move(state);
 
@@ -210,26 +216,37 @@ namespace OpenXcom
 	/**
 	 * Set captions and click handlers for the common control elements.
 	 */
-	void ArticleState::initLayout()
+	void ArticleState::initLayout(bool addAll)
 	{
-		add(_bg);
-		add(_btnOk);
-		add(_btnPrev);
-		add(_btnNext);
-		add(_btnInfo);
+		if (addAll)
+		{
+			add(_bg);
+			add(_btnOk);
+			add(_btnPrev);
+			add(_btnNext);
+			add(_btnInfo);
+		}
+
+
+		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
+		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
 
 		_btnOk->setText(tr("STR_OK"));
+		_btnOk->setScale(scaleX, scaleY);
 		_btnOk->onMouseClick((ActionHandler)&ArticleState::btnOkClick);
 		_btnOk->onKeyboardPress((ActionHandler)&ArticleState::btnOkClick,Options::keyOk);
 		_btnOk->onKeyboardPress((ActionHandler)&ArticleState::btnOkClick,Options::keyCancel);
 		_btnOk->onKeyboardPress((ActionHandler)&ArticleState::btnResetMusicClick, Options::keySelectMusicTrack);
 		_btnPrev->setText("<<");
+		_btnPrev->setScale(scaleX, scaleY);
 		_btnPrev->onMouseClick((ActionHandler)&ArticleState::btnPrevClick);
 		_btnPrev->onKeyboardPress((ActionHandler)&ArticleState::btnPrevClick, Options::keyGeoLeft);
 		_btnNext->setText(">>");
+		_btnNext->setScale(scaleX, scaleY);
 		_btnNext->onMouseClick((ActionHandler)&ArticleState::btnNextClick);
 		_btnNext->onKeyboardPress((ActionHandler)&ArticleState::btnNextClick, Options::keyGeoRight);
 		_btnInfo->setText(tr("STR_INFO_UFOPEDIA"));
+		_btnInfo->setScale(scaleX, scaleY);
 		_btnInfo->onMouseClick((ActionHandler)&ArticleState::btnInfoClick);
 		_btnInfo->onKeyboardPress((ActionHandler)&ArticleState::btnInfoClick, Options::keyGeoUfopedia);
 		_btnInfo->setVisible(false);
@@ -241,6 +258,7 @@ namespace OpenXcom
 	 */
 	void ArticleState::btnOkClick(Action *)
 	{
+		_game->getScreen()->resetDisplay(true, false, Screen::ORIGINAL_WIDTH, Screen::ORIGINAL_HEIGHT, 8);
 		_game->popState();
 	}
 

@@ -32,6 +32,7 @@
 #include "RuleAlienMission.h"
 #include "RuleBaseFacilityFunctions.h"
 #include "RuleItem.h"
+#include "../Engine/Screen.h"
 
 namespace OpenXcom
 {
@@ -324,9 +325,9 @@ private:
 	/// Loads resources from extra rulesets.
 	void loadExtraResources();
 	/// Loads surfaces on demand.
-	void lazyLoadSurface(const std::string &name);
+	void lazyLoadSurface(const std::string &name, int width = Screen::ORIGINAL_WIDTH, int height = Screen::ORIGINAL_HEIGHT);
 	/// Loads an external sprite.
-	void loadExtraSprite(ExtraSprites *spritePack);
+	void loadExtraSprite(ExtraSprites *spritePack, int width = Screen::ORIGINAL_WIDTH, int height = Screen::ORIGINAL_HEIGHT);
 	/// Applies mods to vanilla resources.
 	void modResources();
 	/// Sorts all our lists according to their weight.
@@ -391,7 +392,7 @@ public:
 	/// Gets a particular font.
 	Font *getFont(const std::string &name, bool error = true, int scaleX=1, int scaleY=1) const;
 	/// Gets a particular surface.
-	Surface *getSurface(const std::string &name, bool error = true);
+	Surface *getSurface(const std::string &name, bool error = true, int width = Screen::ORIGINAL_WIDTH, int height = Screen::ORIGINAL_HEIGHT);
 	/// Gets a particular surface set.
 	SurfaceSet *getSurfaceSet(const std::string &name, bool error = true);
 	/// Gets a particular music.

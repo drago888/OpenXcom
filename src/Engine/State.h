@@ -133,6 +133,8 @@ public:
 	void genDefPal();
 	/// Generate cutscene Palette
 	void genCutPal();
+	/// Generate ufopedia article Palette
+	void genPediaPal();
 };
 
 }

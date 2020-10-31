@@ -25,7 +25,7 @@
 namespace OpenXcom
 {
 
-enum OptionType { OPTION_BOOL, OPTION_INT, OPTION_STRING, OPTION_KEY };
+enum OptionType { OPTION_BOOL, OPTION_INT, OPTION_STRING, OPTION_KEY, OPTION_DOUBLE };
 
 /**
  * Helper class that ties metadata to particular options to help in serializing
@@ -37,13 +37,15 @@ class OptionInfo
 private:
 	std::string _id, _desc, _cat;
 	OptionType _type;
-	union { bool *b; int *i; std::string *s; SDLKey *k; } _ref;
-	union { bool b; int i; const char *s; SDLKey k; } _def; // can't put strings in unions
+	union { bool* b; int* i; std::string* s; SDLKey* k; double* d; } _ref;
+	union { bool b; int i; const char* s; SDLKey k; double d; } _def; // can't put strings in unions
 public:
 	/// Creates a bool option.
 	OptionInfo(const std::string &id, bool *option, bool def, const std::string &desc = "", const std::string &cat = "");
 	/// Creates a int option.
 	OptionInfo(const std::string &id, int *option, int def, const std::string &desc = "", const std::string &cat = "");
+	/// Creates a double option.
+	OptionInfo(const std::string& id, double* option, double def, const std::string& desc = "", const std::string& cat = "");
 	/// Creates a key option.
 	OptionInfo(const std::string &id, SDLKey *option, SDLKey def, const std::string &desc = "", const std::string &cat = "");
 	/// Creates a string option.

@@ -100,4 +100,5 @@ OPT std::vector< std::pair<std::string, bool> > mods; // ordered list of availab
 OPT SoundFormat currentSound;
 
 // 32 bits large size images
-OPT int cutsceneResolutionX, cutsceneResolutionY, pediaBgResolutionX, pediaBgResolutionY, pediaTitleScale;
+OPT int cutsceneResolutionX, cutsceneResolutionY, pediaBgResolutionX, pediaBgResolutionY;
+OPT double pediaTitleScale;

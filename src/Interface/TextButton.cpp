@@ -37,7 +37,8 @@ Sound *TextButton::soundPress;
  * @param x X position in pixels.
  * @param y Y position in pixels.
  */
-TextButton::TextButton(int width, int height, int x, int y, int bpp, int scaleX, int scaleY) : InteractiveSurface(width, height, x, y, bpp), _color(0), _group(0), _contrast(false), _geoscapeButton(false), _comboBox(0)
+TextButton::TextButton(int width, int height, int x, int y, int bpp, int scaleX, int scaleY) : InteractiveSurface(width, height, x, y, bpp), _color(0), _group(0),
+       _contrast(false), _geoscapeButton(false), _comboBox(0), scale(1)
 {
 	_text = new Text(width * scaleX, height * scaleY, 0, 0, bpp);
 	_text->setScale(scaleX, scaleY);
@@ -233,13 +234,16 @@ void TextButton::draw()
 
 		_surface->format->BitsPerPixel == 8 ? drawRect(&square, color) : drawRect32(&square, col.r << 16 | col.g << 8 | col.r | col.unused << 24);
 
-		if (i % 2 == 0)
+		for (int j = 0; j <= scale / 2;j++)
 		{
-			square.x++;
-			square.y++;
+			if (i % 2 == 0)
+			{
+				square.x++;
+				square.y++;
+			}
+			square.w--;
+			square.h--;
 		}
-		square.w--;
-		square.h--;
 
 		switch (i)
 		{

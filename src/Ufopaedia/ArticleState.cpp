@@ -128,9 +128,13 @@ namespace OpenXcom
 		// init background and navigation elements
 		_bg = new Surface(Options::pediaBgResolutionX, Options::pediaBgResolutionY, 0 * scaleX, 0 * scaleY, bpp);
 		_btnOk = new TextButton(30 * scaleX, 14 * scaleY, 5 * scaleX, 5 * scaleY, bpp);
+		_btnOk->scale = scaleX;
 		_btnPrev = new TextButton(30 * scaleX, 14 * scaleY, 40 * scaleX, 5 * scaleY, bpp);
+		_btnPrev->scale = scaleX;
 		_btnNext = new TextButton(30 * scaleX, 14 * scaleY, 75 * scaleX, 5 * scaleY, bpp);
+		_btnNext->scale = scaleX;
 		_btnInfo = new TextButton(40 * scaleX, 14 * scaleY, 110 * scaleX, 5 * scaleY, bpp);
+		_btnInfo->scale = scaleX;
 
 		_state = std::move(state);
 

@@ -42,7 +42,7 @@ namespace OpenXcom
 		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
 		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
-		int titleAddHeight = 32;
+		int titleAddHeight = 32 * (int)(Options::pediaTitleScale - 1);
 
 		// add screen elements
 		_txtTitle = new Text(210 * scaleX * Options::pediaTitleScale, 32 * scaleY * Options::pediaTitleScale, 5 * scaleX, 24 * scaleY, bpp);

@@ -48,6 +48,7 @@ private:
 protected:
 	bool isButtonHandled(Uint8 button = 0) override;
 public:
+	int scale;
 	static Sound *soundPress;
 	/// Creates a new text button with the specified size and position.
 	TextButton(int width, int height, int x = 0, int y = 0, int bpp = 8, int textScaleX = 1, int textScaleY = 1);

@@ -52,6 +52,19 @@ OptionInfo::OptionInfo(const std::string &id, int *option, int def, const std::s
 }
 
 /**
+ * Creates info for an double option.
+ * @param id String ID used in serializing.
+ * @param option Pointer to the option.
+ * @param def Default option value.
+ * @param desc Language ID for the option description (if any).
+ * @param cat Language ID for the option category (if any).
+ */
+OptionInfo::OptionInfo(const std::string& id, double* option, double def, const std::string& desc, const std::string& cat) : _id(id), _desc(desc), _cat(cat), _type(OPTION_DOUBLE)
+{
+	_ref.d = option;
+	_def.d = def;
+}
+/**
  * Creates info for a keyboard shortcut option.
  * @param id String ID used in serializing.
  * @param option Pointer to the option.
@@ -103,6 +116,9 @@ void OptionInfo::load(const YAML::Node &node) const
 		break;
 	case OPTION_STRING:
 		*(_ref.s) = node[_id].as<std::string>(_def.s);
+		break;
+	case OPTION_DOUBLE:
+		*(_ref.d) = node[_id].as<double>(_def.d);
 		break;
 	}
 }
@@ -169,6 +185,9 @@ void OptionInfo::save(YAML::Node &node) const
 		break;
 	case OPTION_STRING:
 		node[_id] = *(_ref.s);
+		break;
+	case OPTION_DOUBLE:
+		node[_id] = *(_ref.d);
 		break;
 	}
 }

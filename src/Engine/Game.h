@@ -108,7 +108,7 @@ public:
 	/// Returns the update flag.
 	bool getUpdateFlag() const { return _update; }
 	/// change cursor
-	void changeCursor(Cursor* cur) { _cursor = cur; }
+	void changeCursor(Cursor* cur);
 };
 
 }

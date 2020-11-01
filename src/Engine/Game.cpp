@@ -48,6 +48,13 @@ namespace OpenXcom
 {
 const double Game::VOLUME_GRADIENT = 10.0;
 
+void Game::changeCursor(Cursor* cur)
+{
+	_cursor = cur;
+
+	// trick to get cursor to appear near top left of screen
+	SDL_WarpMouse(100, 100);
+}
 /**
  * Starts up SDL with all the subsystems and SDL_mixer for audio processing,
  * creates the display screen and sets up the cursor.

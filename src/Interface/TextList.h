@@ -67,7 +67,7 @@ private:
 	void updateVisible();
 public:
 	/// Creates a text list with the specified size and position.
-	TextList(int width, int height, int x = 0, int y = 0);
+	TextList(int width, int height, int x = 0, int y = 0, int bpp = 8);
 	/// Cleans up the text list.
 	~TextList();
 	/// Sets the X position of the surface.

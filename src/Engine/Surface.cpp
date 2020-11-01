@@ -547,8 +547,8 @@ void Surface::loadImage(const std::string &filename)
 	if (!rw) { return; } // relevant message gets logged in FileMap.
 
 	// Try loading with LodePNG first
-	//if (CrossPlatform::compareExt(filename, "png"))
-	if (FileMap::isPng(rw))
+	if (CrossPlatform::compareExt(filename, "png"))
+	//if (FileMap::isPng(rw))
 	{
 		size_t size;
 		void *data = SDL_LoadFile_RW(rw, &size, SDL_FALSE);

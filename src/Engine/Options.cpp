@@ -385,6 +385,7 @@ void create()
 	_info.push_back(OptionInfo("pediaBgResolutionX", &pediaBgResolutionX, 320));
 	_info.push_back(OptionInfo("pediaBgResolutionY", &pediaBgResolutionY, 200));
 	_info.push_back(OptionInfo("pediaTitleScale", &pediaTitleScale, 1.0));
+	_info.push_back(OptionInfo("pediaSubTitleScale", &pediaSubTitleScale, 1.0));
 }
 
 // we can get fancier with these detection routines, but for now just look for

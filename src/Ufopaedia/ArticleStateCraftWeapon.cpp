@@ -70,24 +70,32 @@ namespace OpenXcom
 		{
 			setCustomPalette(_game->getMod()->getSurface(defs->image_id)->getPalette(), Mod::BATTLESCAPE_CURSOR);
 		}
-		else
+		else if (bpp == 8)
 		{
 			setStandardPalette("PAL_BATTLEPEDIA");
+		}
+		else
+		{
+			genPediaPal();
+			_cursorColor = Mod::UFOPAEDIA_CURSOR;
 		}
 
 		if (bpp == 8)
 		{
 			_buttonColor = _game->getMod()->getInterface("articleCraftWeapon")->getElement("button")->color;
+			_textColor = _game->getMod()->getInterface("articleCraftWeapon")->getElement("text")->color;
+			_textColor2 = _game->getMod()->getInterface("articleCraftWeapon")->getElement("text")->color2;
+			_listColor1 = _game->getMod()->getInterface("articleCraftWeapon")->getElement("list")->color;
+			_listColor2 = _game->getMod()->getInterface("articleCraftWeapon")->getElement("list")->color2;
 		}
 		else
 		{
 			_buttonColor = Palette::blockOffset(15) - 1;
+			_textColor = Palette::blockOffset(14) + 15;
+			_textColor2 = Palette::blockOffset(15) + 4;
+			_listColor1 = Palette::blockOffset(14) + 15;
+			_listColor2 = Palette::blockOffset(15) + 4;
 		}
-
-		_textColor = _game->getMod()->getInterface("articleCraftWeapon")->getElement("text")->color;
-		_textColor2 = _game->getMod()->getInterface("articleCraftWeapon")->getElement("text")->color2;
-		_listColor1 = _game->getMod()->getInterface("articleCraftWeapon")->getElement("list")->color;
-		_listColor2 = _game->getMod()->getInterface("articleCraftWeapon")->getElement("list")->color2;
 
 		ArticleState::initLayout(false);
 
@@ -136,13 +144,21 @@ namespace OpenXcom
 		add(_txtInfo);
 
 		
-		_lstInfo = new TextList(250 * scaleX, (111 - offset) * scaleY, 5 * scaleX, 80 * scaleY + titleAddHeight);
-		_lstInfo->setScale(scaleX, scaleY);
-		//add(_lstInfo);
+		_lstInfo = new TextList(250 * scaleX *Options::pediaSubTitleScale, (111 - offset) * scaleY * Options::pediaSubTitleScale, 5 * scaleX, 80 * scaleY + titleAddHeight, bpp);
+		_lstInfo->setScale(scaleX * Options::pediaSubTitleScale, scaleY * Options::pediaSubTitleScale);
+		// 8 bits need to add lstInfo before proceeding
+		if (bpp == 8)
+		{
+			add(_lstInfo);
+		}
 		_lstInfo->setVisible(category != CWC_EQUIPMENT);
 
 		_lstInfo->setColor(_listColor1);
-		_lstInfo->setColumns(2, 180, 70);
+		_lstInfo->statePalette = _palette;
+		_lstInfo->textPalette = _palette;
+		_lstInfo->textColor = _textColor;
+		_lstInfo->textColor2 = _textColor2;
+		_lstInfo->setColumns(2, 180*scaleX, 70*scaleY);
 		_lstInfo->setDot(true);
 		_lstInfo->setBig();
 
@@ -171,7 +187,11 @@ namespace OpenXcom
 			_lstInfo->addRow(2, tr("STR_RANGE").c_str(), tr("STR_KILOMETERS").arg(weapon->getRange()).c_str());
 			_lstInfo->setCellColor(1, 1, _listColor2);
 		}
-		add(_lstInfo);
+		// 32 bits need add after everything done
+		if (bpp == 32)
+		{
+			add(_lstInfo);
+		}
 
 		centerAllSurfaces();
 	}

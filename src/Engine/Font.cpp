@@ -205,6 +205,10 @@ SurfaceCrop Font::getChar(UCode c) const
  */
 int Font::getWidth() const
 {
+	if (_images.empty())
+	{
+		return 0;
+	}
 	return _images[0].width;
 }
 
@@ -214,6 +218,10 @@ int Font::getWidth() const
  */
 int Font::getHeight() const
 {
+	if (_images.empty())
+	{
+		return 0;
+	}
 	return _images[0].height;
 }
 
@@ -225,6 +233,10 @@ int Font::getHeight() const
  */
 int Font::getSpacing() const
 {
+	if (_images.empty())
+	{
+		return 0;
+	}
 	return _images[0].spacing;
 }
 

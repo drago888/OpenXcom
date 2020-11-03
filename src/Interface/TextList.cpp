@@ -44,7 +44,8 @@ TextList::TextList(int width, int height, int x, int y, int bpp) : InteractiveSu
 	_dot(false), _selectable(false), _condensed(false), _contrast(false), _wrap(false), _flooding(false), _ignoreSeparators(false),
 	_bg(0), _selector(0), _margin(0), _scrolling(true), _arrowPos(-1), _scrollPos(4), _arrowType(ARROW_VERTICAL),
 	_leftClick(0), _leftPress(0), _leftRelease(0), _rightClick(0), _rightPress(0), _rightRelease(0),
-	_arrowsLeftEdge(0), _arrowsRightEdge(0), _noScrollLeftEdge(0), _noScrollRightEdge(0), _comboBox(0)
+	_arrowsLeftEdge(0), _arrowsRightEdge(0), _noScrollLeftEdge(0), _noScrollRightEdge(0), _comboBox(0), textPalette(nullptr),
+	textColor(0), textColor2(0)
 {
 	_up = new ArrowButton(ARROW_BIG_UP, 13, 14, getX() + getWidth() + _scrollPos, getY());
 	_up->setVisible(false);
@@ -155,6 +156,10 @@ void TextList::unpress(State *state)
  */
 void TextList::setCellColor(size_t row, size_t column, Uint8 color)
 {
+	if (_texts.empty())
+	{
+		return;
+	}
 	_texts[row][column]->setColor(color);
 	_redraw = true;
 }
@@ -166,6 +171,10 @@ void TextList::setCellColor(size_t row, size_t column, Uint8 color)
  */
 void TextList::setRowColor(size_t row, Uint8 color)
 {
+	if (_texts.empty())
+	{
+		return;
+	}
 	for (std::vector<Text*>::iterator i = _texts[row].begin(); i < _texts[row].end(); ++i)
 	{
 		(*i)->setColor(color);
@@ -181,6 +190,10 @@ void TextList::setRowColor(size_t row, Uint8 color)
  */
 std::string TextList::getCellText(size_t row, size_t column) const
 {
+	if (_texts.empty())
+	{
+		return "";
+	}
 	return _texts[row][column]->getText();
 }
 
@@ -203,6 +216,10 @@ void TextList::setCellText(size_t row, size_t column, const std::string &text)
  */
 int TextList::getColumnX(size_t column) const
 {
+	if (_texts.empty())
+	{
+		return 0;
+	}
 	return getX() + _texts[0][column]->getX();
 }
 
@@ -213,6 +230,10 @@ int TextList::getColumnX(size_t column) const
  */
 int TextList::getRowY(size_t row) const
 {
+	if (_texts.empty())
+	{
+		return 0;
+	}
 	return getY() + _texts[row][0]->getY();
 }
 
@@ -223,6 +244,10 @@ int TextList::getRowY(size_t row) const
  */
 int TextList::getTextHeight(size_t row) const
 {
+	if (_texts.empty())
+	{
+		return 0;
+	}
 	return _texts[row].front()->getTextHeight();
 }
 
@@ -233,6 +258,10 @@ int TextList::getTextHeight(size_t row) const
  */
 int TextList::getNumTextLines(size_t row) const
 {
+	if (_texts.empty())
+	{
+		return 0;
+	}
 	return _texts[row].front()->getNumLines();
 }
 
@@ -283,139 +312,189 @@ void TextList::addRow(int cols, ...)
 		ncols = 1;
 	}
 
-	std::vector<Text*> temp;
-	// Positions are relative to list surface.
-	int rowX = 0, rowY = 0, rows = 1, rowHeight = 0;
-	if (!_texts.empty())
-	{
-		rowY = _texts.back().front()->getY() + _texts.back().front()->getHeight() + _font->getSpacing();
-	}
-
-	for (int i = 0; i < ncols; ++i)
-	{
-		int width;
-		// Place text
-		if (_flooding)
-		{
-			width = 340;
-		}
-		else
-		{
-			width = _columns[i];
-		}
-		Text* txt = new Text(width, _font->getHeight(), _margin + rowX, rowY);
-		txt->setPalette(this->getPalette());
-		txt->initText(_big, _small, _lang);
-		txt->setColor(_color);
-		txt->setSecondaryColor(_color2);
-		if (_align[i])
-		{
-			txt->setAlign(_align[i]);
-		}
-		txt->setHighContrast(_contrast);
-		if (_font == _big)
-		{
-			txt->setBig();
-		}
-		else
-		{
-			txt->setSmall();
-		}
-		if (cols > 0)
-			txt->setText(va_arg(args, char*));
-		// grab this before we enable word wrapping so we can use it to calculate
-		// the total row height below
-		int vmargin = _font->getHeight() - txt->getTextHeight();
-		// Wordwrap text if necessary
-		if (_wrap && txt->getTextWidth() > txt->getWidth())
-		{
-			txt->setWordWrap(true, true, _ignoreSeparators);
-			rows = std::max(rows, txt->getNumLines());
-		}
-		rowHeight = std::max(rowHeight, txt->getTextHeight() + vmargin);
-
-		// Places dots between text
-		if (_dot && i < cols - 1)
-		{
-			std::string buf = txt->getText();
-			unsigned int w = txt->getTextWidth();
-			while (w < _columns[i])
-			{
-				if (_align[i] != ALIGN_RIGHT)
-				{
-					w += _font->getChar('.').getCrop()->w + _font->getSpacing();
-					buf += '.';
-				}
-				if (_align[i] != ALIGN_LEFT)
-				{
-					w += _font->getChar('.').getCrop()->w + _font->getSpacing();
-					buf.insert(0, 1, '.');
-				}
-			}
-			txt->setText(buf);
-		}
-
-		temp.push_back(txt);
-		if (_condensed)
-		{
-			rowX += txt->getTextWidth();
-		}
-		else
-		{
-			rowX += _columns[i];
-		}
-	}
-
-	// ensure all elements in this row are the same height
+	std::vector<std::string> vec_str;
 	for (int i = 0; i < cols; ++i)
 	{
-		temp[i]->setHeight(rowHeight);
+		std::string str = va_arg(args, char*);
+		vec_str.push_back(str);
 	}
-
-	_texts.push_back(temp);
-	for (int i = 0; i < rows; ++i)
-	{
-		_rows.push_back(_texts.size() - 1);
-	}
-
-	// Place arrow buttons
-	// Position defined w.r.t. main window, NOT TextList.
-	if (_arrowPos != -1)
-	{
-		ArrowShape shape1, shape2;
-		if (_arrowType == ARROW_VERTICAL)
-		{
-			shape1 = ARROW_SMALL_UP;
-			shape2 = ARROW_SMALL_DOWN;
-		}
-		else
-		{
-			shape1 = ARROW_SMALL_LEFT;
-			shape2 = ARROW_SMALL_RIGHT;
-		}
-		ArrowButton *a1 = new ArrowButton(shape1, 11, 8, getX() + _arrowPos, getY());
-		a1->setListButton();
-		a1->setPalette(this->getPalette());
-		a1->setColor(_up->getColor());
-		a1->onMouseClick(_leftClick, 0);
-		a1->onMousePress(_leftPress);
-		a1->onMouseRelease(_leftRelease);
-		_arrowLeft.push_back(a1);
-		ArrowButton *a2 = new ArrowButton(shape2, 11, 8, getX() + _arrowPos + 12, getY());
-		a2->setListButton();
-		a2->setPalette(this->getPalette());
-		a2->setColor(_up->getColor());
-		a2->onMouseClick(_rightClick, 0);
-		a2->onMousePress(_rightPress);
-		a2->onMouseRelease(_rightRelease);
-		_arrowRight.push_back(a2);
-	}
-
-	_redraw = true;
 	va_end(args);
+	_rowValues.push_back(vec_str);
+
+	_populRow(_rowValues.size()-1, _rowValues.size()-1);
+}
+/**
+* Populate the rows
+* @param startRow the starting row of _rowValues
+* @param endRow the end row of _rowValues
+*/
+void TextList::_populRow(int startRow, int endRow)
+{
+	if (_font == 0)
+	{
+		return;
+	}
+
+	if (!(startRow >= 0 && endRow < _rowValues.size()))
+	{
+		return;
+	}
+
+	int ncols, cols;
+
+	for (int row = startRow; row <= endRow; row++)
+	{
+		ncols = _rowValues[row].size();
+		cols = ncols;
+		if (ncols <= 0)
+		{
+			ncols = 1;
+		}
+
+			std::vector<Text*> temp;
+
+			// Positions are relative to list surface.
+			int rowX = 0, rowY = 0, rows = 1, rowHeight = 0;
+			if (!_texts.empty())
+			{
+				rowY = _texts.back().front()->getY() + _texts.back().front()->getHeight() + _font->getSpacing();
+			}
+
+			for (int i = 0; i < ncols; ++i)
+			{
+				std::string str = _rowValues[row][i];
+				int width;
+				// Place text
+				if (_flooding)
+				{
+					width = 340;
+				}
+				else
+				{
+					width = _columns[i];
+				}
+				Text* txt = new Text(width, _font->getHeight(), _margin + rowX, rowY, _surface->format->BitsPerPixel);
+				if (txt->getSurface()->format->BitsPerPixel == 8)
+				{
+					txt->setPalette(this->getPalette());
+				}
+				else
+				{
+					txt->setPalette(textPalette);
+				}
+
+				txt->initText(_big, _small, _lang);
+				txt->setColor(_color);
+				txt->setSecondaryColor(_color2);
+				if (_align[i])
+				{
+					txt->setAlign(_align[i]);
+				}
+				txt->setHighContrast(_contrast);
+				if (_font == _big)
+				{
+					txt->setBig();
+				}
+				else
+				{
+					txt->setSmall();
+				}
+				if (cols > 0)
+				{
+					txt->setText(str);
+				}
+				// grab this before we enable word wrapping so we can use it to calculate
+				// the total row height below
+				int vmargin = _font->getHeight() - txt->getTextHeight();
+				// Wordwrap text if necessary
+				if (_wrap && txt->getTextWidth() > txt->getWidth())
+				{
+					txt->setWordWrap(true, true, _ignoreSeparators);
+					rows = std::max(rows, txt->getNumLines());
+				}
+				rowHeight = std::max(rowHeight, txt->getTextHeight() + vmargin);
+
+				// Places dots between text
+				if (_dot && i < cols - 1)
+				{
+					std::string buf = txt->getText();
+					unsigned int w = txt->getTextWidth();
+					while (w < _columns[i])
+					{
+						if (_align[i] != ALIGN_RIGHT)
+						{
+							w += _font->getChar('.').getCrop()->w + _font->getSpacing();
+							buf += '.';
+						}
+						if (_align[i] != ALIGN_LEFT)
+						{
+							w += _font->getChar('.').getCrop()->w + _font->getSpacing();
+							buf.insert(0, 1, '.');
+						}
+					}
+					txt->setText(buf);
+				}
+
+				temp.push_back(txt);
+				if (_condensed)
+				{
+					rowX += txt->getTextWidth();
+				}
+				else
+				{
+					rowX += _columns[i];
+				}
+			}
+
+
+			// ensure all elements in this row are the same height
+			for (int i = 0; i < cols; ++i)
+			{
+				temp[i]->setHeight(rowHeight);
+			}
+
+			_texts.push_back(temp);
+			for (int i = 0; i < rows; ++i)
+			{
+				_rows.push_back(_texts.size() - 1);
+			}
+
+			// Place arrow buttons
+			// Position defined w.r.t. main window, NOT TextList.
+			if (_arrowPos != -1)
+			{
+				ArrowShape shape1, shape2;
+				if (_arrowType == ARROW_VERTICAL)
+				{
+					shape1 = ARROW_SMALL_UP;
+					shape2 = ARROW_SMALL_DOWN;
+				}
+				else
+				{
+					shape1 = ARROW_SMALL_LEFT;
+					shape2 = ARROW_SMALL_RIGHT;
+				}
+				ArrowButton* a1 = new ArrowButton(shape1, 11, 8, getX() + _arrowPos, getY());
+				a1->setListButton();
+				a1->setPalette(this->getPalette());
+				a1->setColor(_up->getColor());
+				a1->onMouseClick(_leftClick, 0);
+				a1->onMousePress(_leftPress);
+				a1->onMouseRelease(_leftRelease);
+				_arrowLeft.push_back(a1);
+				ArrowButton* a2 = new ArrowButton(shape2, 11, 8, getX() + _arrowPos + 12, getY());
+				a2->setListButton();
+				a2->setPalette(this->getPalette());
+				a2->setColor(_up->getColor());
+				a2->onMouseClick(_rightClick, 0);
+				a2->onMousePress(_rightPress);
+				a2->onMouseRelease(_rightRelease);
+				_arrowRight.push_back(a2);
+			}
+	}
+	_redraw = true;
 	updateArrows();
 }
-
 /**
  * Removes the last row from the text list.
  */
@@ -517,13 +596,12 @@ void TextList::initText(Font *big, Font *small, Language *lang)
 	_font = small;
 	_lang = lang;
 
-	delete _selector;
-	_selector = new Surface(getWidth(), _font->getHeight() + _font->getSpacing(), getX(), getY());
-	_selector->setPalette(getPalette());
-	_selector->setVisible(false);
+	if (_font == 0)
+	{
+		return;
+	}
 
-	updateVisible();
-
+	setSelector();
 }
 
 /**
@@ -663,8 +741,24 @@ void TextList::setBig()
 {
 	_font = _big;
 
+	if (_font == 0)
+	{
+		return;
+	}
+	setSelector();
+}
+
+/**
+ * Set the selector
+ */
+void TextList::setSelector()
+{
+	if (_font == 0)
+	{
+		return;
+	}
 	delete _selector;
-	_selector = new Surface(getWidth(), _font->getHeight() + _font->getSpacing(), getX(), getY());
+	_selector = new Surface(getWidth(), _font->getHeight() + _font->getSpacing(), getX(), getY(), _surface->format->BitsPerPixel);
 	_selector->setPalette(getPalette());
 	_selector->setVisible(false);
 
@@ -678,12 +772,11 @@ void TextList::setSmall()
 {
 	_font = _small;
 
-	delete _selector;
-	_selector = new Surface(getWidth(), _font->getHeight() + _font->getSpacing(), getX(), getY());
-	_selector->setPalette(getPalette());
-	_selector->setVisible(false);
-
-	updateVisible();
+	if (_font == 0)
+	{
+		return;
+	}
+	setSelector();
 }
 
 /**
@@ -996,6 +1089,21 @@ void TextList::setScrolling(bool scrolling, int scrollPos)
 void TextList::draw()
 {
 	Surface::draw();
+	if (_surface->format->BitsPerPixel != 8)
+	{
+		_rows.clear();
+		_populRow(0, _rowValues.size() - 1);
+	}
+
+	blitText(this->getSurface());
+}
+
+/**
+* Blits the text
+* @param surface to blit to 
+*/
+void TextList::blitText(SDL_Surface* surface, int xpos, int ypos)
+{
 	int y = 0;
 	if (!_rows.empty())
 	{
@@ -1007,10 +1115,21 @@ void TextList::draw()
 		}
 		for (size_t i = _rows[_scroll]; i < _texts.size() && i < _rows[_scroll] + _visibleRows; ++i)
 		{
+			int z = 0;
 			for (std::vector<Text*>::iterator j = _texts[i].begin(); j < _texts[i].end(); ++j)
 			{
-				(*j)->setY(y);
-				(*j)->blit(this->getSurface());
+				if (z++ % 2 == 0 && _surface->format->BitsPerPixel != 8)
+				{
+					(*j)->setColor(textColor);
+				}
+				else if (_surface->format->BitsPerPixel != 8)
+				{
+					(*j)->setColor(textColor2);
+				}
+				(*j)->statePalette = textPalette;
+				(*j)->setY(y+ypos);
+				(*j)->setX((*j)->getX() + xpos);
+				(*j)->blit(surface);
 			}
 			if (!_texts[i].empty())
 			{
@@ -1023,7 +1142,6 @@ void TextList::draw()
 		}
 	}
 }
-
 /**
  * Blits the text list and selector.
  * @param surface Pointer to surface to blit onto.
@@ -1032,7 +1150,12 @@ void TextList::blit(SDL_Surface *surface)
 {
 	if (_visible && !_hidden)
 	{
+		if (_surface->format->BitsPerPixel != 8)
+		{
+			setSelector();
+		}
 		_selector->blit(surface);
+		draw();
 	}
 	Surface::blit(surface);
 	if (_visible && !_hidden)
@@ -1070,6 +1193,10 @@ void TextList::blit(SDL_Surface *surface)
 		_up->blit(surface);
 		_down->blit(surface);
 		_scrollbar->blit(surface);
+		if (_surface->format->BitsPerPixel != 8)
+		{
+			blitText(surface, _x, _y);
+		}
 	}
 }
 

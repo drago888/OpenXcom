@@ -60,12 +60,18 @@ private:
 	int _arrowsLeftEdge, _arrowsRightEdge;
 	int _noScrollLeftEdge, _noScrollRightEdge;
 	ComboBox *_comboBox;
+	std::vector<std::vector<std::string>> _rowValues;
 
 	/// Updates the arrow buttons.
 	void updateArrows();
 	/// Updates the visible rows.
 	void updateVisible();
+	/// Populate each row in the list
+	void _populRow(int startRow, int endRow);
 public:
+	SDL_Color* textPalette;
+	Uint8 textColor, textColor2;
+
 	/// Creates a text list with the specified size and position.
 	TextList(int width, int height, int x = 0, int y = 0, int bpp = 8);
 	/// Cleans up the text list.
@@ -178,6 +184,8 @@ public:
 	void draw() override;
 	/// Blits the text list onto another surface.
 	void blit(SDL_Surface *surface) override;
+	/// Blit the text
+	void blitText(SDL_Surface* surface, int x = 0, int y = 0);
 	/// Thinks arrow buttons.
 	void think() override;
 	/// Handles arrow buttons.
@@ -207,6 +215,8 @@ public:
 	void setFlooding(bool flooding);
 	/// Treat separators as spaces (false) or as normal text (true)?
 	void setIgnoreSeparators(bool ignoreSeparators);
+	/// set the selector
+	void setSelector();
 };
 
 }

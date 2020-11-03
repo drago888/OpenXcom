@@ -34,6 +34,7 @@ namespace OpenXcom
 {
 	Cursor* ArticleState::_bigCursor = nullptr;
 	Cursor* ArticleState::_smallCursor = nullptr;
+	bool ArticleState::inPediaArticle = false;
 	/**
 	 * Change index position to next article.
 	 */
@@ -123,9 +124,13 @@ namespace OpenXcom
 		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
 		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
-		_game->changeCursor(_bigCursor);
-		_game->mouseScaleXMul = scaleX;
-		_game->mouseScaleYMul = scaleY;
+		if (!ArticleState::inPediaArticle)
+		{
+			_game->changeCursor(_bigCursor);
+			_game->mouseScaleXMul = scaleX;
+			_game->mouseScaleYMul = scaleY;
+			ArticleState::inPediaArticle = true;
+		}
 
 		// init background and navigation elements
 		_bg = new Surface(Options::pediaBgResolutionX, Options::pediaBgResolutionY, 0 * scaleX, 0 * scaleY, bpp);
@@ -149,9 +154,6 @@ namespace OpenXcom
 	 */
 	ArticleState::~ArticleState()
 	{
-		_game->changeCursor(_smallCursor);
-		_game->mouseScaleXMul = 1;
-		_game->mouseScaleYMul = 1;
 	}
 
 	std::string ArticleState::getDamageTypeText(ItemDamageType dt) const
@@ -272,6 +274,10 @@ namespace OpenXcom
 	void ArticleState::btnOkClick(Action *)
 	{
 		_game->getScreen()->resetDisplay(true, false, Screen::ORIGINAL_WIDTH, Screen::ORIGINAL_HEIGHT, 8);
+		_game->changeCursor(_smallCursor);
+		_game->mouseScaleXMul = 1;
+		_game->mouseScaleYMul = 1;
+		ArticleState::inPediaArticle = false;
 		_game->popState();
 	}
 

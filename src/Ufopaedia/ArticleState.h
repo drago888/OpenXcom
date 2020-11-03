@@ -88,6 +88,7 @@ namespace OpenXcom
 	public:
 		/// return the article id
 		std::string getId() const { return _id; }
+		static bool inPediaArticle;
 
 	protected:
 

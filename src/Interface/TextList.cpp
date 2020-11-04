@@ -360,7 +360,7 @@ void TextList::_populRow(int startRow, int endRow)
 				rowY = _texts.back().front()->getY() + _texts.back().front()->getHeight() + _font->getSpacing();
 			}
 
-			for (int i = 0; i < ncols; ++i)
+			for (int i = 0; i < ncols && _rowValues[row].size() > 0; ++i)
 			{
 				std::string str = _rowValues[row][i];
 				int width;

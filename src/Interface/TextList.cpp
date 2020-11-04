@@ -355,7 +355,7 @@ void TextList::_populRow(int startRow, int endRow)
 
 			// Positions are relative to list surface.
 			int rowX = 0, rowY = 0, rows = 1, rowHeight = 0;
-			if (!_texts.empty())
+			if (!_texts.empty() && _texts.back().size() > 0)
 			{
 				rowY = _texts.back().front()->getY() + _texts.back().front()->getHeight() + _font->getSpacing();
 			}

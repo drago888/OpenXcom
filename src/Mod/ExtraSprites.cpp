@@ -37,6 +37,7 @@ ExtraSprites::ExtraSprites() : _current(0), _width(320), _height(200), _singleIm
 {
 }
 
+
 /**
  * Cleans up the extra sprite set.
  */

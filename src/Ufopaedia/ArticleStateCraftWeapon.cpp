@@ -43,7 +43,7 @@ namespace OpenXcom
 		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
 		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
-		int titleAddHeight = 32 * (int)(Options::pediaTitleScale - 1);
+		int titleAddHeight = std::max(32 * (int)(Options::pediaTitleScale - 1) - 10, 0);
 
 		CraftWeaponCategory category = CWC_WEAPON;
 		int offset = 0;
@@ -109,7 +109,7 @@ namespace OpenXcom
 		}
 		else
 		{
-			_game->getMod()->getSurface(defs->image_id, true, Options::pediaBgResolutionX, Options::pediaBgResolutionY)->blitNShade32(_bg, 0, 0);
+			_game->getMod()->getSurface(getTypeId(defs->image_id), true, Options::pediaBgResolutionX, Options::pediaBgResolutionY)->blitNShade32(_bg, 0, 0);
 		}
 
 		_btnOk->setColor(_buttonColor);

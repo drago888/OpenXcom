@@ -2585,6 +2585,20 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 				data = &_modData.at(0);
 			extraSprites->load(*i, data);
 			_extraSprites[type].push_back(extraSprites);
+
+			std::string str_chk = "Resources/Backgrounds/";
+			std::string first_sprite = extraSprites->getSprites() && extraSprites->getSprites()->size() > 0  ? extraSprites->getSprites()->begin()->second : "";
+			
+			if ( first_sprite.size() > str_chk.size() && first_sprite.substr(0, str_chk.size()) == str_chk)
+			{
+				ExtraSprites* sprites32bits = new ExtraSprites(*extraSprites);
+				sprites32bits->setType("32_" + extraSprites->getType());
+				std::string filename = extraSprites->getSprites()->begin()->second;
+				sprites32bits->getSprites()->find(0)->second = filename.substr(0, filename.size() - 4) + "32" + filename.substr(filename.size() - 4, std::string::npos);
+				sprites32bits->setWidth(Options::pediaBgResolutionX);
+				sprites32bits->setHeight(Options::pediaBgResolutionY);
+				_extraSprites[sprites32bits->getType()].push_back(sprites32bits);
+			}
 		}
 		else if ((*i)["delete"])
 		{

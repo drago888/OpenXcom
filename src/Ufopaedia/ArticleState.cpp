@@ -29,6 +29,7 @@
 #include "../Mod/Mod.h"
 #include "../Savegame/SavedGame.h"
 #include "../Engine/Screen.h"
+#include "../Mod/ExtraSprites.h"
 
 namespace OpenXcom
 {
@@ -154,6 +155,29 @@ namespace OpenXcom
 	 */
 	ArticleState::~ArticleState()
 	{
+	}
+
+	/*
+	* Get the 32 bit sprites type id
+	* @param id the 8 bit sprite type id
+	* @return the typeid to use 
+	*/
+	std::string ArticleState::getTypeId(std::string id)
+	{
+		if (_game->getMod()->getExtraSprites().find(id)->second.size() > 0)
+		{
+			ExtraSprites* sprite = _game->getMod()->getExtraSprites().find(id)->second[0];
+
+			std::string str_chk = "Resources/Backgrounds/";
+			std::string first_sprite = sprite->getSprites() && sprite->getSprites()->size() > 0 ? sprite->getSprites()->begin()->second : "";
+
+			if (first_sprite.size() > str_chk.size() && first_sprite.substr(0, str_chk.size()) == str_chk)
+			{
+				return "32_" + id;
+			}
+		}
+
+		return id;
 	}
 
 	std::string ArticleState::getDamageTypeText(ItemDamageType dt) const

@@ -47,6 +47,8 @@ private:
 public:
 	/// Creates a blank external sprite set.
 	ExtraSprites();
+	/// Copy constructor
+	ExtraSprites(ExtraSprites& sprite) = default;
 	/// Cleans up the external sprite set.
 	virtual ~ExtraSprites();
 	/// Loads the data from YAML.
@@ -75,6 +77,14 @@ public:
 	SurfaceSet *loadSurfaceSet(SurfaceSet *set);
 	/// Gets mod data that define this surface.
 	const ModData* getModOwner() { return _current; }
+	/// set type
+	void setType(std::string type) { _type = type; }
+	/// set width
+	void setWidth(int width) { _width = width; }
+	/// set height
+	void setHeight(int height) { _height = height; }
+	/// get sprite
+	std::map<int, std::string>* getSprite() { return &_sprites; }
 };
 
 }

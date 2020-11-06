@@ -186,6 +186,7 @@ void State::add(Surface *surface)
 	surface->setPalette(_palette);
 	surface->statePalette = _palette;
 
+
 	// Set default text resources
 	if (_game->getLanguage() && _game->getMod())
 		surface->initText(_game->getMod()->getFont("FONT_BIG",true,(int)surface->getScaleX(),(int)surface->getScaleY()),

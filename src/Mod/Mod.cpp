@@ -794,7 +794,11 @@ SurfaceSet *Mod::getSurfaceSet(const std::string &name, bool error)
 	lazyLoadSurface(name);
 	return getRule(name, "Sprite Set", _sets, error);
 }
-
+SurfaceSet* Mod::getSurfaceSet32(const std::string& name, bool error, int width, int height)
+{
+	lazyLoadSurface(name, width, height);
+	return getRule(name, "Sprite Set", _sets, error);
+}
 /**
  * Returns a specific music from the mod.
  * @param name Name of the music.
@@ -1670,6 +1674,7 @@ void Mod::loadAll()
 	loadVanillaResources();
 	_surfaceOffsetBasebits = _sets["BASEBITS.PCK"]->getMaxSharedFrames();
 	_surfaceOffsetBigobs = _sets["BIGOBS.PCK"]->getMaxSharedFrames();
+	_surfaceOffsetBigobs32 = _sets["32_BIGOBS.PCK"]->getMaxSharedFrames();
 	_surfaceOffsetFloorob = _sets["FLOOROB.PCK"]->getMaxSharedFrames();
 	_surfaceOffsetHandob = _sets["HANDOB.PCK"]->getMaxSharedFrames();
 	_surfaceOffsetHit = _sets["HIT.PCK"]->getMaxSharedFrames();
@@ -2587,16 +2592,31 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			_extraSprites[type].push_back(extraSprites);
 
 			std::string str_chk = "Resources/Backgrounds/";
+			std::string str_chk2 = "Resources/";
+			std::string str_chk3 = "Resources/Weapons/";
 			std::string first_sprite = extraSprites->getSprites() && extraSprites->getSprites()->size() > 0  ? extraSprites->getSprites()->begin()->second : "";
-			
-			if ( first_sprite.size() > str_chk.size() && first_sprite.substr(0, str_chk.size()) == str_chk)
+
+			if ((( first_sprite.size() > str_chk.size() && first_sprite.substr(0, str_chk.size()) == str_chk) ||
+				(first_sprite.size() > str_chk2.size() && first_sprite.substr(0, str_chk2.size()) == str_chk2
+					&& first_sprite.substr(str_chk2.size(), std::string::npos).find("/") == std::string::npos) ||
+				(first_sprite.size() > str_chk3.size() && first_sprite.substr(0, str_chk3.size()) == str_chk3))
+				&& Screen::ORIGINAL_WIDTH != Options::pediaBgResolutionX)
 			{
 				ExtraSprites* sprites32bits = new ExtraSprites(*extraSprites);
+				for (std::map<int, std::string>::iterator it = sprites32bits->getSprites()->begin(); it != sprites32bits->getSprite()->end(); ++it)
+				{
+					std::string filename = it->second;
+					if ((filename.size() > str_chk.size() && filename.substr(0, str_chk.size()) == str_chk) ||
+						(filename.size() > str_chk2.size() && filename.substr(0, str_chk2.size()) == str_chk2
+							&& filename.substr(str_chk2.size(), std::string::npos).find("/") == std::string::npos) ||
+						(filename.size() > str_chk3.size() && filename.substr(0, str_chk3.size()) == str_chk3))
+					{
+						it->second = filename.substr(0, filename.size() - 4) + "32" + filename.substr(filename.size() - 4, std::string::npos);
+					}
+				}
 				sprites32bits->setType("32_" + extraSprites->getType());
-				std::string filename = extraSprites->getSprites()->begin()->second;
-				sprites32bits->getSprites()->find(0)->second = filename.substr(0, filename.size() - 4) + "32" + filename.substr(filename.size() - 4, std::string::npos);
-				sprites32bits->setWidth(Options::pediaBgResolutionX);
-				sprites32bits->setHeight(Options::pediaBgResolutionY);
+				sprites32bits->setWidth(sprites32bits->getWidth() * Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH);
+				sprites32bits->setHeight(sprites32bits->getHeight() * Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT);
 				_extraSprites[sprites32bits->getType()].push_back(sprites32bits);
 			}
 		}
@@ -4648,6 +4668,7 @@ void Mod::loadVanillaResources()
 			"INTICON.PCK",
 			"CustomArmorPreviews",
 			"CustomItemPreviews",
+			"32_BIGOBS.PCK",
 		};
 
 		for (size_t i = 0; i < ARRAYLEN(surfaceNames); ++i)
@@ -4743,7 +4764,10 @@ void Mod::loadBattlescapeResources()
 		if (fname != "BIGOBS.PCK")
 			_sets[fname] = new SurfaceSet(32, 40);
 		else
+		{
 			_sets[fname] = new SurfaceSet(32, 48);
+			_sets["32_" + fname] = new SurfaceSet(32 * Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH, 48 * Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT);
+		}
 		_sets[fname]->loadPck("UNITS/" + *i, "UNITS/" + CrossPlatform::noExt(*i) + ".TAB");
 	}
 	// incomplete chryssalid set: 1.0 data: stop loading.
@@ -5258,6 +5282,9 @@ void Mod::modResources()
 	getSurfaceSet("HANDOB.PCK");
 	getSurfaceSet("FLOOROB.PCK");
 	getSurfaceSet("BIGOBS.PCK");
+	_sets["32_BIGOBS.PCK"]->setMaxSharedFrames(_sets["BIGOBS.PCK"]->getMaxSharedFrames());
+	getSurfaceSet32("32_BIGOBS.PCK");
+
 
 	// embiggen the geoscape background by mirroring the contents
 	// modders can provide their own backgrounds via ALTGEOBORD.SCR
@@ -5635,6 +5662,7 @@ void Mod::ScriptRegister(ScriptParserBase *parser)
 	mod.add<&offset<&Mod::_soundOffsetGeo>>("getSoundOffsetGeo");
 	mod.add<&offset<&Mod::_surfaceOffsetBasebits>>("getSpriteOffsetBasebits");
 	mod.add<&offset<&Mod::_surfaceOffsetBigobs>>("getSpriteOffsetBigobs");
+	mod.add<&offset<&Mod::_surfaceOffsetBigobs32>>("getSpriteOffsetBigobs32");
 	mod.add<&offset<&Mod::_surfaceOffsetFloorob>>("getSpriteOffsetFloorob");
 	mod.add<&offset<&Mod::_surfaceOffsetHandob>>("getSpriteOffsetHandob");
 	mod.add<&offset<&Mod::_surfaceOffsetHit>>("getSpriteOffsetHit");

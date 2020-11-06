@@ -289,6 +289,7 @@ private:
 	std::vector<const RuleItem*> _craftWeaponStorageItemsCache;
 
 	size_t _surfaceOffsetBigobs = 0;
+	size_t _surfaceOffsetBigobs32 = 0;
 	size_t _surfaceOffsetFloorob = 0;
 	size_t _surfaceOffsetHandob = 0;
 	size_t _surfaceOffsetSmoke = 0;
@@ -395,6 +396,8 @@ public:
 	Surface *getSurface(const std::string &name, bool error = true, int width = Screen::ORIGINAL_WIDTH, int height = Screen::ORIGINAL_HEIGHT);
 	/// Gets a particular surface set.
 	SurfaceSet *getSurfaceSet(const std::string &name, bool error = true);
+	SurfaceSet* getSurfaceSet32(const std::string& name, bool error = true, int width = 32 * Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH,
+		int height = 48 * Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT);
 	/// Gets a particular music.
 	Music *getMusic(const std::string &name, bool error = true) const;
 	/// Gets the available music tracks.

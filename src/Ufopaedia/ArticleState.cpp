@@ -162,16 +162,22 @@ namespace OpenXcom
 	* @param id the 8 bit sprite type id
 	* @return the typeid to use 
 	*/
-	std::string ArticleState::getTypeId(std::string id)
+	std::string ArticleState::getTypeId(std::string id, int bpp)
 	{
-		if (_game->getMod()->getExtraSprites().find(id)->second.size() > 0)
+		if (bpp != 8 && _game->getMod()->getExtraSprites().find(id)->second.size() > 0)
 		{
 			ExtraSprites* sprite = _game->getMod()->getExtraSprites().find(id)->second[0];
 
 			std::string str_chk = "Resources/Backgrounds/";
+			std::string str_chk2 = "Resources/";
+			std::string str_chk3 = "Resources/Weapons/";
 			std::string first_sprite = sprite->getSprites() && sprite->getSprites()->size() > 0 ? sprite->getSprites()->begin()->second : "";
 
-			if (first_sprite.size() > str_chk.size() && first_sprite.substr(0, str_chk.size()) == str_chk)
+
+			if ((first_sprite.size() > str_chk.size() && first_sprite.substr(0, str_chk.size()) == str_chk) ||
+				(first_sprite.size() > str_chk2.size() && first_sprite.substr(0, str_chk2.size()) == str_chk2
+					&& first_sprite.substr(str_chk2.size(), std::string::npos).find("/") == std::string::npos) ||
+				(first_sprite.size() > str_chk3.size() && first_sprite.substr(0, str_chk3.size()) == str_chk3))
 			{
 				return "32_" + id;
 			}

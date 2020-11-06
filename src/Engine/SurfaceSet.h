@@ -49,6 +49,7 @@ public:
 	~SurfaceSet();
 	/// Loads an X-Com set of PCK/TAB image files.
 	void loadPck(const std::string &pck, const std::string &tab = "");
+	void loadPck32(const std::string& pck, const std::string& tab = "");
 	/// Loads an X-Com DAT image file.
 	void loadDat(const std::string &filename);
 	/// Gets a particular frame from the set.

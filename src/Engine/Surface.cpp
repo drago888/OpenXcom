@@ -547,7 +547,7 @@ void Surface::loadImage(const std::string &filename)
 	if (!rw) { return; } // relevant message gets logged in FileMap.
 
 	// Try loading with LodePNG first
-	if (CrossPlatform::compareExt(filename, "png"))
+	/*if (CrossPlatform::compareExt(filename, "png"))
 	//if (FileMap::isPng(rw))
 	{
 		size_t size;
@@ -610,7 +610,7 @@ void Surface::loadImage(const std::string &filename)
 			}
 		}
 		if (data) { SDL_free(data); }
-	}
+	}*/
 	if (_surface)
 	{
 		SDL_RWclose(rw);
@@ -895,10 +895,12 @@ void Surface::invert32(Uint8 mid, SDL_Color* palette)
 
 	for (int x = 0, y = 0; x < getWidth() && y < getHeight();)
 	{
-		Uint8 pixel = getPixel(x, y);
+		Uint32 pixel = getPixel32(x, y);
 		if (pixel > 0)
 		{
-			SDL_Color col = palette[pixel + 2 * ((int)mid - (int)pixel)];
+			SDL_Color col;
+			SDL_GetRGBA(pixel, _surface->format, &col.r, &col.g, &col.b, &col.unused);
+			col.r = ~col.r, col.g = ~col.g, col.b = ~col.b;
 			setPixelIterative32(&x, &y, col.r << 16 | col.g << 8 | col.b | col.unused << 24);
 		}
 		else

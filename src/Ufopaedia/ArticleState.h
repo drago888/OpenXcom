@@ -90,7 +90,7 @@ namespace OpenXcom
 		std::string getId() const { return _id; }
 		static bool inPediaArticle;
 		// get the 32 bits typeid
-		std::string getTypeId(std::string id);
+		std::string getTypeId(std::string id, int bpp = 8);
 
 	protected:
 

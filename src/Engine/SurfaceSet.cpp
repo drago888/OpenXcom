@@ -148,6 +148,93 @@ void SurfaceSet::loadPck(const std::string &pck, const std::string &tab)
 }
 
 /**
+ * Loads the contents of an X-Com set of PCK/TAB image files
+ * into the surface. The PCK file contains an RLE compressed
+ * image, while the TAB file contains the offsets to each
+ * frame in the image.
+ * @param pck Filename of the PCK image.
+ * @param tab Filename of the TAB offsets.
+ * @sa http://www.ufopaedia.org/index.php?title=Image_Formats#PCK
+ */
+void SurfaceSet::loadPck32(const std::string& pck, const std::string& tab)
+{
+	_frames.clear();
+
+	int nframes = 0;
+
+	// Load TAB and get image offsets
+	if (!tab.empty())
+	{
+		auto offsetFile = FileMap::getIStream(tab);
+		std::streampos begin, end;
+		begin = offsetFile->tellg();
+		int off;
+		offsetFile->read((char*)&off, sizeof(off));
+		offsetFile->seekg(0, std::ios::end);
+		end = offsetFile->tellg();
+		int size = end - begin;
+		// 16-bit offsets
+		if (off != 0)
+		{
+			nframes = size / 2;
+		}
+		// 32-bit offsets
+		else
+		{
+			nframes = size / 4;
+		}
+		for (int frame = 0; frame < nframes; ++frame)
+		{
+			_frames.push_back(Surface(_width, _height));
+		}
+	}
+	else
+	{
+		nframes = 1;
+		_frames.push_back(Surface(_width, _height));
+	}
+
+	auto imgFile = FileMap::getIStream(pck);
+	Uint32 value;
+
+	for (int frame = 0; frame < nframes; ++frame)
+	{
+		int x = 0, y = 0;
+
+		// Lock the surface
+		_frames[frame].lock();
+
+		imgFile->read((char*)&value, 4);
+		for (int i = 0; i < value; ++i)
+		{
+			for (int j = 0; j < _width; ++j)
+			{
+				_frames[frame].setPixelIterative32(&x, &y, 0);
+			}
+		}
+
+		while (imgFile->read((char*)&value, 1) && value != 255)
+		{
+			if (value == 254)
+			{
+				imgFile->read((char*)&value, 1);
+				for (int i = 0; i < value; ++i)
+				{
+					_frames[frame].setPixelIterative32(&x, &y, 0);
+				}
+			}
+			else
+			{
+				_frames[frame].setPixelIterative32(&x, &y, value);
+			}
+		}
+
+		// Unlock the surface
+		_frames[frame].unlock();
+	}
+}
+
+/**
  * Loads the contents of an X-Com DAT image file into the
  * surface. Unlike the PCK, a DAT file is an uncompressed
  * image with no offsets so these have to be figured out

@@ -95,13 +95,11 @@ namespace OpenXcom
 		}
 		else if (!defs->image_id.empty())  // 32 bits
 		{
-			// for images in background, will not be changing to 32 bits
-			// thus maintain 2 sets, 8 bits for normal and 32 bits for this
-			_game->getMod()->getSurface(getTypeId(defs->image_id), true, Options::pediaBgResolutionX, Options::pediaBgResolutionY)->blitNShade32(_bg, 0, 0);
+			_game->getMod()->getSurface(getTypeId(defs->image_id, bpp), true, Options::pediaBgResolutionX, Options::pediaBgResolutionY)->blitNShade32(_bg, 0, 0);
 		}
 		else // 32 bits
 		{
-			_game->getMod()->getSurface(getTypeId("BACK10.SCR"), true, Options::pediaBgResolutionX, Options::pediaBgResolutionY)->blitNShade32(_bg, 0, 0);
+			_game->getMod()->getSurface(getTypeId("BACK10.SCR", bpp), true, Options::pediaBgResolutionX, Options::pediaBgResolutionY)->blitNShade32(_bg, 0, 0);
 		}
 
 		if (bpp == 8)

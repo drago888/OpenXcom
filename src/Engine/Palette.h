@@ -49,6 +49,7 @@ public:
 	// Gets a number of colors in the palette.
 	int getColorCount() const { return _count; }
 
+	SDL_Color* getPalette();
 	void savePal(const std::string &file) const;
 	void savePalMod(const std::string &file, const std::string &type, const std::string &target) const;
 	void savePalJasc(const std::string &file) const;

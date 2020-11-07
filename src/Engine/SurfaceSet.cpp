@@ -319,7 +319,9 @@ Surface *SurfaceSet::addFrame(int i)
 	{
 		_frames.resize(i + 1);
 	}
+
 	_frames[i] = Surface(_width, _height);
+
 	return &_frames[i];
 }
 

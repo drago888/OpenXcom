@@ -4766,9 +4766,23 @@ void Mod::loadBattlescapeResources()
 		else
 		{
 			_sets[fname] = new SurfaceSet(32, 48);
-			_sets["32_" + fname] = new SurfaceSet(32 * Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH, 48 * Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT);
 		}
 		_sets[fname]->loadPck("UNITS/" + *i, "UNITS/" + CrossPlatform::noExt(*i) + ".TAB");
+	}
+	int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
+	int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+	int width = 32 * scaleX;
+	int height = 48 * scaleY;
+	// set up 32_BIGOBS.PCK
+	_sets["32_BIGOBS.PCK"] = new SurfaceSet(width, height);
+	for (int cnt = 0; cnt < _sets["BIGOBS.PCK"]->getTotalFrames(); ++cnt)
+	{
+		_sets["32_BIGOBS.PCK"]->addFrame(cnt);
+		Surface surf = Surface(*_sets["BIGOBS.PCK"]->getFrame(cnt));
+		surf.setScale(scaleX, scaleY);
+		surf.doScale();
+		surf.convertTo32Bits(&surf, _palettes["PAL_BATTLESCAPE"]->getPalette());
+		*_sets["32_BIGOBS.PCK"]->getFrame(cnt) = surf;
 	}
 	// incomplete chryssalid set: 1.0 data: stop loading.
 	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
@@ -5280,7 +5294,6 @@ void Mod::modResources()
 	getSurfaceSet("HANDOB.PCK");
 	getSurfaceSet("FLOOROB.PCK");
 	getSurfaceSet("BIGOBS.PCK");
-	_sets["32_BIGOBS.PCK"]->setMaxSharedFrames(_sets["BIGOBS.PCK"]->getMaxSharedFrames());
 	getSurfaceSet32("32_BIGOBS.PCK");
 
 

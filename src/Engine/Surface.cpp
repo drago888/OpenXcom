@@ -80,7 +80,22 @@ inline void RawCopySurf(const Surface::UniqueSurfacePtr& dest, const Surface::Un
 		ShaderMove<Uint8>(src.get())
 	);
 }
-
+/**
+ * Raw copy without any change of pixel index value between two SDL surface, palette is ignored
+ * @param dest Destination surface
+ * @param src Source surface
+ */
+inline void RawCopySurf32(const Surface::UniqueSurfacePtr& dest, const Surface::UniqueSurfacePtr& src)
+{
+	ShaderDrawFunc(
+		[](Uint32& destStuff, Uint32& srcStuff)
+		{
+			destStuff = srcStuff;
+		},
+		ShaderMove<Uint32>(dest.get()),
+			ShaderMove<Uint32>(src.get())
+			);
+}
 /**
  * TODO: function for purge, we should accept only "standard" surfaces
  * Helper function correcting graphic that should have index 0 as transparent,
@@ -286,15 +301,25 @@ Surface::Surface(const Surface& other) : Surface{ }
 	}
 	int width = other.getWidth();
 	int height = other.getHeight();
+	int bpp = other._surface->format->BitsPerPixel;
 	//move copy
-	*this = Surface(width, height, other._x, other._y);
+	
+	*this = Surface(width, height, other._x, other._y, bpp);
 	//cant call `setPalette` because its virtual function and it doesn't work correctly in constructor
 	if (other.getPalette())
 	{
 		SDL_SetColors(_surface.get(), other.getPalette(), 0, 255);
 	}
 
-	RawCopySurf(_surface, other._surface);
+	if (other._surface->format->BitsPerPixel == 8)
+	{
+		RawCopySurf(_surface, other._surface);
+	}
+	else
+	{
+		RawCopySurf32(_surface, other._surface);
+	}
+
 
 	_x = other._x;
 	_y = other._y;
@@ -441,7 +466,7 @@ void Surface::loadRaw(const std::vector<char> &bytes)
 */
 void Surface::get32Bits(std::vector<Uint32>* dest, const void* image, int size, Uint8 bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask, Uint32 endian, SDL_Color* palette)
 {
-	if (bpp == 8)
+	if (bpp == 8 && palette)
 	{
 		for (int i = 0; i < size; ++i)
 		{
@@ -515,17 +540,19 @@ void Surface::get32Bits(std::vector<Uint32>* dest, const void* image, int size, 
  * @param Amask the alpha mask of src
  * @return the 32 bits new surface
 */
-Surface* Surface::convertTo32Bits(Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask, Uint32 endian)
+Surface* Surface::convertTo32Bits(Surface* src, SDL_Color* palette)
 {
-	if (_surface->format->BitsPerPixel != 8)
+	if (src->_surface->format->BitsPerPixel != 8)
 	{
 		return this;
 	}
 
 	std::vector<Uint32> image32;
-	get32Bits(&image32, _surface->pixels, _surface->w * _surface->h, _surface->format->BitsPerPixel, Rmask, Gmask, Bmask, Amask, endian);
+	get32Bits(&image32, src->_surface->pixels, src->_surface->w * src->_surface->h, src->_surface->format->BitsPerPixel,
+		src->_surface->format->Rmask, src->_surface->format->Gmask, src->_surface->format->Bmask, src->_surface->format->Amask, SDL_BYTEORDER,
+		palette);
 
-	*this = Surface(_surface->w, _surface->h, 0, 0, 32);
+	*this = Surface(src->_surface->w, src->_surface->h, 0, 0, 32);
 	lock();
 	ShaderDrawFunc(
 		[](Uint32& dest, Uint32& src)
@@ -533,7 +560,7 @@ Surface* Surface::convertTo32Bits(Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint
 			dest = src;
 		},
 		ShaderSurface((SurfaceRaw<Uint32>)this),
-			ShaderSurface(SurfaceRaw<Uint32>(image32, _surface->w, _surface->h))
+			ShaderSurface(SurfaceRaw<Uint32>(image32, src->_surface->w, src->_surface->h))
 			);
 	unlock();
 	return this;

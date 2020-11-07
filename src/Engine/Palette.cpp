@@ -40,6 +40,10 @@ Palette::~Palette()
 	delete[] _colors;
 }
 
+SDL_Color* Palette::getPalette()
+{
+	return _colors;
+}
 /**
  * Loads an X-Com palette from a file. X-Com palettes are just a set
  * of RGB colors in a row, on a 0-63 scale, which have to be adjusted

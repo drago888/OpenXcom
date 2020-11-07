@@ -35,7 +35,7 @@ namespace OpenXcom
  * @param x X position in pixels.
  * @param y Y position in pixels.
  */
-Text::Text(int width, int height, int x, int y, int bpp) : InteractiveSurface(width, height, x, y, bpp), _big(0), _small(0), _font(0), _lang(0), _wrap(false), _invert(false), _contrast(false), _indent(false), _ignoreSeparators(false), _align(ALIGN_LEFT), _valign(ALIGN_TOP), _color(0), _color2(0)
+Text::Text(int width, int height, int x, int y, int bpp) : InteractiveSurface(width, height, x, y, bpp), _big(0), _small(0), _font(&_small), _lang(0), _wrap(false), _invert(false), _contrast(false), _indent(false), _ignoreSeparators(false), _align(ALIGN_LEFT), _valign(ALIGN_TOP), _color(0), _color2(0)
 {
 }
 
@@ -52,8 +52,8 @@ Text::~Text()
  */
 void Text::setBig()
 {
-	_font = _big;
-	processText();
+	_font = &_big;
+	//processText();
 }
 
 /**
@@ -61,8 +61,8 @@ void Text::setBig()
  */
 void Text::setSmall()
 {
-	_font = _small;
-	processText();
+	_font = &_small;
+	//processText();
 }
 
 /**
@@ -71,7 +71,7 @@ void Text::setSmall()
  */
 Font *Text::getFont() const
 {
-	return _font;
+	return *_font;
 }
 
 /**
@@ -88,8 +88,8 @@ void Text::initText(Font *big, Font *small, Language *lang)
 	_big = big;
 	_small = small;
 	_lang = lang;
-	_font = _small;
-	processText();
+	//_font = &_small;
+	//processText();
 }
 
 /**
@@ -99,12 +99,12 @@ void Text::initText(Font *big, Font *small, Language *lang)
 void Text::setText(const std::string &text)
 {
 	_text = text;
-	processText();
+	/*processText();
 	// If big text won't fit the space, try small text
-	if (_font == _big && (getTextWidth() > getWidth() || getTextHeight() > getHeight()) && _text[_text.size()-1] != '.')
+	if (*_font == _big && (getTextWidth() > getWidth() || getTextHeight() > getHeight()) && _text[_text.size()-1] != '.')
 	{
 		setSmall();
-	}
+	}*/
 }
 
 /**
@@ -131,7 +131,7 @@ void Text::setWordWrap(bool wrap, bool indent, bool ignoreSeparators)
 		_wrap = wrap;
 		_indent = indent;
 		_ignoreSeparators = ignoreSeparators;
-		processText();
+		//processText();
 	}
 }
 
@@ -301,7 +301,7 @@ int Text::getTextWidth(int line) const
  */
 void Text::processText()
 {
-	if (_font == 0 || _lang == 0)
+	if (*_font == 0 || _lang == 0)
 	{
 		return;
 	}
@@ -313,7 +313,7 @@ void Text::processText()
 	int width = 0, word = 0;
 	size_t space = 0, textIndentation = 0;
 	bool start = true;
-	Font *font = _font;
+	Font *font = *_font;
 	UString &str = _processedText;
 
 	// Go through the text character by character
@@ -410,6 +410,11 @@ void Text::processText()
 		}
 	}
 
+	// If big text won't fit the space, try small text
+	if (*_font == _big && (getTextWidth() > getWidth() || getTextHeight() > getHeight()) && _text[_text.size() - 1] != '.')
+	{
+		setSmall();
+	}
 	_redraw = true;
 }
 
@@ -504,7 +509,7 @@ int Text::getLineX(int line) const
 		case ALIGN_LEFT:
 			break;
 		case ALIGN_CENTER:
-			x = (int)ceil((getWidth() + _font->getSpacing() - _lineWidth[line]) / 2.0);
+			x = (int)ceil((getWidth() + (*_font)->getSpacing() - _lineWidth[line]) / 2.0);
 			break;
 		case ALIGN_RIGHT:
 			x = getWidth() - 1 - _lineWidth[line];
@@ -518,7 +523,7 @@ int Text::getLineX(int line) const
 			x = getWidth() - 1;
 			break;
 		case ALIGN_CENTER:
-			x = getWidth() - (int)ceil((getWidth() + _font->getSpacing() - _lineWidth[line]) / 2.0);
+			x = getWidth() - (int)ceil((getWidth() + (*_font)->getSpacing() - _lineWidth[line]) / 2.0);
 			break;
 		case ALIGN_RIGHT:
 			x = _lineWidth[line];
@@ -535,7 +540,7 @@ int Text::getLineX(int line) const
 void Text::draw()
 {
 	Surface::draw();
-	if (_text.empty() || _font == 0)
+	if (_text.empty() || *_font == 0)
 	{
 		return;
 	}
@@ -557,7 +562,7 @@ void Text::draw()
 	}
 
 	int x = 0, y = 0, line = 0, height = 0;
-	Font *font = _font;
+	Font *font = *_font;
 	Uint32 color = _color;
 	const UString &s = _processedText;
 
@@ -640,4 +645,19 @@ void Text::draw()
 	}
 }
 
+/*
+* Blit the text to the surface
+* @param dest surface to blit to
+*/
+void Text::blit(SDL_Surface* dest)
+{
+	if (firstBlit)
+	{
+		firstBlit = false;
+		processText();
+		draw();
+	}
+
+	Surface::blit(dest);
+}
 }

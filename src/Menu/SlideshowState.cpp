@@ -50,6 +50,7 @@ SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std
 			new InteractiveSurface(Screen::ORIGINAL_WIDTH, Screen::ORIGINAL_HEIGHT, 0, 0);*/
 		InteractiveSurface* slide =
 			new InteractiveSurface(Options::cutsceneResolutionX, Options::cutsceneResolutionY, 0, 0);
+		add(slide);
 		slide->loadImage(it->imagePath);
 		slide->onMouseClick((ActionHandler)&SlideshowState::screenClick);
 		slide->onKeyboardPress((ActionHandler)&SlideshowState::screenClick, Options::keyOk);
@@ -57,19 +58,19 @@ SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std
 		slide->setVisible(false);
 		_slides.push_back(slide);
 		setStatePalette(slide->getPalette());
-		add(slide);
+
 
 		// initialize with default rect; may get overridden by
 		// category/id definition
 		Text *caption = new Text(it->w*scaleX, it->h*scaleY, it->x*scaleX, it->y*scaleY, slide->getSurface()->format->BitsPerPixel);
 		caption->setScale(scaleX, scaleY);
+		add(caption);
 		caption->setColor(it->color);
 		caption->setText(tr(it->caption));
 		caption->setAlign(it->align);
 		caption->setWordWrap(true);
 		caption->setVisible(false);
 		_captions.push_back(caption);
-		add(caption);
 	}
 
 	centerAllSurfaces();

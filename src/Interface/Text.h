@@ -40,7 +40,7 @@ enum TextVAlign { ALIGN_TOP, ALIGN_MIDDLE, ALIGN_BOTTOM };
 class Text : public InteractiveSurface
 {
 private:
-	Font *_big, *_small, **_font;
+	Font *_big, *_small, *_font;
 	Language *_lang;
 	std::string _text;
 	UString _processedText;
@@ -101,8 +101,6 @@ public:
 	int getTextHeight(int line = -1) const;
 	/// Draws the text.
 	void draw() override;
-	/// blit the text
-	void blit(SDL_Surface* dest) override;
 };
 
 }

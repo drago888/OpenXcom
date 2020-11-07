@@ -80,6 +80,20 @@ public:
 
 	/// Zero whole surface.
 	static void CleanSdlSurface(SDL_Surface* surface);
+	/// <summary>
+	///  get the 32 bits image
+	/// </summary>
+	/// <param name="dest"></param>
+	/// <param name="image"></param>
+	/// <param name="size"></param>
+	/// <param name="bpp"></param>
+	/// <param name="Rmask"></param>
+	/// <param name="Gmask"></param>
+	/// <param name="Bmask"></param>
+	/// <param name="Amask"></param>
+	/// <param name="endian"></param>
+	void get32Bits(std::vector<Uint32>* dest, const void* image, int size, Uint8 bpp = 8, Uint32 Rmask = 0x00ff0000, Uint32 Gmask = 0x0000ff00, Uint32 Bmask = 0x000000ff,
+		Uint32 Amask = 0xff000000, Uint32 endian = SDL_BYTEORDER, SDL_Color* palette = nullptr);
 
 	SDL_Color* statePalette;
 
@@ -99,8 +113,11 @@ protected:
 	/// Resizes the surface.
 	void resize(int width, int height);
     /// Convert to 32bits RGBA
-	void convertToRGBA(const void* image, int size, int width, int height, Uint8 bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask, Uint32 endian = SDL_BIG_ENDIAN);
+	void convertToRGBA(const void* image, int size, int width, int height, Uint8 bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask, Uint32 endian = SDL_BYTEORDER);
 public:
+	/// Convert to 32bits
+	Surface* convertTo32Bits(Uint32 Rmask = 0x00ff0000, Uint32 Gmask = 0x0000ff00, Uint32 Bmask = 0x000000ff, Uint32 Amask = 0xff000000,
+		Uint32 endian = SDL_BYTEORDER);
 	/// Set the scaleX and scaleY
 	void setScale(double x, double y);
 	/// Scale the surface

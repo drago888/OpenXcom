@@ -289,7 +289,11 @@ Surface::Surface(const Surface& other) : Surface{ }
 	//move copy
 	*this = Surface(width, height, other._x, other._y);
 	//cant call `setPalette` because its virtual function and it doesn't work correctly in constructor
-	SDL_SetColors(_surface.get(), other.getPalette(), 0, 255);
+	if (other.getPalette())
+	{
+		SDL_SetColors(_surface.get(), other.getPalette(), 0, 255);
+	}
+
 	RawCopySurf(_surface, other._surface);
 
 	_x = other._x;
@@ -433,6 +437,108 @@ void Surface::loadRaw(const std::vector<char> &bytes)
 	unlock();
 }
 /**
+* Get the image to 32 bits
+*/
+void Surface::get32Bits(std::vector<Uint32>* dest, const void* image, int size, Uint8 bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask, Uint32 endian, SDL_Color* palette)
+{
+	if (bpp == 8)
+	{
+		for (int i = 0; i < size; ++i)
+		{
+			SDL_Color color = palette[((Uint8*)image)[i]];
+
+			dest->push_back(color.unused << 24 | color.r << 16 | color.g << 8 | color.b);
+		}
+	}
+	else
+	{
+		Uint32 temp[4];
+		size_t bytesPerPixel = bpp / 8;
+		enum { RED_MASK, GREEN_MASK, BLUE_MASK, ALPHA_MASK };
+		int noOfPixels = (size - 1) / bytesPerPixel; // noOfPixels is minus 1 from actual pixels
+		Uint32 colorMaskIndex[4] = { (Rmask == 0x00ff0000) | (Rmask == 0x0000ff00) * 2 | (Rmask == 0x000000ff) * 3,
+								  (Gmask == 0x00ff0000) | (Gmask == 0x0000ff00) * 2 | (Gmask == 0x000000ff) * 3,
+								  (Bmask == 0x00ff0000) | (Bmask == 0x0000ff00) * 2 | (Bmask == 0x000000ff) * 3,
+								  (Amask == 0x00ff0000) | (Amask == 0x0000ff00) * 2 | (Amask == 0x000000ff) * 3 };
+
+		int maxIndex = *std::max_element(colorMaskIndex, colorMaskIndex + 4);
+		if (bpp == 24 && maxIndex == 3)
+		{
+			for (int i = 0; i < 4; i++)
+			{
+				if (colorMaskIndex[i] > 0)
+				{
+					colorMaskIndex[i]--;
+				}
+			}
+		}
+
+		if (endian == SDL_LIL_ENDIAN)
+		{
+			maxIndex = *std::max_element(colorMaskIndex, colorMaskIndex + 4);
+			for (int i = 0; i < 4; i++)
+			{
+				colorMaskIndex[i] = abs((int)colorMaskIndex[i] - maxIndex);
+			}
+		}
+
+		// noOfPixels is minus one from actual pixels
+		for (size_t i = 0; i <= noOfPixels; i++)
+		{
+			temp[1] = ((Uint8*)image)[i * bytesPerPixel + colorMaskIndex[RED_MASK]];
+			temp[2] = ((Uint8*)image)[i * bytesPerPixel + colorMaskIndex[GREEN_MASK]];
+			temp[3] = ((Uint8*)image)[i * bytesPerPixel + +colorMaskIndex[BLUE_MASK]];
+
+			if (bpp != 32)
+			{
+				temp[0] = SDL_ALPHA_OPAQUE;
+			}
+			else
+			{
+				temp[0] = ((Uint8*)image)[i * bytesPerPixel + +colorMaskIndex[ALPHA_MASK]];
+			}
+
+
+			dest->push_back(temp[0] << 24 | temp[1] << 16 | temp[2] << 8 | temp[3]);
+		}
+	}
+}
+/**
+* Convert the surface from 8 bits into 32 bits
+* @param dest
+ * @param image the source surface
+ * @param size the size in bytes to copy
+ * @param bpp the bits per pixel of src
+ * @param Rmask the red mask of src
+ * @param Gmask the green mask of src
+ * @param Bmask the blue mask of src
+ * @param Amask the alpha mask of src
+ * @return the 32 bits new surface
+*/
+Surface* Surface::convertTo32Bits(Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask, Uint32 endian)
+{
+	if (_surface->format->BitsPerPixel != 8)
+	{
+		return this;
+	}
+
+	std::vector<Uint32> image32;
+	get32Bits(&image32, _surface->pixels, _surface->w * _surface->h, _surface->format->BitsPerPixel, Rmask, Gmask, Bmask, Amask, endian);
+
+	*this = Surface(_surface->w, _surface->h, 0, 0, 32);
+	lock();
+	ShaderDrawFunc(
+		[](Uint32& dest, Uint32& src)
+		{
+			dest = src;
+		},
+		ShaderSurface((SurfaceRaw<Uint32>)this),
+			ShaderSurface(SurfaceRaw<Uint32>(image32, _surface->w, _surface->h))
+			);
+	unlock();
+	return this;
+}
+/**
  * Copy into the current Surface from dest with RGBA 32bits
  * Only support 24 and 32 bits bpps
  * @param image the source surface
@@ -442,7 +548,7 @@ void Surface::loadRaw(const std::vector<char> &bytes)
  * @Gmask the green mask of src
  * @Bmask the blue mask of src
  * @Amask the alpha mask of src
- * @
+ * @e
  */
 void Surface::convertToRGBA(const void* image, int size, int width, int height, Uint8 bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask, Uint32 endian)
 {
@@ -451,57 +557,9 @@ void Surface::convertToRGBA(const void* image, int size, int width, int height, 
 		return;
 	}
 
-	Uint32 temp[4];
-	size_t bytesPerPixel = bpp / 8;
-	enum { RED_MASK, GREEN_MASK, BLUE_MASK, ALPHA_MASK };
-	int noOfPixels = (size - 1) / bytesPerPixel; // noOfPixels is minus 1 from actual pixels
-	Uint32 colorMaskIndex[4] = { (Rmask == 0x00ff0000) | (Rmask == 0x0000ff00) * 2 | (Rmask == 0x000000ff) * 3,
-							  (Gmask == 0x00ff0000) | (Gmask == 0x0000ff00) * 2 | (Gmask == 0x000000ff) * 3,
-							  (Bmask == 0x00ff0000) | (Bmask == 0x0000ff00) * 2 | (Bmask == 0x000000ff) * 3,
-							  (Amask == 0x00ff0000) | (Amask == 0x0000ff00) * 2 | (Amask == 0x000000ff) * 3 };
-
-	int maxIndex = *std::max_element(colorMaskIndex, colorMaskIndex + 4);
-	if (bpp == 24 && maxIndex == 3)
-	{
-		for (int i = 0; i < 4; i++)
-		{
-			if (colorMaskIndex[i] > 0)
-			{
-				colorMaskIndex[i]--;
-			}
-		}
-	}
-
-	if (endian == SDL_LIL_ENDIAN)
-	{
-		maxIndex = *std::max_element(colorMaskIndex, colorMaskIndex + 4);
-		for (int i = 0; i < 4; i++)
-		{
-			colorMaskIndex[i] = abs((int)colorMaskIndex[i] - maxIndex);
-		}
-	}
-
 	std::vector<Uint32> image32;
 
-	// noOfPixels is minus one from actual pixels
-	for (size_t i = 0; i <= noOfPixels; i++)
-	{
-		temp[1] = ((Uint8*)image)[i * bytesPerPixel + colorMaskIndex[RED_MASK]];
-		temp[2] = ((Uint8*)image)[i * bytesPerPixel + colorMaskIndex[GREEN_MASK]];
-		temp[3] = ((Uint8*)image)[i * bytesPerPixel + +colorMaskIndex[BLUE_MASK]];
-
-		if (bpp != 32)
-		{
-			temp[0] = SDL_ALPHA_OPAQUE;
-		}
-		else
-		{
-			temp[0] = ((Uint8*)image)[i * bytesPerPixel + +colorMaskIndex[ALPHA_MASK]];
-		}
-
-
-		image32.push_back(temp[0] << 24 | temp[1] << 16 | temp[2] << 8 | temp[3]);
-	}
+	get32Bits(&image32, image, size, bpp, Rmask, Gmask, Bmask, Amask, endian);
 
 	*this = Surface(width, height, 0, 0, 32);
 	lock();

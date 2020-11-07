@@ -101,4 +101,4 @@ OPT SoundFormat currentSound;
 
 // 32 bits large size images
 OPT int cutsceneResolutionX, cutsceneResolutionY, pediaBgResolutionX, pediaBgResolutionY;
-OPT double pediaTitleScale, pediaSubTitleScale;
+

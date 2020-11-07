@@ -5028,8 +5028,6 @@ void Mod::loadExtraResources()
 	std::set<std::pair<int, int>> scales = { {
 		std::make_pair(Options::cutsceneResolutionX / Screen::ORIGINAL_WIDTH, Options::cutsceneResolutionY / Screen::ORIGINAL_HEIGHT),
 		std::make_pair(Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH, Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT),
-		std::make_pair(Options::pediaBgResolutionX * Options::pediaTitleScale / Screen::ORIGINAL_WIDTH, Options::pediaBgResolutionY * Options::pediaTitleScale / Screen::ORIGINAL_HEIGHT),
-		std::make_pair(Options::pediaBgResolutionX * Options::pediaSubTitleScale / Screen::ORIGINAL_WIDTH, Options::pediaBgResolutionY * Options::pediaSubTitleScale / Screen::ORIGINAL_HEIGHT),
 	} };
 
 	// Load fonts

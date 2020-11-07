@@ -240,7 +240,7 @@ void Surface::UniqueSurfaceDeleter::operator ()(SDL_Surface* surf)
 /**
  * Default empty surface.
  */
-Surface::Surface() : _x{ }, _y{ }, _width{ }, _height{ }, _pitch{ }, _visible(true), _hidden(false), _redraw(false), _scaleX(1.0), _scaleY(1.0), statePalette(nullptr), addedToState(false), firstBlit(true)
+Surface::Surface() : _x{ }, _y{ }, _width{ }, _height{ }, _pitch{ }, _visible(true), _hidden(false), _redraw(false), _scaleX(1.0), _scaleY(1.0), statePalette(nullptr)
 {
 
 }
@@ -257,7 +257,7 @@ Surface::Surface() : _x{ }, _y{ }, _width{ }, _height{ }, _pitch{ }, _visible(tr
  * @param y Y position in pixels.
  * @param bpp Bits-per-pixel depth.
  */
-Surface::Surface(int width, int height, int x, int y, int bpp) : _x(x), _y(y), _visible(true), _hidden(false), _redraw(false), _scaleX(1.0), _scaleY(1.0), statePalette(nullptr), addedToState(false), firstBlit(true)
+Surface::Surface(int width, int height, int x, int y, int bpp) : _x(x), _y(y), _visible(true), _hidden(false), _redraw(false), _scaleX(1.0), _scaleY(1.0), statePalette(nullptr)
 {
 	if (bpp == 8)
 	{
@@ -300,10 +300,6 @@ Surface::Surface(const Surface& other) : Surface{ }
 	_scaleX = other._scaleX;
 	_scaleY = other._scaleY;
 	statePalette = other.statePalette;
-
-	// reset back to initial
-	addedToState = false;
-	firstBlit = true;
 }
 
 /**

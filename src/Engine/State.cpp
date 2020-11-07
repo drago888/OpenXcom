@@ -182,12 +182,6 @@ void State::setWindowBackground(Window *window, const std::string &s)
  */
 void State::add(Surface *surface)
 {
-	if (surface->addedToState)
-	{
-		// prevent delete exception when added more than once
-		return;
-	}
-	surface->addedToState = true;
 	// Set palette
 	surface->setPalette(_palette);
 	surface->statePalette = _palette;

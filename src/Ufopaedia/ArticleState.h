@@ -98,7 +98,7 @@ namespace OpenXcom
 		std::string getDamageTypeText(ItemDamageType dt) const;
 
 		/// screen layout helpers
-		void initLayout(bool addAll = true);
+		void initLayout();
 
 		/// callback for OK button
 		void btnOkClick(Action *action);

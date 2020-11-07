@@ -284,6 +284,15 @@ size_t TextList::getRows() const
 }
 
 /**
+* Gets the index of the last row in the list.
+* @return Index of the last row or -1 if the list is empty.
+*/
+int TextList::getLastRowIndex() const
+{
+	return _texts.size() - 1;
+}
+
+/**
  * Returns the amount of visible rows stored in the list.
  * @return Number of rows.
  */
@@ -1089,11 +1098,12 @@ void TextList::setScrolling(bool scrolling, int scrollPos)
 void TextList::draw()
 {
 	Surface::draw();
-	if (_surface->format->BitsPerPixel != 8)
+	// to redraw all the rows
+	/*if (_surface->format->BitsPerPixel != 8)
 	{
 		_rows.clear();
 		_populRow(0, _rowValues.size() - 1);
-	}
+	}*/
 
 	blitText(this->getSurface());
 }
@@ -1127,9 +1137,12 @@ void TextList::blitText(SDL_Surface* surface, int xpos, int ypos)
 					(*j)->setColor(textColor2);
 				}
 				(*j)->statePalette = textPalette;
+				int origX = (*j)->getX(), origY = (*j)->getY();
 				(*j)->setY(y+ypos);
 				(*j)->setX((*j)->getX() + xpos);
 				(*j)->blit(surface);
+				(*j)->setX(origX);
+				(*j)->setY(origY);
 			}
 			if (!_texts[i].empty())
 			{

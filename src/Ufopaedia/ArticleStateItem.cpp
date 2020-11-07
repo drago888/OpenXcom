@@ -139,12 +139,6 @@ namespace OpenXcom
 			}
 		}
 
-		// add screen elements
-		_txtTitle = new Text(148 * scaleX, 32 * scaleY * Options::pediaTitleScale, 5 * scaleX, 24 * scaleY, bpp);
-		_txtTitle->setScale(scaleX * Options::pediaTitleScale, scaleY * Options::pediaTitleScale);
-		_txtWeight = new Text(88 * scaleX, 8 * scaleY, 104 * scaleX, 55 * scaleY + titleAddHeight, bpp);
-		_txtWeight->setScale(scaleX, scaleY);
-
 		// Set palette
 		if (bpp == 8)
 		{
@@ -185,12 +179,18 @@ namespace OpenXcom
 			_ammoColor = _game->getMod()->getInterface("articleItem")->getElement("ammoColor")->color;
 		}
 
+		// set buttons palette before adding to state
+		_btnOk->statePalette = _palette;
+		_btnOk->setTextPalette(buttonTextPalette);
+		_btnPrev->statePalette = _palette;
+		_btnPrev->setTextPalette(buttonTextPalette);
+		_btnNext->statePalette = _palette;
+		_btnNext->setTextPalette(buttonTextPalette);
+		_btnInfo->statePalette = _palette;
+		_btnInfo->setTextPalette(buttonTextPalette);
+		ArticleState::initLayout();
 
-		ArticleState::initLayout(false);
-
-		// add other elements
-		//add(_txtTitle);
-		//add(_txtWeight);
+		// add screen elements
 
 		// Set up objects
 		if (bpp == 8)
@@ -203,26 +203,22 @@ namespace OpenXcom
 		}
 
 		_btnOk->setColor(_buttonColor);
-		_btnOk->setTextPalette(buttonTextPalette);
 		_btnPrev->setColor(_buttonColor);
-		_btnPrev->setTextPalette(buttonTextPalette);
 		_btnNext->setColor(_buttonColor);
-		_btnNext->setTextPalette(buttonTextPalette);
 		_btnInfo->setColor(_buttonColor);
 		_btnInfo->setVisible(_game->getMod()->getShowPediaInfoButton());
-		_btnInfo->setTextPalette(buttonTextPalette);
-		add(_bg);
-		add(_btnOk);
-		add(_btnPrev);
-		add(_btnNext);
-		add(_btnInfo);
 
+		_txtTitle = new Text(148 * scaleX, 32 * scaleY, 5 * scaleX, 24 * scaleY, bpp);
+		_txtTitle->setScale(scaleX, scaleY);
+		add(_txtTitle);
 		_txtTitle->setColor(_textColor);
 		_txtTitle->setBig();
 		_txtTitle->setWordWrap(true);
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
-		add(_txtTitle);
 
+		_txtWeight = new Text(88 * scaleX, 8 * scaleY, 104 * scaleX, 55 * scaleY + titleAddHeight, bpp);
+		_txtWeight->setScale(scaleX, scaleY);
+		add(_txtWeight);
 		_txtWeight->setColor(_textColor);
 		_txtWeight->setAlign(ALIGN_RIGHT);
 
@@ -262,34 +258,28 @@ namespace OpenXcom
 		{
 			_txtShotType = new Text(100 * scaleX, 17 * scaleY, 8 * scaleX, 66 * scaleY + titleAddHeight, bpp);
 			_txtShotType->setScale(scaleX, scaleY);
-			//add(_txtShotType);
+			add(_txtShotType);
 			_txtShotType->setColor(_textColor);
 			_txtShotType->setWordWrap(true);
 			_txtShotType->setText(tr("STR_SHOT_TYPE"));
-			add(_txtShotType);
 
 			_txtAccuracy = new Text(50 * scaleX, 17 * scaleY, 104 * scaleX, 66 * scaleY + titleAddHeight, bpp);
 			_txtAccuracy->setScale(scaleX, scaleY);
-			//add(_txtAccuracy);
+			add(_txtAccuracy);
 			_txtAccuracy->setColor(_textColor);
 			_txtAccuracy->setWordWrap(true);
 			_txtAccuracy->setText(tr("STR_ACCURACY_UC"));
-			add(_txtAccuracy);
 
 			_txtTuCost = new Text(60 * scaleX, 17 * scaleY, 158 * scaleX, 66 * scaleY + titleAddHeight, bpp);
 			_txtTuCost->setScale(scaleX, scaleY);
-			//add(_txtTuCost);
+			add(_txtTuCost);
 			_txtTuCost->setColor(_textColor);
 			_txtTuCost->setWordWrap(true);
 			_txtTuCost->setText(tr("STR_TIME_UNIT_COST"));
-			add(_txtTuCost);
 
 			_lstInfo = new TextList(204 * scaleX, 55 * scaleY, 8 * scaleX, 82 * scaleY + titleAddHeight, bpp);
 			_lstInfo->setScale(scaleX, scaleY);
-			if (bpp == 8)
-			{
-				add(_lstInfo);
-			}
+			add(_lstInfo);
 
 			_lstInfo->setColor(_listColor2); // color for % data!
 			_lstInfo->statePalette = _palette;
@@ -318,12 +308,6 @@ namespace OpenXcom
 			}
 		};
 
-		// 32 bits need add after everything done
-		if (bpp == 32 && _lstInfo)
-		{
-			add(_lstInfo);
-		}
-
 		if (item->getBattleType() == BT_FIREARM)
 		{
 			int current_row = 0;
@@ -345,6 +329,7 @@ namespace OpenXcom
 			}
 			_txtInfo = new Text((ammo_data->size()<3 ? 300 : 180) * scaleX, (56 + shift - bottomOffset) * scaleY, 8 * scaleX, (138 - shift) * scaleY + titleAddHeight, bpp);
 			_txtInfo->setScale(scaleX, scaleY);
+			add(_txtInfo);
 		}
 		else if (item->getBattleType() == BT_MELEE)
 		{
@@ -355,22 +340,21 @@ namespace OpenXcom
 			// text_info is BELOW the info table (with 1 row only)
 			_txtInfo = new Text(300 * scaleX, (88 - bottomOffset) * scaleY, 8 * scaleX, 106 * scaleY + titleAddHeight, bpp);
 			_txtInfo->setScale(scaleX, scaleY);
+			add(_txtInfo);
 		}
 		else
 		{
 			// text_info is larger and starts on top
 			_txtInfo = new Text(300 * scaleX, (125 - bottomOffset) * scaleY, 8 * scaleX, 67 * scaleY + titleAddHeight, bpp);
 			_txtInfo->setScale(scaleX, scaleY);
+			add(_txtInfo);
 		}
-
-		//add(_txtInfo);
 
 		_txtInfo->setColor(_textColor);
 		_txtInfo->setSecondaryColor(_textColor2);
 		_txtInfo->setWordWrap(true);
 		_txtInfo->setText(tr(defs->getTextForPage(_state->current_page)));
 
-		add(_txtInfo);
 
 		// STATS FOR NERDS extract
 		_txtAccuracyModifier = new Text(300 * scaleX, 9 * scaleY, 8 * scaleX, 174 * scaleY + titleAddHeight, bpp);
@@ -378,14 +362,14 @@ namespace OpenXcom
 		_txtPowerBonus = new Text(300 * scaleX, 17 * scaleY, 8 * scaleX, 183 * scaleY + titleAddHeight, bpp);
 		_txtPowerBonus->setScale(scaleX, scaleY);
 
-		/*if (bottomOffset > 0)
+		if (bottomOffset > 0)
 		{
 			if (bottomOffset >= 20)
 			{
 				add(_txtAccuracyModifier);
 			}
 			add(_txtPowerBonus);
-		}*/
+		}
 
 		_txtAccuracyModifier->setColor(_textColor);
 		_txtAccuracyModifier->setSecondaryColor(_listColor2);
@@ -397,14 +381,6 @@ namespace OpenXcom
 		_txtPowerBonus->setWordWrap(true);
 		_txtPowerBonus->setText(tr("STR_POWER_BONUS").arg(powerBonus));
 
-		if (bottomOffset > 0)
-		{
-			if (bottomOffset >= 20)
-			{
-				add(_txtAccuracyModifier);
-			}
-			add(_txtPowerBonus);
-		}
 
 		// AMMO column
 		std::ostringstream ss;
@@ -413,7 +389,7 @@ namespace OpenXcom
 		{
 			_txtAmmoType[i] = new Text(82 * scaleX, 16 * scaleY, 194 * scaleX, (20 + i*49) * scaleY + titleAddHeight, bpp);
 			_txtAmmoType[i]->setScale(scaleX, scaleY);
-			//add(_txtAmmoType[i]);
+			add(_txtAmmoType[i]);
 			_txtAmmoType[i]->setColor(_textColor);
 			_txtAmmoType[i]->setAlign(ALIGN_CENTER);
 			_txtAmmoType[i]->setVerticalAlign(ALIGN_MIDDLE);
@@ -421,13 +397,13 @@ namespace OpenXcom
 
 			_txtAmmoDamage[i] = new Text(82 * scaleX, 17 * scaleY, 194 * scaleX, (40 + i*49) * scaleY + titleAddHeight, bpp);
 			_txtAmmoDamage[i]->setScale(scaleX, scaleY);
-			//add(_txtAmmoDamage[i]);
+			add(_txtAmmoDamage[i]);
 			_txtAmmoDamage[i]->setColor(_ammoColor);
 			_txtAmmoDamage[i]->setAlign(ALIGN_CENTER);
 			_txtAmmoDamage[i]->setBig();
 
 			_imageAmmo[i] = new Surface(32 * scaleX, 48 * scaleY, 280 * scaleX, (16 + i*49) * scaleY + titleAddHeight, bpp);
-			//add(_imageAmmo[i]);
+			add(_imageAmmo[i]);
 		}
 
 		auto addAmmoDamagePower = [&](int pos, const RuleItem *rule)
@@ -441,14 +417,7 @@ namespace OpenXcom
 				ss << "x" << rule->getShotgunPellets();
 			}
 			_txtAmmoDamage[pos]->setText(ss.str());
-			if (bpp != 8 && (rule->getDamageType()->ResistType == DT_HE || rule->getDamageType()->ResistType == DT_AP)) // concussion change to more readable color
-			{
-				_txtAmmoDamage[pos]->setColor(getDamageTypeTextColor(rule->getDamageType()->ResistType)-5);
-			}
-			else
-			{
-				_txtAmmoDamage[pos]->setColor(getDamageTypeTextColor(rule->getDamageType()->ResistType));
-			}
+			_txtAmmoDamage[pos]->setColor(getDamageTypeTextColor(rule->getDamageType()->ResistType));
 
 		};
 
@@ -458,19 +427,17 @@ namespace OpenXcom
 				if (item->getHidePower()) break;
 				_txtDamage = new Text(82 * scaleX, 10 * scaleY, 194 * scaleX, 7 * scaleY + titleAddHeight, bpp);
 				_txtDamage->setScale(scaleX, scaleY);
-				//add(_txtDamage);
+				add(_txtDamage);
 				_txtDamage->setColor(_textColor);
 				_txtDamage->setAlign(ALIGN_CENTER);
 				_txtDamage->setText(tr("STR_DAMAGE_UC"));
-				add(_txtDamage);
 
 				_txtAmmo = new Text(50 * scaleX, 10 * scaleY, 268 * scaleX, 7 * scaleY + titleAddHeight, bpp);
 				_txtAmmo->setScale(scaleX, scaleY);
-				//add(_txtAmmo);
+				add(_txtAmmo);
 				_txtAmmo->setColor(_textColor);
 				_txtAmmo->setAlign(ALIGN_CENTER);
 				_txtAmmo->setText(tr("STR_AMMO"));
-				add(_txtAmmo);
 
 				if (ammo_data->empty())
 				{
@@ -520,11 +487,10 @@ namespace OpenXcom
 				if (item->getHidePower()) break;
 				_txtDamage = new Text(82 * scaleX, 10 * scaleY, 194 * scaleX, 7 * scaleY + titleAddHeight, bpp);
 				_txtDamage->setScale(scaleX, scaleY);
-				//add(_txtDamage);
+				add(_txtDamage);
 				_txtDamage->setColor(_textColor);
 				_txtDamage->setAlign(ALIGN_CENTER);
 				_txtDamage->setText(tr("STR_DAMAGE_UC"));
-				add(_txtDamage);
 
 				addAmmoDamagePower(0, item);
 				break;
@@ -534,22 +500,13 @@ namespace OpenXcom
 		// multi-page indicator
 		_txtArrows = new Text(32 * scaleX, 9 * scaleY, 280 * scaleX, 183 *scaleY + titleAddHeight, bpp);
 		_txtArrows->setScale(scaleX, scaleY);
-		//add(_txtArrows);
+		add(_txtArrows);
 		_txtArrows->setColor(_arrowColor);
 		_txtArrows->setAlign(ALIGN_RIGHT);
 		std::ostringstream ss2;
 		if (_state->hasPrevArticlePage()) ss2 << "<<";
 		if (_state->hasNextArticlePage()) ss2 << " >>";
 		_txtArrows->setText(ss2.str());
-		add(_txtArrows);
-
-		add(_txtWeight);
-		for (int i = 0; i < 3; ++i)
-		{
-			add(_txtAmmoType[i]);
-			add(_txtAmmoDamage[i]);
-			add(_imageAmmo[i]);
-		}
 
 		centerAllSurfaces();
 	}

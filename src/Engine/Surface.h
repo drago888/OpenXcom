@@ -82,7 +82,6 @@ public:
 	static void CleanSdlSurface(SDL_Surface* surface);
 
 	SDL_Color* statePalette;
-	bool addedToState, firstBlit;
 
 protected:
 	UniqueBufferPtr _alignedBuffer;

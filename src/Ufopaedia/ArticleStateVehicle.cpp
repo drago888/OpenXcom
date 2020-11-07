@@ -43,7 +43,6 @@ namespace OpenXcom
 		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
 		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
-		int titleAddHeight = std::max(32 * (int)(Options::pediaTitleScale - 1) - 10, 0);
 
 		Unit *unit = item->getVehicleUnit();
 		if (!unit)
@@ -53,11 +52,11 @@ namespace OpenXcom
 		Armor *armor = unit->getArmor();
 
 		// add screen elements
-		_txtTitle = new Text(310 * scaleX * Options::pediaTitleScale, 17 * scaleY * Options::pediaTitleScale, 5 * scaleX, 23 * scaleY, bpp);
-		_txtTitle->setScale(scaleX * Options::pediaTitleScale, scaleY * Options::pediaTitleScale);
-		_txtInfo = new Text(300 * scaleX, 150 * scaleY, 10 * scaleX, 122 * scaleY + titleAddHeight, bpp);
+		_txtTitle = new Text(310 * scaleX, 17 * scaleY, 5 * scaleX, 23 * scaleY, bpp);
+		_txtTitle->setScale(scaleX, scaleY);
+		_txtInfo = new Text(300 * scaleX, 150 * scaleY, 10 * scaleX, 122 * scaleY, bpp);
 		_txtInfo->setScale(scaleX, scaleY);
-		_lstStats = new TextList(300 * scaleX * Options::pediaSubTitleScale, 89 * scaleX * Options::pediaSubTitleScale, 10 * scaleX, 48 * scaleY + titleAddHeight, bpp);
+		_lstStats = new TextList(300 * scaleX, 89 * scaleX, 10 * scaleX, 48 * scaleY, bpp);
 
 		// Set palette
 		if (defs->customPalette && bpp == 8)
@@ -74,7 +73,7 @@ namespace OpenXcom
 			_cursorColor = Mod::UFOPAEDIA_CURSOR;
 		}
 
-		ArticleState::initLayout(false);
+		ArticleState::initLayout();
 
 		// add other elements
 		//add(_txtTitle);
@@ -130,10 +129,6 @@ namespace OpenXcom
 		_btnOk->setTextPalette(buttonTextPalette);
 		_btnPrev->setTextPalette(buttonTextPalette);
 		_btnNext->setTextPalette(buttonTextPalette);
-		add(_bg);
-		add(_btnOk);
-		add(_btnPrev);
-		add(_btnNext);
 
 
 		_txtTitle->setBig();

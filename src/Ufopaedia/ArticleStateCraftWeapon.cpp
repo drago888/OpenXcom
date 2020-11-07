@@ -43,7 +43,6 @@ namespace OpenXcom
 		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
 		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
-		int titleAddHeight = std::max(32 * (int)(Options::pediaTitleScale - 1) - 10, 0);
 
 		CraftWeaponCategory category = CWC_WEAPON;
 		int offset = 0;
@@ -60,10 +59,6 @@ namespace OpenXcom
 				offset = 80; // 5 * 16
 			}
 		}
-
-		// add screen elements
-		_txtTitle = new Text(200 * scaleX * Options::pediaTitleScale, 32 * scaleY * Options::pediaTitleScale, 5 * scaleX, 24 * scaleY, bpp);
-		_txtTitle->setScale(scaleX * Options::pediaTitleScale, scaleY * Options::pediaTitleScale);
 
 		// Set palette
 		if (defs->customPalette && bpp == 8)
@@ -97,10 +92,16 @@ namespace OpenXcom
 			_listColor2 = Palette::blockOffset(15) + 4;
 		}
 
-		ArticleState::initLayout(false);
-
-		// add other elements
-		//add(_txtTitle);
+		// set buttons palette before adding to state
+		_btnOk->statePalette = _palette;
+		_btnOk->setTextPalette(buttonTextPalette);
+		_btnPrev->statePalette = _palette;
+		_btnPrev->setTextPalette(buttonTextPalette);
+		_btnNext->statePalette = _palette;
+		_btnNext->setTextPalette(buttonTextPalette);
+		_btnInfo->statePalette = _palette;
+		_btnInfo->setTextPalette(buttonTextPalette);
+		ArticleState::initLayout();
 
 		// Set up objects
 		if (bpp == 8)
@@ -113,46 +114,32 @@ namespace OpenXcom
 		}
 
 		_btnOk->setColor(_buttonColor);
-		_btnOk->setTextPalette(buttonTextPalette);
 		_btnPrev->setColor(_buttonColor);
-		_btnPrev->setTextPalette(buttonTextPalette);
 		_btnNext->setColor(_buttonColor);
-		_btnNext->setTextPalette(buttonTextPalette);
 		_btnInfo->setColor(_buttonColor);
 		_btnInfo->setVisible(true);
-		_btnInfo->setTextPalette(buttonTextPalette);
-		add(_bg);
-		add(_btnOk);
-		add(_btnPrev);
-		add(_btnNext);
-		add(_btnInfo);
 
+		// add screen elements
+		_txtTitle = new Text(200 * scaleX, 32 * scaleY, 5 * scaleX, 24 * scaleY, bpp);
+		_txtTitle->setScale(scaleX, scaleY);
+		add(_txtTitle);
 		_txtTitle->setColor(_textColor);
 		_txtTitle->setBig();
 		_txtTitle->setWordWrap(true);
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
-		add(_txtTitle);
 
-		_txtInfo = new Text(310 * scaleX, (32 + offset) * scaleY, 5 * scaleX, (160 - offset)*scaleY + titleAddHeight, bpp);
+		_txtInfo = new Text(310 * scaleX, (32 + offset) * scaleY, 5 * scaleX, (160 - offset)*scaleY, bpp);
 		_txtInfo->setScale(scaleX, scaleY);
-		//add(_txtInfo);
-
+		add(_txtInfo);
 		_txtInfo->setColor(_textColor);
 		_txtInfo->setSecondaryColor(_textColor2);
 		_txtInfo->setWordWrap(true);
 		_txtInfo->setText(tr(defs->getTextForPage(_state->current_page)));
-		add(_txtInfo);
 
-		
-		_lstInfo = new TextList(250 * scaleX *Options::pediaSubTitleScale, (111 - offset) * scaleY * Options::pediaSubTitleScale, 5 * scaleX, 80 * scaleY + titleAddHeight, bpp);
-		_lstInfo->setScale(scaleX * Options::pediaSubTitleScale, scaleY * Options::pediaSubTitleScale);
-		// 8 bits need to add lstInfo before proceeding
-		if (bpp == 8)
-		{
-			add(_lstInfo);
-		}
+		_lstInfo = new TextList(250 * scaleX, (111 - offset) * scaleY, 5 * scaleX, 80 * scaleY, bpp);
+		_lstInfo->setScale(scaleX, scaleY);
+		add(_lstInfo);
 		_lstInfo->setVisible(category != CWC_EQUIPMENT);
-
 		_lstInfo->setColor(_listColor1);
 		_lstInfo->statePalette = _palette;
 		_lstInfo->textPalette = _palette;
@@ -186,11 +173,6 @@ namespace OpenXcom
 
 			_lstInfo->addRow(2, tr("STR_RANGE").c_str(), tr("STR_KILOMETERS").arg(weapon->getRange()).c_str());
 			_lstInfo->setCellColor(1, 1, _listColor2);
-		}
-		// 32 bits need add after everything done
-		if (bpp == 32)
-		{
-			add(_lstInfo);
 		}
 
 		centerAllSurfaces();

@@ -5,17 +5,12 @@ cutsceneResolutionX : 1280
 cutsceneResolutionY : 800
 pediaBgResolutionX : 1280
 pediaBgResolutionY : 800
-pediaTitleScale : 2
-pediaSubTitleScale : 1.75
 
 
 To use back the original game,
 delete the above or change them to
 All X : 320
 All Y : 200
-pediaTitleScale: 1
-pediaSubTitleScale : 1
-
 
 
 --------------

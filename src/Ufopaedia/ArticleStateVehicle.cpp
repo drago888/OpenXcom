@@ -51,13 +51,6 @@ namespace OpenXcom
 		}
 		Armor *armor = unit->getArmor();
 
-		// add screen elements
-		_txtTitle = new Text(310 * scaleX, 17 * scaleY, 5 * scaleX, 23 * scaleY, bpp);
-		_txtTitle->setScale(scaleX, scaleY);
-		_txtInfo = new Text(300 * scaleX, 150 * scaleY, 10 * scaleX, 122 * scaleY, bpp);
-		_txtInfo->setScale(scaleX, scaleY);
-		_lstStats = new TextList(300 * scaleX, 89 * scaleX, 10 * scaleX, 48 * scaleY, bpp);
-
 		// Set palette
 		if (defs->customPalette && bpp == 8)
 		{
@@ -73,15 +66,20 @@ namespace OpenXcom
 			_cursorColor = Mod::UFOPAEDIA_CURSOR;
 		}
 
+		// set buttons palette before adding to state
+		_btnOk->statePalette = _palette;
+		_btnOk->setTextPalette(buttonTextPalette);
+		_btnPrev->statePalette = _palette;
+		_btnPrev->setTextPalette(buttonTextPalette);
+		_btnNext->statePalette = _palette;
+		_btnNext->setTextPalette(buttonTextPalette);
+		_btnInfo->statePalette = _palette;
+		_btnInfo->setTextPalette(buttonTextPalette);
 		ArticleState::initLayout();
 
-		// add other elements
-		//add(_txtTitle);
-		//add(_txtInfo);
-		if (bpp == 8)
-		{
-			add(_lstStats);
-		}
+		_btnOk->setTextPalette(buttonTextPalette);
+		_btnPrev->setTextPalette(buttonTextPalette);
+		_btnNext->setTextPalette(buttonTextPalette);
 
 		// Set up objects
 		if (!defs->image_id.empty() && bpp == 8)
@@ -100,6 +98,24 @@ namespace OpenXcom
 		{
 			_game->getMod()->getSurface(getTypeId("BACK10.SCR", bpp), true, Options::pediaBgResolutionX, Options::pediaBgResolutionY)->blitNShade32(_bg, 0, 0);
 		}
+
+		// add screen elements
+		_txtTitle = new Text(310 * scaleX, 17 * scaleY, 5 * scaleX, 23 * scaleY, bpp);
+		_txtTitle->setScale(scaleX, scaleY);
+		add(_txtTitle);
+		_txtTitle->setBig();
+		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
+
+		_txtInfo = new Text(300 * scaleX, 150 * scaleY, 10 * scaleX, 122 * scaleY, bpp);
+		_txtInfo->setScale(scaleX, scaleY);
+		add(_txtInfo);
+		_txtInfo->setSecondaryColor(Palette::blockOffset(15) + 4);
+		_txtInfo->setWordWrap(true);
+		_txtInfo->setText(tr(defs->getTextForPage(_state->current_page)));
+
+		_lstStats = new TextList(300 * scaleX, 89 * scaleX, 10 * scaleX, 48 * scaleY, bpp);
+		_lstStats->setScale(scaleX, scaleY);
+		add(_lstStats);
 
 		if (bpp == 8)
 		{
@@ -125,21 +141,6 @@ namespace OpenXcom
 			_lstStats->textColor = Palette::blockOffset(14) + 15;
 			_lstStats->textColor2 = Palette::blockOffset(15) + 4;
 		}
-
-		_btnOk->setTextPalette(buttonTextPalette);
-		_btnPrev->setTextPalette(buttonTextPalette);
-		_btnNext->setTextPalette(buttonTextPalette);
-
-
-		_txtTitle->setBig();
-		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
-		add(_txtTitle);
-
-		_txtInfo->setSecondaryColor(Palette::blockOffset(15) + 4);
-		_txtInfo->setWordWrap(true);
-		_txtInfo->setText(tr(defs->getTextForPage(_state->current_page)));
-		add(_txtInfo);
-
 
 		_lstStats->setColumns(2, 175 * scaleX, 145 * scaleY);
 		_lstStats->setDot(true);
@@ -198,13 +199,6 @@ namespace OpenXcom
 			_lstStats->addRow(2, tr("STR_WEAPON_POWER").c_str(), ss8.str().c_str());
 		}
 
-
-
-		// 32 bits need add after everything done
-		if (bpp == 32)
-		{
-			add(_lstStats);
-		}
 		centerAllSurfaces();
 	}
 

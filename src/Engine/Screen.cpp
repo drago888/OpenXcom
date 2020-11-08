@@ -175,7 +175,7 @@ void Screen::handle(Action *action)
 	if (action->getDetails()->type == SDL_KEYDOWN && action->getDetails()->key.keysym.sym == SDLK_RETURN && (SDL_GetModState() & KMOD_ALT) != 0)
 	{
 		Options::fullscreen = !Options::fullscreen;
-		resetDisplay();
+		resetDisplay(true, false, _imageWidth, _imageHeight, _bpp);
 	}
 	else if (action->getDetails()->type == SDL_KEYDOWN && action->getDetails()->key.keysym.sym == Options::keyScreenshot)
 	{
@@ -335,6 +335,8 @@ int Screen::getHeight() const
  */
 void Screen::resetDisplay(bool resetVideo, bool noShaders, int pwidth, int pheight, int forcedBpp)
 {
+	_imageWidth = pwidth, _imageHeight = pheight;
+
 	int width = Options::displayWidth;
 	int height = Options::displayHeight;
 #ifdef __linux__

@@ -42,6 +42,7 @@ private:
 	SDL_Surface *_screen;
 	int _bpp;
 	int _baseWidth, _baseHeight;
+	int _imageWidth, _imageHeight; // this is used to handle sizing screen
 	double _scaleX, _scaleY;
 	int _topBlackBand, _bottomBlackBand, _leftBlackBand, _rightBlackBand, _cursorTopBlackBand, _cursorLeftBlackBand;
 	Uint32 _flags;

@@ -1363,6 +1363,7 @@ void TextList::mouseOver(Action *action, State *state)
 			Text *selText = _texts[_rows[_selRow]].front();
 			int y = getY() + selText->getY();
 			int actualHeight = selText->getHeight() + _font->getSpacing(); //current line height
+			Uint32 selectorY = getY() + getRowY(_selRow) - getRowY(_scroll);
 			if (y < getY() || y + actualHeight > getY() + getHeight())
 			{
 				actualHeight /= 2;
@@ -1371,14 +1372,15 @@ void TextList::mouseOver(Action *action, State *state)
 			{
 				y = getY();
 			}
-			if (_selector->getHeight() != actualHeight)
+			/*if (_selector->getHeight() != actualHeight)
 			{
 				// resizing doesn't work, but recreating does, so let's do that!
 				delete _selector;
 				_selector = new Surface(getWidth(), actualHeight, getX(), y);
 				_selector->setPalette(getPalette());
-			}
-			_selector->setY(y);
+			}*/
+			//_selector->setY(y);
+			_selector->setY(selectorY);
 			_selector->copy(_bg);
 			if (_contrast)
 			{

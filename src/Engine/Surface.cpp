@@ -632,8 +632,8 @@ void Surface::loadImage(const std::string &filename)
 	if (!rw) { return; } // relevant message gets logged in FileMap.
 
 	// Try loading with LodePNG first
-	/*if (CrossPlatform::compareExt(filename, "png"))
-	//if (FileMap::isPng(rw))
+	//if (CrossPlatform::compareExt(filename, "png"))
+	if (FileMap::isPng(rw))
 	{
 		size_t size;
 		void *data = SDL_LoadFile_RW(rw, &size, SDL_FALSE);
@@ -681,9 +681,13 @@ void Surface::loadImage(const std::string &filename)
 						Log(LOG_WARNING) << "Image " << filename << " (from lodepng) has incorrect transparent color index " << transparent << " (instead of 0).";
 					}
 				}
-				else if (bpp == 24 || bpp == 32)// 24 & 32bits
+				else if (bpp == 24)
 				{
-					convertToRGBA(image.data(), image.size(), width, height, bpp, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
+					convertToRGBA(image.data(), image.size(), width, height, bpp, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000, SDL_BIG_ENDIAN);
+				}
+				else if (bpp == 32)
+				{
+					convertToRGBA(image.data(), image.size(), width, height, bpp, 0xff000000, 0x00ff0000, 0x0000ff00, 0x000000ff, SDL_BIG_ENDIAN);
 				}
 				else // other than 8, 24 and 32 bits
 				{
@@ -695,7 +699,7 @@ void Surface::loadImage(const std::string &filename)
 			}
 		}
 		if (data) { SDL_free(data); }
-	}*/
+	}
 	if (_surface)
 	{
 		SDL_RWclose(rw);

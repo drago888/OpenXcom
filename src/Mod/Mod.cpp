@@ -1876,6 +1876,25 @@ void Mod::loadAll()
 	sortLists();
 	loadExtraResources();
 	modResources();
+
+	// if any images in 32_BIGOBS.PCK is 8 bits, change it to 32bits
+	if (Options::pediaBgResolutionX != Screen::ORIGINAL_WIDTH)
+	{
+		for (int i = 0; i < _sets["32_BIGOBS.PCK"]->getTotalFrames(); ++i)
+		{
+			Surface* frame = _sets["32_BIGOBS.PCK"]->getFrame(i);
+			if (!frame || !frame->getSurface() || frame->getSurface()->format->BitsPerPixel != 8 ||
+				!_sets["BIGOBS.PCK"]->getFrame(i) || !_sets["BIGOBS.PCK"]->getFrame(i)->getSurface())
+			{
+				continue;
+			}
+				
+			*frame = *_sets["BIGOBS.PCK"]->getFrame(i);
+			frame->setScale(Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH, Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT);
+			frame->doScale();
+			frame->convertTo32Bits(frame, _palettes["PAL_BATTLESCAPE"]->getColors(0));
+		}
+	}
 }
 
 /**

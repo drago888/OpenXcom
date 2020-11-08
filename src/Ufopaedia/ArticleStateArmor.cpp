@@ -125,10 +125,11 @@ namespace OpenXcom
 				else
 				{
                     // there is no 32 bits images for this, thus use back old and scale and convertto32
-					surf->setScale(scaleX, scaleY);
-					surf->doScale();
-					surf->convertTo32Bits(surf, _game->getMod()->getPalette("PAL_BATTLESCAPE")->getColors());
-					surf->blitNShade32(_image, 0, 0);
+					Surface newSurf = Surface(*surf);
+					newSurf.setScale(scaleX, scaleY);
+					newSurf.doScale();
+					newSurf.convertTo32Bits(&newSurf, _game->getMod()->getPalette("PAL_BATTLESCAPE")->getColors());
+					newSurf.blitNShade32(_image, 0, 0);
 				}
 			}
 		}
@@ -152,10 +153,11 @@ namespace OpenXcom
 			{
 				auto surf = _game->getMod()->getSurface(look, true);
 				// there is no 32 bits images for this, thus use back old and scale and convertto32
-				surf->setScale(scaleX, scaleY);
-				surf->doScale();
-				surf->convertTo32Bits(surf, _game->getMod()->getPalette("PAL_BATTLESCAPE")->getColors());
-				surf->blitNShade32(_image, 0, 0);
+				Surface newSurf = Surface(*surf);
+				newSurf.setScale(scaleX, scaleY);
+				newSurf.doScale();
+				newSurf.convertTo32Bits(&newSurf, _game->getMod()->getPalette("PAL_BATTLESCAPE")->getColors());
+				newSurf.blitNShade32(_image, 0, 0);
 			}
 
 		}
@@ -163,17 +165,18 @@ namespace OpenXcom
 
 		_lstInfo = new TextList(150 * scaleX, 96 * scaleY, 150 * scaleX, 46 * scaleY, bpp);
 		_lstInfo->setScale(scaleX, scaleY);
+		_lstInfo->statePalette = _palette;
+		_lstInfo->textPalette = _palette;
+		_lstInfo->textColor = _textColor;
+		_lstInfo->textColor2 = _textColor2;
 		add(_lstInfo);
 		_lstInfo->setColor(_listColor1);
 		_lstInfo->setColumns(2, 125 * scaleX, 25 * scaleY);
 		_lstInfo->setDot(true);
 
+
 		_txtInfo = new Text(300 * scaleX, 48 * scaleY, 8 * scaleX, 150 * scaleY, bpp);
 		_txtInfo->setScale(scaleX, scaleY);
-		_lstInfo->statePalette = _palette;
-		_lstInfo->textPalette = _palette;
-		_lstInfo->textColor = _textColor;
-		_lstInfo->textColor2 = _textColor2;
 		add(_txtInfo);
 		_txtInfo->setColor(_textColor);
 		_txtInfo->setSecondaryColor(_textColor2);

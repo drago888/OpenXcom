@@ -396,7 +396,10 @@ void Surface::doScale(bool useInt)
 	if (surface)
 	{
 		*this = Surface(surface->w, surface->h, 0, 0);
-		setPalette(surface->format->palette->colors, 0, surface->format->palette->ncolors);
+		if (surface->format->palette)
+		{
+			setPalette(surface->format->palette->colors, 0, surface->format->palette->ncolors);
+		}
 		RawCopySurf(_surface, surface);
 		FixTransparent(_surface, surface->format->colorkey);
 	}

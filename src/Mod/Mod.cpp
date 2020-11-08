@@ -4781,7 +4781,7 @@ void Mod::loadBattlescapeResources()
 		Surface surf = Surface(*_sets["BIGOBS.PCK"]->getFrame(cnt));
 		surf.setScale(scaleX, scaleY);
 		surf.doScale();
-		surf.convertTo32Bits(&surf, _palettes["PAL_BATTLESCAPE"]->getPalette());
+		surf.convertTo32Bits(&surf, _palettes["PAL_BATTLESCAPE"]->getColors(0));
 		*_sets["32_BIGOBS.PCK"]->getFrame(cnt) = surf;
 	}
 	// incomplete chryssalid set: 1.0 data: stop loading.

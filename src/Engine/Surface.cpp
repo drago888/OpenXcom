@@ -486,10 +486,10 @@ void Surface::get32Bits(std::vector<Uint32>* dest, const void* image, int size, 
 								  (Bmask == 0x00ff0000) | (Bmask == 0x0000ff00) * 2 | (Bmask == 0x000000ff) * 3,
 								  (Amask == 0x00ff0000) | (Amask == 0x0000ff00) * 2 | (Amask == 0x000000ff) * 3 };
 
-		int maxIndex = *std::max_element(colorMaskIndex, colorMaskIndex + 4);
+		int maxIndex = *std::max_element(colorMaskIndex, colorMaskIndex + 3);
 		if (bpp == 24 && maxIndex == 3)
 		{
-			for (int i = 0; i < 4; i++)
+			for (int i = 0; i < 3; i++)
 			{
 				if (colorMaskIndex[i] > 0)
 				{
@@ -681,11 +681,7 @@ void Surface::loadImage(const std::string &filename)
 						Log(LOG_WARNING) << "Image " << filename << " (from lodepng) has incorrect transparent color index " << transparent << " (instead of 0).";
 					}
 				}
-				else if (bpp == 24)
-				{
-					convertToRGBA(image.data(), image.size(), width, height, bpp, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000, SDL_BIG_ENDIAN);
-				}
-				else if (bpp == 32)
+				else if (bpp == 24 || bpp == 32)
 				{
 					convertToRGBA(image.data(), image.size(), width, height, bpp, 0xff000000, 0x00ff0000, 0x0000ff00, 0x000000ff, SDL_BIG_ENDIAN);
 				}

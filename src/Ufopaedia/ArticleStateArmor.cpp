@@ -43,23 +43,49 @@ namespace OpenXcom
 	{
 		Armor *armor = _game->getMod()->getArmor(defs->id, true);
 
-		// add screen elements
-		_txtTitle = new Text(300, 17, 5, 24);
+		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
+		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
+		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
 
 		// Set palette
-		setStandardPalette("PAL_BATTLEPEDIA");
+		if (bpp == 8)
+		{
+			setStandardPalette("PAL_BATTLEPEDIA");
+		}
+		else
+		{
+			genPediaPal();
+			_cursorColor = Mod::UFOPAEDIA_CURSOR;
+		}
 
-		_buttonColor = _game->getMod()->getInterface("articleArmor")->getElement("button")->color;
-		_textColor = _game->getMod()->getInterface("articleArmor")->getElement("text")->color;
-		_textColor2 = _game->getMod()->getInterface("articleArmor")->getElement("text")->color2;
-		_listColor1 = _game->getMod()->getInterface("articleArmor")->getElement("list")->color;
-		_listColor2 = _game->getMod()->getInterface("articleArmor")->getElement("list")->color2;
+		if (bpp == 8)
+		{
+			_buttonColor = _game->getMod()->getInterface("articleArmor")->getElement("button")->color;
+			_textColor = _game->getMod()->getInterface("articleArmor")->getElement("text")->color;
+			_textColor2 = _game->getMod()->getInterface("articleArmor")->getElement("text")->color2;
+			_listColor1 = _game->getMod()->getInterface("articleArmor")->getElement("list")->color;
+			_listColor2 = _game->getMod()->getInterface("articleArmor")->getElement("list")->color2;
+		}
+		else
+		{
+			_buttonColor = Palette::blockOffset(15) - 1;
+			_textColor = Palette::blockOffset(14) + 15;
+			_textColor2 = Palette::blockOffset(15) + 4;
+			_listColor1 = Palette::blockOffset(14) + 15;
+			_listColor2 = Palette::blockOffset(15) + 4;
+		}
 
+		// set buttons palette before adding to state
+		_btnOk->statePalette = _palette;
+		_btnOk->setTextPalette(buttonTextPalette);
+		_btnPrev->statePalette = _palette;
+		_btnPrev->setTextPalette(buttonTextPalette);
+		_btnNext->statePalette = _palette;
+		_btnNext->setTextPalette(buttonTextPalette);
+		_btnInfo->statePalette = _palette;
+		_btnInfo->setTextPalette(buttonTextPalette);
 		ArticleState::initLayout();
-
-		// add other elements
-		add(_txtTitle);
-
 		// Set up objects
 		_btnOk->setColor(_buttonColor);
 		_btnPrev->setColor(_buttonColor);
@@ -67,11 +93,15 @@ namespace OpenXcom
 		_btnInfo->setColor(_buttonColor);
 		_btnInfo->setVisible(_game->getMod()->getShowPediaInfoButton());
 
+		// add screen elements
+		_txtTitle = new Text(300 * scaleX, 17 * scaleY, 5 * scaleX, 24 * scaleY, bpp);
+		_txtTitle->setScale(scaleX, scaleY);
+		add(_txtTitle);
 		_txtTitle->setColor(_textColor);
 		_txtTitle->setBig();
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
 
-		_image = new Surface(320, 200, 0, 0);
+		_image = new Surface(320 * scaleX, 200 * scaleY, 0 * scaleX, 0 * scaleY, bpp);
 		add(_image);
 
 		auto defaultPrefix = armor->getLayersDefaultPrefix();
@@ -87,7 +117,19 @@ namespace OpenXcom
 			for (auto layer : layers)
 			{
 				auto surf = _game->getMod()->getSurface(layer, true);
-				surf->blitNShade(_image, 0, 0);
+
+				if (bpp == 8)
+				{
+					surf->blitNShade(_image, 0, 0);
+				}
+				else
+				{
+                    // there is no 32 bits images for this, thus use back old and scale and convertto32
+					surf->setScale(scaleX, scaleY);
+					surf->doScale();
+					surf->convertTo32Bits(surf, _game->getMod()->getPalette("PAL_BATTLESCAPE")->getColors());
+					surf->blitNShade32(_image, 0, 0);
+				}
 			}
 		}
 		else
@@ -102,20 +144,37 @@ namespace OpenXcom
 			{
 				look = armor->getSpriteInventory();
 			}
-			_game->getMod()->getSurface(look, true)->blitNShade(_image, 0, 0);
+			if (bpp == 8)
+			{
+				_game->getMod()->getSurface(look, true)->blitNShade(_image, 0, 0);
+			}
+			else
+			{
+				auto surf = _game->getMod()->getSurface(look, true);
+				// there is no 32 bits images for this, thus use back old and scale and convertto32
+				surf->setScale(scaleX, scaleY);
+				surf->doScale();
+				surf->convertTo32Bits(surf, _game->getMod()->getPalette("PAL_BATTLESCAPE")->getColors());
+				surf->blitNShade32(_image, 0, 0);
+			}
+
 		}
 
 
-		_lstInfo = new TextList(150, 96, 150, 46);
+		_lstInfo = new TextList(150 * scaleX, 96 * scaleY, 150 * scaleX, 46 * scaleY, bpp);
+		_lstInfo->setScale(scaleX, scaleY);
 		add(_lstInfo);
-
 		_lstInfo->setColor(_listColor1);
-		_lstInfo->setColumns(2, 125, 25);
+		_lstInfo->setColumns(2, 125 * scaleX, 25 * scaleY);
 		_lstInfo->setDot(true);
 
-		_txtInfo = new Text(300, 48, 8, 150);
+		_txtInfo = new Text(300 * scaleX, 48 * scaleY, 8 * scaleX, 150 * scaleY, bpp);
+		_txtInfo->setScale(scaleX, scaleY);
+		_lstInfo->statePalette = _palette;
+		_lstInfo->textPalette = _palette;
+		_lstInfo->textColor = _textColor;
+		_lstInfo->textColor2 = _textColor2;
 		add(_txtInfo);
-
 		_txtInfo->setColor(_textColor);
 		_txtInfo->setSecondaryColor(_textColor2);
 		_txtInfo->setWordWrap(true);

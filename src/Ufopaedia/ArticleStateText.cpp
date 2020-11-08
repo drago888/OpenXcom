@@ -58,9 +58,19 @@ namespace OpenXcom
 		_btnInfo->statePalette = _palette;
 		_btnInfo->setTextPalette(buttonTextPalette);
 		ArticleState::initLayout();
-		_btnOk->setColor(Palette::blockOffset(5));
-		_btnPrev->setColor(Palette::blockOffset(5));
-		_btnNext->setColor(Palette::blockOffset(5));
+		if (bpp == 8)
+		{
+			_btnOk->setColor(Palette::blockOffset(5));
+			_btnPrev->setColor(Palette::blockOffset(5));
+			_btnNext->setColor(Palette::blockOffset(5));
+		}
+		else
+		{
+			_btnOk->setColor(Palette::blockOffset(15) - 1);
+			_btnPrev->setColor(Palette::blockOffset(15) - 1);
+			_btnNext->setColor(Palette::blockOffset(15) - 1);
+		}
+
 
 		// add screen elements
 		_txtTitle = new Text(296 * scaleX, 17 * scaleY, 5 * scaleX, 23 * scaleY, bpp);
@@ -87,7 +97,7 @@ namespace OpenXcom
 		}
 		else
 		{
-			_game->getMod()->getSurface(getTypeId("BACK10.SCR"), true, Options::pediaBgResolutionX, Options::pediaBgResolutionY)->blitNShade32(_bg, 0, 0);
+			_game->getMod()->getSurface(getTypeId("BACK10.SCR", bpp), true, Options::pediaBgResolutionX, Options::pediaBgResolutionY)->blitNShade32(_bg, 0, 0);
 		}
 	}
 

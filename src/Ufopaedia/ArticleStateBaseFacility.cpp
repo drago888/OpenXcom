@@ -68,10 +68,21 @@ namespace OpenXcom
 		_btnInfo->statePalette = _palette;
 		_btnInfo->setTextPalette(buttonTextPalette);
 		ArticleState::initLayout();
-		_btnOk->setColor(Palette::blockOffset(4));
-		_btnPrev->setColor(Palette::blockOffset(4));
-		_btnNext->setColor(Palette::blockOffset(4));
-		_btnInfo->setColor(Palette::blockOffset(4));
+		if (bpp == 8)
+		{
+			_btnOk->setColor(Palette::blockOffset(4));
+			_btnPrev->setColor(Palette::blockOffset(4));
+			_btnNext->setColor(Palette::blockOffset(4));
+			_btnInfo->setColor(Palette::blockOffset(4));
+		}
+		else
+		{
+			_btnOk->setColor(Palette::blockOffset(15) - 1);
+			_btnPrev->setColor(Palette::blockOffset(15) - 1);
+			_btnNext->setColor(Palette::blockOffset(15) - 1);
+			_btnInfo->setColor(Palette::blockOffset(15) - 1);
+		}
+
 		_btnInfo->setVisible(_game->getMod()->getShowPediaInfoButton());
 
 		// add screen elements

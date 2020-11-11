@@ -78,7 +78,7 @@ namespace OpenXcom
 		}
 		else
 		{
-			_game->getMod()->getSurface(getTypeId(defs->image_id, bpp), Options::pediaBgResolutionX, Options::pediaBgResolutionY)->blitNShade32(_bg, 0, 0, 3);
+			_game->getMod()->getSurface(getTypeId(defs->image_id, bpp), Options::pediaBgResolutionX, Options::pediaBgResolutionY)->blitNShade32(_bg, 0, 0);
 		}
 		_btnOk->setColor(Palette::blockOffset(15)-1);
 		_btnPrev->setColor(Palette::blockOffset(15)-1);

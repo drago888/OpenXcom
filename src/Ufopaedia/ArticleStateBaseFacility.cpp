@@ -169,10 +169,10 @@ namespace OpenXcom
 					}
 				}
 
-				x_pos += tile_size;
+				x_pos += tile_size * scaleX;
 				num++;
 			}
-			y_pos += tile_size;
+			y_pos += tile_size * scaleY;
 		}
 
 		_txtInfo = new Text(300 * scaleX, 90 * scaleY, 10 * scaleX, 104 * scaleY, bpp);

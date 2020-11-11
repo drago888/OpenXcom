@@ -97,7 +97,8 @@ namespace OpenXcom
 		}
 		else
 		{
-			_game->getMod()->getSurface(getTypeId("BACK10.SCR", bpp), true, Options::pediaBgResolutionX, Options::pediaBgResolutionY)->blitNShade32(_bg, 0, 0);
+			Surface surf;
+			get32Surf("32_BACK10.SCR", "BACK10.SCR", &surf, "PAL_BATTLEPEDIA")->blitNShade32(_bg, 0, 0);
 		}
 	}
 

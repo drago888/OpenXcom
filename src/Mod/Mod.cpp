@@ -2613,12 +2613,14 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			std::string str_chk = "Resources/Backgrounds/";
 			std::string str_chk2 = "Resources/";
 			std::string str_chk3 = "Resources/Weapons/";
+			std::string str_chk4 = "Resources/Pedia/";
 			std::string first_sprite = extraSprites->getSprites() && extraSprites->getSprites()->size() > 0  ? extraSprites->getSprites()->begin()->second : "";
 
 			if ((( first_sprite.size() > str_chk.size() && first_sprite.substr(0, str_chk.size()) == str_chk) ||
 				(first_sprite.size() > str_chk2.size() && first_sprite.substr(0, str_chk2.size()) == str_chk2
 					&& first_sprite.substr(str_chk2.size(), std::string::npos).find("/") == std::string::npos) ||
-				(first_sprite.size() > str_chk3.size() && first_sprite.substr(0, str_chk3.size()) == str_chk3))
+				(first_sprite.size() > str_chk3.size() && first_sprite.substr(0, str_chk3.size()) == str_chk3) ||
+				(first_sprite.size() > str_chk4.size() && first_sprite.substr(0, str_chk4.size()) == str_chk4))
 				&& Screen::ORIGINAL_WIDTH != Options::pediaBgResolutionX)
 			{
 				ExtraSprites* sprites32bits = new ExtraSprites(*extraSprites);
@@ -2628,7 +2630,8 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 					if ((filename.size() > str_chk.size() && filename.substr(0, str_chk.size()) == str_chk) ||
 						(filename.size() > str_chk2.size() && filename.substr(0, str_chk2.size()) == str_chk2
 							&& filename.substr(str_chk2.size(), std::string::npos).find("/") == std::string::npos) ||
-						(filename.size() > str_chk3.size() && filename.substr(0, str_chk3.size()) == str_chk3))
+						(filename.size() > str_chk3.size() && filename.substr(0, str_chk3.size()) == str_chk3) ||
+						(filename.size() > str_chk4.size() && filename.substr(0, str_chk4.size()) == str_chk4))
 					{
 						it->second = filename.substr(0, filename.size() - 4) + "32" + filename.substr(filename.size() - 4, std::string::npos);
 					}

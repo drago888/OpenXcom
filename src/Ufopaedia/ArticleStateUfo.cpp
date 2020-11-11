@@ -88,11 +88,8 @@ namespace OpenXcom
 		}
 		else
 		{
-			Surface surf = *_game->getMod()->getSurface("BACK11.SCR");
-			surf.setScale(scaleX, scaleY);
-			surf.doScale();
-			surf.convertTo32Bits(&surf, _game->getMod()->getPalettes().find("PAL_GEOSCAPE")->second->getColors());
-			surf.blitNShade32(_bg, 0, 0);
+			Surface surf;
+			get32Surf("32_BACK11.SCR", "BACK11.SCR", &surf, "PAL_UFOPAEDIA")->blitNShade32(_bg, 0, 0);
 		}
 
 		// add screen elements

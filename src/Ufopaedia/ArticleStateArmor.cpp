@@ -107,7 +107,7 @@ namespace OpenXcom
 		auto defaultPrefix = armor->getLayersDefaultPrefix();
 		if (!defaultPrefix.empty())
 		{
-			// dummy default soldier (M0)
+			// dummy default soldier (M0)f
 			Soldier *s = new Soldier(_game->getMod()->getSoldier(_game->getMod()->getSoldiersList().front(), true), armor, 0);
 			s->setGender(GENDER_MALE);
 			s->setLook(LOOK_BLONDE);
@@ -124,12 +124,8 @@ namespace OpenXcom
 				}
 				else
 				{
-                    // there is no 32 bits images for this, thus use back old and scale and convertto32
-					Surface newSurf = Surface(*surf);
-					newSurf.setScale(scaleX, scaleY);
-					newSurf.doScale();
-					newSurf.convertTo32Bits(&newSurf, _game->getMod()->getPalette("PAL_BATTLESCAPE")->getColors());
-					newSurf.blitNShade32(_image, 0, 0);
+					Surface surf2;
+					get32Surf("32_"+layer, layer, &surf2, "PAL_BATTLESCAPE", true)->blitNShade32(_image, 0, 0);
 				}
 			}
 		}
@@ -151,13 +147,8 @@ namespace OpenXcom
 			}
 			else
 			{
-				auto surf = _game->getMod()->getSurface(look, true);
-				// there is no 32 bits images for this, thus use back old and scale and convertto32
-				Surface newSurf = Surface(*surf);
-				newSurf.setScale(scaleX, scaleY);
-				newSurf.doScale();
-				newSurf.convertTo32Bits(&newSurf, _game->getMod()->getPalette("PAL_BATTLESCAPE")->getColors());
-				newSurf.blitNShade32(_image, 0, 0);
+				Surface surf;
+				get32Surf("32_" + look, look, &surf, "PAL_BATTLESCAPE")->blitNShade32(_image, 0, 0);
 			}
 
 		}

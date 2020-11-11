@@ -199,7 +199,8 @@ namespace OpenXcom
 		}
 		else
 		{
-			_game->getMod()->getSurface(getTypeId("BACK08.SCR", bpp), true, Options::pediaBgResolutionX, Options::pediaBgResolutionY)->blitNShade32(_bg, 0, 0);
+			Surface surf;
+			get32Surf("32_BACK08.SCR", "BACK08.SCR", &surf, "PAL_BATTLEPEDIA")->blitNShade32(_bg, 0, 0);
 		}
 
 		_btnOk->setColor(_buttonColor);
@@ -228,10 +229,11 @@ namespace OpenXcom
 
 		if (bpp == 8)
 		{
-			item->drawHandSprite(_game->getMod()->getSurfaceSet(getTypeId("BIGOBS.PCK", bpp)), _image);
+			item->drawHandSprite(_game->getMod()->getSurfaceSet("BIGOBS.PCK"), _image);
 		}
 		else
 		{
+			Surface surf;
 			item->drawHandSprite(_game->getMod()->getSurfaceSet32(getTypeId("BIGOBS.PCK", bpp)), _image, 0, 0, bpp);
 		}
 

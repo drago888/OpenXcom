@@ -156,7 +156,25 @@ inline ShaderMove<const Uint8> ShaderCrop(SurfaceCrop s, int x, int y)
 	}
 	return ret;
 }
-
+/**
+ * Create warper from cropped Surface and provided offset
+ * @param s standard 8bit OpenXcom surface
+ * @param x offset on x
+ * @param y offset on y
+ * @return
+ */
+inline ShaderMove<const Uint32> ShaderCrop32(SurfaceCrop s, int x, int y)
+{
+	ShaderMove<const Uint32> ret(s.getSurface(), x, y);
+	SDL_Rect* s_crop = s.getCrop();
+	if (s_crop->w || s_crop->h)
+	{
+		GraphSubset crop(std::make_pair(s_crop->x, s_crop->x + s_crop->w), std::make_pair(s_crop->y, s_crop->y + s_crop->h));
+		ret.setDomain(crop);
+		ret.addMove(-s_crop->x, -s_crop->y);
+	}
+	return ret;
+}
 /**
  * Create warper from cropped Surface
  * @param s standard 8bit OpenXcom surface

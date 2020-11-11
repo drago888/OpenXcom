@@ -608,6 +608,7 @@ public:
 
 	/// Blit Cropped surface to another surface.
 	void blit(Surface* dest);
+	void blit32(Surface* dest);
 };
 
 }

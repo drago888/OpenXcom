@@ -1435,5 +1435,21 @@ void SurfaceCrop::blit(Surface* dest)
 		);
 	}
 }
+void SurfaceCrop::blit32(Surface* dest)
+{
+	if (_surface)
+	{
+		auto srcShader = ShaderCrop32(*this, _x, _y);
+		auto destShader = ShaderMove<Uint32>(dest, 0, 0);
 
+		ShaderDrawFunc(
+			[](Uint32& d, Uint32 s)
+			{
+				if (s) d = s;
+			},
+			destShader,
+				srcShader
+				);
+	}
+}
 }

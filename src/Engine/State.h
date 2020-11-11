@@ -59,6 +59,8 @@ protected:
 	SDL_Color _palette[256];
 	Uint8 _cursorColor;
 
+	int _resX, _resY, _bpp;
+
 public:
 	bool resetScreen;
 	/// Creates a new state linked to a game.

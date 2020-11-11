@@ -39,6 +39,8 @@ SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std
 	resetScreen = true; // resetDisplay at firstBlit
 	genCutPal(); // generate cutscene palette
 	_wasLetterboxed = CutsceneState::initDisplay();
+	_resX = Options::cutsceneResolutionX, _resY = Options::cutsceneResolutionY;
+	_bpp = Options::cutsceneResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
 
 	int scaleX = Options::cutsceneResolutionX/Screen::ORIGINAL_WIDTH;
 	int scaleY = Options::cutsceneResolutionY/Screen::ORIGINAL_HEIGHT;
@@ -52,6 +54,14 @@ SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std
 			new InteractiveSurface(Options::cutsceneResolutionX, Options::cutsceneResolutionY, 0, 0);
 		add(slide);
 		slide->loadImage(it->imagePath);
+		if (_bpp != 8 && slide->getWidth() == Screen::ORIGINAL_WIDTH)
+		{
+			Palette pal = Palette();
+			pal.setColors(slide->getSurface()->format->palette->colors, slide->getSurface()->format->palette->ncolors);
+			slide->setScale(scaleX, scaleY);
+			slide->doScale();
+			slide->convertTo32Bits(slide, pal.getColors());
+		}
 		slide->onMouseClick((ActionHandler)&SlideshowState::screenClick);
 		slide->onKeyboardPress((ActionHandler)&SlideshowState::screenClick, Options::keyOk);
 		slide->onKeyboardPress((ActionHandler)&SlideshowState::screenSkip, Options::keyCancel);

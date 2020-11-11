@@ -122,6 +122,9 @@ namespace OpenXcom
 	ArticleState::ArticleState(const std::string &article_id, std::shared_ptr<ArticleCommonState> state) : _id(article_id)
 	{
 		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
+		_resX = Options::pediaBgResolutionX, _resY = Options::pediaBgResolutionY;
+		_bpp = bpp;
+
 		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
 		if (!ArticleState::inPediaArticle)

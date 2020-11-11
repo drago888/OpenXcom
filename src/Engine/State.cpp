@@ -37,6 +37,7 @@
 #include "../Interface/FpsCounter.h"
 #include "../Savegame/SavedBattleGame.h"
 #include "../Mod/RuleInterface.h"
+#include "../Engine/Screen.h"
 
 namespace OpenXcom
 {
@@ -49,7 +50,8 @@ Game* State::_game = 0;
  * By default states are full-screen.
  * @param game Pointer to the core game.
  */
-State::State() : _screen(true), _soundPlayed(false), _modal(0), _ruleInterface(0), _ruleInterfaceParent(0), resetScreen(false)
+State::State() : _screen(true), _soundPlayed(false), _modal(0), _ruleInterface(0), _ruleInterfaceParent(0), resetScreen(false),
+	_resX(Screen::ORIGINAL_WIDTH), _resY(Screen::ORIGINAL_HEIGHT), _bpp(8)
 {
 	// initialize palette to all black
 	memset(_palette, 0, sizeof(_palette));
@@ -373,9 +375,7 @@ void State::blit()
 	{
 		resetScreen = !resetScreen;
 
-		_game->getScreen()->resetDisplay(true, false, _surfaces.size() > 0 ? _surfaces.at(0)->getWidth() : Screen::ORIGINAL_WIDTH,
-									                  _surfaces.size() > 0 ? _surfaces.at(0)->getHeight() : Screen::ORIGINAL_HEIGHT,
-			                                          _surfaces.size()>0?_surfaces.at(0)->getSurface()->format->BitsPerPixel : 0);
+		_game->getScreen()->resetDisplay(true, false, _resX, _resY, _bpp);
 	}
 	for (std::vector<Surface*>::iterator i = _surfaces.begin(); i != _surfaces.end(); ++i)
 		(*i)->blit(_game->getScreen()->getSurface());

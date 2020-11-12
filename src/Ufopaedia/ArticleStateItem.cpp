@@ -39,9 +39,14 @@
 namespace OpenXcom
 {
 
-	ArticleStateItem::ArticleStateItem(ArticleDefinitionItem *defs, std::shared_ptr<ArticleCommonState> state) : ArticleState(defs->id, std::move(state))
+	ArticleStateItem::ArticleStateItem(ArticleDefinitionItem *defs, std::shared_ptr<ArticleCommonState> state) : ArticleState(defs->id, std::move(state)), _lstInfo(nullptr)
 	{
 		RuleItem *item = _game->getMod()->getItem(defs->id, true);
+
+		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
+		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
+		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
 
 		int bottomOffset = 20;
 		std::string accuracyModifier;
@@ -133,52 +138,104 @@ namespace OpenXcom
 			}
 		}
 
-		// add screen elements
-		_txtTitle = new Text(148, 32, 5, 24);
-		_txtWeight = new Text(88, 8, 104, 55);
-
 		// Set palette
-		setStandardPalette("PAL_BATTLEPEDIA");
-
-		_buttonColor = _game->getMod()->getInterface("articleItem")->getElement("button")->color;
-		_arrowColor = _buttonColor;
-		if (_game->getMod()->getInterface("articleItem")->getElement("arrow"))
+		if (bpp == 8)
 		{
-			_arrowColor = _game->getMod()->getInterface("articleItem")->getElement("arrow")->color;
+			setStandardPalette("PAL_BATTLEPEDIA");
 		}
-		_textColor = _game->getMod()->getInterface("articleItem")->getElement("text")->color;
-		_textColor2 = _game->getMod()->getInterface("articleItem")->getElement("text")->color2;
-		_listColor1 = _game->getMod()->getInterface("articleItem")->getElement("list")->color;
-		_listColor2 = _game->getMod()->getInterface("articleItem")->getElement("list")->color2;
-		_ammoColor = _game->getMod()->getInterface("articleItem")->getElement("ammoColor")->color;
+		else
+		{
+			genPediaPal();
+			_cursorColor = Mod::UFOPAEDIA_CURSOR;
+		}
 
+		if (bpp == 8)
+		{
+			_buttonColor = _game->getMod()->getInterface("articleItem")->getElement("button")->color;
+			_arrowColor = _buttonColor;
+			if (_game->getMod()->getInterface("articleItem")->getElement("arrow"))
+			{
+				_arrowColor = _game->getMod()->getInterface("articleItem")->getElement("arrow")->color;
+			}
+			_textColor = _game->getMod()->getInterface("articleItem")->getElement("text")->color;
+			_textColor2 = _game->getMod()->getInterface("articleItem")->getElement("text")->color2;
+			_listColor1 = _game->getMod()->getInterface("articleItem")->getElement("list")->color;
+			_listColor2 = _game->getMod()->getInterface("articleItem")->getElement("list")->color2;
+			_ammoColor = _game->getMod()->getInterface("articleItem")->getElement("ammoColor")->color;
+		}
+		else
+		{
+			_buttonColor = Palette::blockOffset(15) - 1;
+			_arrowColor = _buttonColor;
+			if (_game->getMod()->getInterface("articleItem")->getElement("arrow"))
+			{
+				_arrowColor = _game->getMod()->getInterface("articleItem")->getElement("arrow")->color;
+			}
+			_textColor = Palette::blockOffset(14) + 15;
+			_textColor2 = Palette::blockOffset(15) + 4;
+			_listColor1 = Palette::blockOffset(14) + 15;
+			_listColor2 = Palette::blockOffset(15) + 4;
+			_ammoColor = _game->getMod()->getInterface("articleItem")->getElement("ammoColor")->color;
+		}
+
+		// set buttons palette before adding to state
+		_btnOk->statePalette = _palette;
+		_btnOk->setTextPalette(buttonTextPalette);
+		_btnPrev->statePalette = _palette;
+		_btnPrev->setTextPalette(buttonTextPalette);
+		_btnNext->statePalette = _palette;
+		_btnNext->setTextPalette(buttonTextPalette);
+		_btnInfo->statePalette = _palette;
+		_btnInfo->setTextPalette(buttonTextPalette);
 		ArticleState::initLayout();
-
-		// add other elements
-		add(_txtTitle);
-		add(_txtWeight);
-
-		// Set up objects
-		_game->getMod()->getSurface("BACK08.SCR")->blitNShade(_bg, 0, 0);
 		_btnOk->setColor(_buttonColor);
 		_btnPrev->setColor(_buttonColor);
 		_btnNext->setColor(_buttonColor);
 		_btnInfo->setColor(_buttonColor);
 		_btnInfo->setVisible(_game->getMod()->getShowPediaInfoButton());
 
+		// add screen elements
+
+		// Set up objects
+		if (bpp == 8)
+		{
+			_game->getMod()->getSurface("BACK08.SCR")->blitNShade(_bg, 0, 0);
+		}
+		else
+		{
+			Surface surf;
+			get32Surf("32_BACK08.SCR", "BACK08.SCR", &surf, "PAL_BATTLEPEDIA")->blitNShade32(_bg, 0, 0, -30); //brighten the background
+		}
+
+		_txtTitle = new Text(148 * scaleX, 32 * scaleY, 5 * scaleX, 24 * scaleY, bpp);
+		_txtTitle->setScale(scaleX, scaleY);
+		add(_txtTitle);
 		_txtTitle->setColor(_textColor);
 		_txtTitle->setBig();
 		_txtTitle->setWordWrap(true);
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
 
+		_txtWeight = new Text(88 * scaleX, 8 * scaleY, 104 * scaleX, 55 * scaleY, bpp);
+		_txtWeight->setScale(scaleX, scaleY);
+		add(_txtWeight);
 		_txtWeight->setColor(_textColor);
 		_txtWeight->setAlign(ALIGN_RIGHT);
 
 		// IMAGE
-		_image = new Surface(32, 48, 157, 5);
-		add(_image);
+		_image = new Surface(32 * scaleX, 48 * scaleY, 157 * scaleX, 5 * scaleY, bpp);
+		//add(_image);
 
-		item->drawHandSprite(_game->getMod()->getSurfaceSet("BIGOBS.PCK"), _image);
+		if (bpp == 8)
+		{
+			item->drawHandSprite(_game->getMod()->getSurfaceSet("BIGOBS.PCK"), _image);
+		}
+		else
+		{
+			Surface surf;
+			item->drawHandSprite(_game->getMod()->getSurfaceSet32(getTypeId("BIGOBS.PCK", bpp)), _image, 0, 0, bpp);
+		}
+
+		add(_image);
 
 
 		auto ammoSlot = defs->getAmmoSlotForPage(_state->current_page);
@@ -199,29 +256,37 @@ namespace OpenXcom
 		// SHOT STATS TABLE (for firearms and melee only)
 		if (item->getBattleType() == BT_FIREARM || item->getBattleType() == BT_MELEE)
 		{
-			_txtShotType = new Text(100, 17, 8, 66);
+			_txtShotType = new Text(100 * scaleX, 17 * scaleY, 8 * scaleX, 66 * scaleY, bpp);
+			_txtShotType->setScale(scaleX, scaleY);
 			add(_txtShotType);
 			_txtShotType->setColor(_textColor);
 			_txtShotType->setWordWrap(true);
 			_txtShotType->setText(tr("STR_SHOT_TYPE"));
 
-			_txtAccuracy = new Text(50, 17, 104, 66);
+			_txtAccuracy = new Text(50 * scaleX, 17 * scaleY, 104 * scaleX, 66 * scaleY, bpp);
+			_txtAccuracy->setScale(scaleX, scaleY);
 			add(_txtAccuracy);
 			_txtAccuracy->setColor(_textColor);
 			_txtAccuracy->setWordWrap(true);
 			_txtAccuracy->setText(tr("STR_ACCURACY_UC"));
 
-			_txtTuCost = new Text(60, 17, 158, 66);
+			_txtTuCost = new Text(60 * scaleX, 17 * scaleY, 158 * scaleX, 66 * scaleY, bpp);
+			_txtTuCost->setScale(scaleX, scaleY);
 			add(_txtTuCost);
 			_txtTuCost->setColor(_textColor);
 			_txtTuCost->setWordWrap(true);
 			_txtTuCost->setText(tr("STR_TIME_UNIT_COST"));
 
-			_lstInfo = new TextList(204, 55, 8, 82);
+			_lstInfo = new TextList(204 * scaleX, 55 * scaleY, 8 * scaleX, 82 * scaleY, bpp);
+			_lstInfo->setScale(scaleX, scaleY);
 			add(_lstInfo);
 
 			_lstInfo->setColor(_listColor2); // color for % data!
-			_lstInfo->setColumns(3, 100, 52, 52);
+			_lstInfo->statePalette = _palette;
+			_lstInfo->textPalette = _palette;
+			_lstInfo->textColor = _textColor;
+			_lstInfo->textColor2 = _textColor2;
+			_lstInfo->setColumns(3, 100 * scaleX, 52 * scaleY, 52 * scaleX);
 			_lstInfo->setBig();
 		}
 
@@ -262,7 +327,9 @@ namespace OpenXcom
 			{
 				shift -= (2 - current_row) * 16;
 			}
-			_txtInfo = new Text((ammo_data->size()<3 ? 300 : 180), 56 + shift - bottomOffset, 8, 138 - shift);
+			_txtInfo = new Text((ammo_data->size()<3 ? 300 : 180) * scaleX, (56 + shift - bottomOffset) * scaleY, 8 * scaleX, (138 - shift) * scaleY, bpp);
+			_txtInfo->setScale(scaleX, scaleY);
+			add(_txtInfo);
 		}
 		else if (item->getBattleType() == BT_MELEE)
 		{
@@ -271,24 +338,29 @@ namespace OpenXcom
 			addAttack(current_row, "STR_SHOT_TYPE_MELEE", item->getCostMelee(), item->getFlatMelee(), item->getConfigMelee());
 
 			// text_info is BELOW the info table (with 1 row only)
-			_txtInfo = new Text(300, 88 - bottomOffset, 8, 106);
+			_txtInfo = new Text(300 * scaleX, (88 - bottomOffset) * scaleY, 8 * scaleX, 106 * scaleY, bpp);
+			_txtInfo->setScale(scaleX, scaleY);
+			add(_txtInfo);
 		}
 		else
 		{
 			// text_info is larger and starts on top
-			_txtInfo = new Text(300, 125 - bottomOffset, 8, 67);
+			_txtInfo = new Text(300 * scaleX, (125 - bottomOffset) * scaleY, 8 * scaleX, 67 * scaleY, bpp);
+			_txtInfo->setScale(scaleX, scaleY);
+			add(_txtInfo);
 		}
-
-		add(_txtInfo);
 
 		_txtInfo->setColor(_textColor);
 		_txtInfo->setSecondaryColor(_textColor2);
 		_txtInfo->setWordWrap(true);
 		_txtInfo->setText(tr(defs->getTextForPage(_state->current_page)));
 
+
 		// STATS FOR NERDS extract
-		_txtAccuracyModifier = new Text(300, 9, 8, 174);
-		_txtPowerBonus = new Text(300, 17, 8, 183);
+		_txtAccuracyModifier = new Text(300 * scaleX, 9 * scaleY, 8 * scaleX, 174 * scaleY, bpp);
+		_txtAccuracyModifier->setScale(scaleX, scaleY);
+		_txtPowerBonus = new Text(300 * scaleX, 17 * scaleY, 8 * scaleX, 183 * scaleY, bpp);
+		_txtPowerBonus->setScale(scaleX, scaleY);
 
 		if (bottomOffset > 0)
 		{
@@ -309,25 +381,28 @@ namespace OpenXcom
 		_txtPowerBonus->setWordWrap(true);
 		_txtPowerBonus->setText(tr("STR_POWER_BONUS").arg(powerBonus));
 
+
 		// AMMO column
 		std::ostringstream ss;
 
 		for (int i = 0; i<3; ++i)
 		{
-			_txtAmmoType[i] = new Text(82, 16, 194, 20 + i*49);
+			_txtAmmoType[i] = new Text(82 * scaleX, 16 * scaleY, 194 * scaleX, (20 + i*49) * scaleY, bpp);
+			_txtAmmoType[i]->setScale(scaleX, scaleY);
 			add(_txtAmmoType[i]);
 			_txtAmmoType[i]->setColor(_textColor);
 			_txtAmmoType[i]->setAlign(ALIGN_CENTER);
 			_txtAmmoType[i]->setVerticalAlign(ALIGN_MIDDLE);
 			_txtAmmoType[i]->setWordWrap(true);
 
-			_txtAmmoDamage[i] = new Text(82, 17, 194, 40 + i*49);
+			_txtAmmoDamage[i] = new Text(82 * scaleX, 17 * scaleY, 194 * scaleX, (40 + i*49) * scaleY, bpp);
+			_txtAmmoDamage[i]->setScale(scaleX, scaleY);
 			add(_txtAmmoDamage[i]);
 			_txtAmmoDamage[i]->setColor(_ammoColor);
 			_txtAmmoDamage[i]->setAlign(ALIGN_CENTER);
 			_txtAmmoDamage[i]->setBig();
 
-			_imageAmmo[i] = new Surface(32, 48, 280, 16 + i*49);
+			_imageAmmo[i] = new Surface(32 * scaleX, 48 * scaleY, 280 * scaleX, (16 + i*49) * scaleY, bpp);
 			add(_imageAmmo[i]);
 		}
 
@@ -343,19 +418,22 @@ namespace OpenXcom
 			}
 			_txtAmmoDamage[pos]->setText(ss.str());
 			_txtAmmoDamage[pos]->setColor(getDamageTypeTextColor(rule->getDamageType()->ResistType));
+
 		};
 
 		switch (item->getBattleType())
 		{
 			case BT_FIREARM:
 				if (item->getHidePower()) break;
-				_txtDamage = new Text(82, 10, 194, 7);
+				_txtDamage = new Text(82 * scaleX, 10 * scaleY, 194 * scaleX, 7 * scaleY, bpp);
+				_txtDamage->setScale(scaleX, scaleY);
 				add(_txtDamage);
 				_txtDamage->setColor(_textColor);
 				_txtDamage->setAlign(ALIGN_CENTER);
 				_txtDamage->setText(tr("STR_DAMAGE_UC"));
 
-				_txtAmmo = new Text(50, 10, 268, 7);
+				_txtAmmo = new Text(50 * scaleX, 10 * scaleY, 268 * scaleX, 7 * scaleY, bpp);
+				_txtAmmo->setScale(scaleX, scaleY);
 				add(_txtAmmo);
 				_txtAmmo->setColor(_textColor);
 				_txtAmmo->setAlign(ALIGN_CENTER);
@@ -383,7 +461,15 @@ namespace OpenXcom
 
 							addAmmoDamagePower(currShow, type);
 
-							type->drawHandSprite(_game->getMod()->getSurfaceSet("BIGOBS.PCK"), _imageAmmo[currShow]);
+							if (bpp == 8)
+							{
+								type->drawHandSprite(_game->getMod()->getSurfaceSet(getTypeId("BIGOBS.PCK", bpp)), _imageAmmo[currShow]);
+							}
+							else
+							{
+								type->drawHandSprite(_game->getMod()->getSurfaceSet(getTypeId("BIGOBS.PCK", bpp)), _imageAmmo[currShow], 0, 0, bpp);
+							}
+
 
 							++currShow;
 							if (currShow == maxShow)
@@ -399,7 +485,8 @@ namespace OpenXcom
 			case BT_PROXIMITYGRENADE:
 			case BT_MELEE:
 				if (item->getHidePower()) break;
-				_txtDamage = new Text(82, 10, 194, 7);
+				_txtDamage = new Text(82 * scaleX, 10 * scaleY, 194 * scaleX, 7 * scaleY, bpp);
+				_txtDamage->setScale(scaleX, scaleY);
 				add(_txtDamage);
 				_txtDamage->setColor(_textColor);
 				_txtDamage->setAlign(ALIGN_CENTER);
@@ -411,7 +498,8 @@ namespace OpenXcom
 		}
 
 		// multi-page indicator
-		_txtArrows = new Text(32, 9, 280, 183);
+		_txtArrows = new Text(32 * scaleX, 9 * scaleY, 280 * scaleX, 183 *scaleY, bpp);
+		_txtArrows->setScale(scaleX, scaleY);
 		add(_txtArrows);
 		_txtArrows->setColor(_arrowColor);
 		_txtArrows->setAlign(ALIGN_RIGHT);

@@ -57,6 +57,8 @@ private:
 	static const double VOLUME_GRADIENT;
 
 public:
+	double mouseScaleXMul;
+	double mouseScaleYMul;
 	/// Creates a new game and initializes SDL.
 	Game(const std::string &title);
 	/// Cleans up all the game's resources and shuts down SDL.
@@ -105,6 +107,8 @@ public:
 	void setUpdateFlag(bool update) { _update = update; }
 	/// Returns the update flag.
 	bool getUpdateFlag() const { return _update; }
+	/// change cursor
+	void changeCursor(Cursor* cur);
 };
 
 }

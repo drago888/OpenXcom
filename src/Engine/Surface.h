@@ -80,6 +80,22 @@ public:
 
 	/// Zero whole surface.
 	static void CleanSdlSurface(SDL_Surface* surface);
+	/// <summary>
+	///  get the 32 bits image
+	/// </summary>
+	/// <param name="dest"></param>
+	/// <param name="image"></param>
+	/// <param name="size"></param>
+	/// <param name="bpp"></param>
+	/// <param name="Rmask"></param>
+	/// <param name="Gmask"></param>
+	/// <param name="Bmask"></param>
+	/// <param name="Amask"></param>
+	/// <param name="endian"></param>
+	void get32Bits(std::vector<Uint32>* dest, const void* image, int size, Uint8 bpp = 8, Uint32 Rmask = 0x00ff0000, Uint32 Gmask = 0x0000ff00, Uint32 Bmask = 0x000000ff,
+		Uint32 Amask = 0xff000000, Uint32 endian = SDL_BYTEORDER, SDL_Color* palette = nullptr);
+
+	SDL_Color* statePalette;
 
 protected:
 	UniqueBufferPtr _alignedBuffer;
@@ -89,17 +105,30 @@ protected:
 	Uint8 _visible: 1;
 	Uint8 _hidden: 1;
 	Uint8 _redraw: 1;
+	double _scaleX, _scaleY;
 
 	/// Copies raw pixels.
 	template <typename T>
 	void rawCopy(const std::vector<T> &bytes);
 	/// Resizes the surface.
 	void resize(int width, int height);
+    /// Convert to 32bits RGBA
+	void convertToRGBA(const void* image, int size, int width, int height, Uint8 bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask, Uint32 endian = SDL_BYTEORDER);
 public:
+	/// Convert to 32bits
+	Surface* convertTo32Bits(Surface* src, SDL_Color* palette, bool usePal = false);
+	/// Set the scaleX and scaleY
+	void setScale(double x, double y);
+	/// Scale the surface
+	void doScale(bool useInt = false);
+	/// get the scaleX
+	double getScaleX() { return _scaleX; };
+	/// get the scaleY
+	double getScaleY() { return _scaleY; };
 	/// Default empty surface.
 	Surface();
 	/// Creates a new surface with the specified size and position.
-	Surface(int width, int height, int x = 0, int y = 0);
+	Surface(int width, int height, int x = 0, int y = 0, int bpp = 8);
 	/// Creates a new surface from an existing one.
 	Surface(const Surface& other);
 	/// Move surface to another place.
@@ -137,6 +166,7 @@ public:
 	void offsetBlock(int off, int blk = 16, int mul = 1);
 	/// Inverts the surface's colors.
 	void invert(Uint8 mid);
+	void invert32(Uint8 mid, SDL_Color* palette);
 	/// Runs surface functionality every cycle
 	virtual void think();
 	/// Draws the surface's graphic.
@@ -149,6 +179,7 @@ public:
 	void copy(Surface *surface);
 	/// Draws a filled rectangle on the surface.
 	void drawRect(SDL_Rect *rect, Uint8 color);
+	void drawRect32(SDL_Rect* rect, Uint32 color);
 	/// Draws a filled rectangle on the surface.
 	void drawRect(Sint16 x, Sint16 y, Sint16 w, Sint16 h, Uint8 color);
 	/// Draws a line on the surface.
@@ -169,6 +200,10 @@ public:
 	 */
 	SDL_Color *getPalette() const
 	{
+		if (!_surface || !_surface->format->palette)
+		{
+			return nullptr;
+		}
 		return _surface->format->palette->colors;
 	}
 	/// Sets the X position of the surface.
@@ -213,6 +248,21 @@ public:
 		*getRaw(x, y) = pixel;
 	}
 	/**
+	 * Changes the color of a pixel in the surface, relative to
+	 * the top-left corner of the surface. Invalid positions are ignored.
+	 * @param x X position of the pixel.
+	 * @param y Y position of the pixel.
+	 * @param pixel New color for the pixel.
+	 */
+	void setPixel32(int x, int y, Uint32 pixel)
+	{
+		if (x < 0 || x >= getWidth() || y < 0 || y >= getHeight())
+		{
+			return;
+		}
+		*getRaw(x, y) = pixel;
+	}
+	/**
 	 * Changes the color of a pixel in the surface and returns the
 	 * next pixel position. Useful when changing a lot of pixels in
 	 * a row, eg. manipulating images.
@@ -223,6 +273,16 @@ public:
 	void setPixelIterative(int *x, int *y, Uint8 pixel)
 	{
 		setPixel(*x, *y, pixel);
+		(*x)++;
+		if (*x == getWidth())
+		{
+			(*y)++;
+			*x = 0;
+		}
+	}
+	void setPixelIterative32(int* x, int* y, Uint32 pixel)
+	{
+		setPixel32(*x, *y, pixel);
 		(*x)++;
 		if (*x == getWidth())
 		{
@@ -244,6 +304,14 @@ public:
 		}
 		return *getRaw(x, y);
 	}
+	Uint32 getPixel32(int x, int y) const
+	{
+		if (x < 0 || x >= getWidth() || y < 0 || y >= getHeight())
+		{
+			return 0;
+		}
+		return *getRaw(x, y);
+	}
 	/**
 	 * Returns the pointer to a specified pixel in the surface.
 	 * @param x X position of the pixel.
@@ -254,6 +322,10 @@ public:
 	{
 		return (Uint8 *)_surface->pixels + (y * _surface->pitch + x * _surface->format->BytesPerPixel);
 	}
+	const Uint32* getRaw32(int x, int y) const
+	{
+		return (Uint32*)_surface->pixels + (y * _surface->pitch + x * _surface->format->BytesPerPixel);
+	}
 	/**
 	 * Returns the pointer to a specified pixel in the surface.
 	 * @param x X position of the pixel.
@@ -263,6 +335,10 @@ public:
 	Uint8 *getRaw(int x, int y)
 	{
 		return (Uint8 *)_surface->pixels + (y * _surface->pitch + x * _surface->format->BytesPerPixel);
+	}
+	Uint32* getRaw32(int x, int y)
+	{
+		return (Uint32*)_surface->pixels + (y * _surface->pitch + x * _surface->format->BytesPerPixel);
 	}
 	/**
 	 * Returns the internal SDL_Surface for SDL calls.
@@ -298,7 +374,7 @@ public:
 		return _pitch;
 	}
 	/// Get pointer to buffer
-	Uint8* getBuffer()
+	void* getBuffer()
 	{
 		return _alignedBuffer.get();
 	}
@@ -315,8 +391,10 @@ public:
 	void unlock();
 	/// Specific blit function to blit battlescape terrain data in different shades in a fast way.
 	static void blitRaw(SurfaceRaw<Uint8> dest, SurfaceRaw<const Uint8> src, int x, int y, int shade, bool half = false, int newBaseColor = 0);
+	static void blitRaw(SurfaceRaw<Uint32> dest, SurfaceRaw<const Uint32> src, SDL_PixelFormat* format, int x, int y, int shade, bool half = false, SDL_Color newBaseColor = {0,0,0,0});
 	/// Specific blit function to blit battlescape terrain data in different shades in a fast way.
 	void blitNShade(SurfaceRaw<Uint8> surface, int x, int y, int shade = 0, bool half = false, int newBaseColor = 0) const;
+	void blitNShade32(SurfaceRaw<Uint32> surface, int x, int y, int shade = 0, bool half = false, SDL_Color newBaseColor = {0,0,0,0}) const;
 	/// Specific blit function to blit battlescape terrain data in different shades in a fast way.
 	void blitNShade(SurfaceRaw<Uint8> surface, int x, int y, int shade, GraphSubset range) const;
 	/// Invalidate the surface: force it to be redrawn
@@ -374,7 +452,7 @@ public:
 	{
 		if (surf)
 		{
-			*this = SurfaceRaw{ surf->getBuffer(), surf->getWidth(), surf->getHeight(), surf->getPitch() };
+			*this = SurfaceRaw{ (Pixel*)surf->getBuffer(), surf->getWidth(), surf->getHeight(), surf->getPitch() };
 		}
 	}
 
@@ -384,7 +462,7 @@ public:
 	{
 		if (surf)
 		{
-			*this = SurfaceRaw{ surf->getBuffer(), surf->getWidth(), surf->getHeight(), surf->getPitch() };
+			*this = SurfaceRaw{ (Pixel*)surf->getBuffer(), surf->getWidth(), surf->getHeight(), surf->getPitch() };
 		}
 	}
 
@@ -530,6 +608,7 @@ public:
 
 	/// Blit Cropped surface to another surface.
 	void blit(Surface* dest);
+	void blit32(Surface* dest);
 };
 
 }

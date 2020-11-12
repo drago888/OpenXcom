@@ -39,6 +39,11 @@ namespace OpenXcom
 	{
 		RuleCraftWeapon *weapon = _game->getMod()->getCraftWeapon(defs->id, true);
 
+		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
+		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
+		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
+
 		CraftWeaponCategory category = CWC_WEAPON;
 		int offset = 0;
 		if (weapon->getHidePediaInfo())
@@ -55,57 +60,93 @@ namespace OpenXcom
 			}
 		}
 
-		// add screen elements
-		_txtTitle = new Text(200, 32, 5, 24);
-
 		// Set palette
-		if (defs->customPalette)
+		if (defs->customPalette && bpp == 8)
 		{
 			setCustomPalette(_game->getMod()->getSurface(defs->image_id)->getPalette(), Mod::BATTLESCAPE_CURSOR);
 		}
-		else
+		else if (bpp == 8)
 		{
 			setStandardPalette("PAL_BATTLEPEDIA");
 		}
+		else
+		{
+			genPediaPal();
+			_cursorColor = Mod::UFOPAEDIA_CURSOR;
+		}
 
-		_buttonColor = _game->getMod()->getInterface("articleCraftWeapon")->getElement("button")->color;
-		_textColor = _game->getMod()->getInterface("articleCraftWeapon")->getElement("text")->color;
-		_textColor2 = _game->getMod()->getInterface("articleCraftWeapon")->getElement("text")->color2;
-		_listColor1 = _game->getMod()->getInterface("articleCraftWeapon")->getElement("list")->color;
-		_listColor2 = _game->getMod()->getInterface("articleCraftWeapon")->getElement("list")->color2;
+		if (bpp == 8)
+		{
+			_buttonColor = _game->getMod()->getInterface("articleCraftWeapon")->getElement("button")->color;
+			_textColor = _game->getMod()->getInterface("articleCraftWeapon")->getElement("text")->color;
+			_textColor2 = _game->getMod()->getInterface("articleCraftWeapon")->getElement("text")->color2;
+			_listColor1 = _game->getMod()->getInterface("articleCraftWeapon")->getElement("list")->color;
+			_listColor2 = _game->getMod()->getInterface("articleCraftWeapon")->getElement("list")->color2;
+		}
+		else
+		{
+			_buttonColor = Palette::blockOffset(15) - 1;
+			_textColor = Palette::blockOffset(14) + 15;
+			_textColor2 = Palette::blockOffset(15) + 4;
+			_listColor1 = Palette::blockOffset(14) + 15;
+			_listColor2 = Palette::blockOffset(15) + 4;
+		}
 
+		// set buttons palette before adding to state
+		_btnOk->statePalette = _palette;
+		_btnOk->setTextPalette(buttonTextPalette);
+		_btnPrev->statePalette = _palette;
+		_btnPrev->setTextPalette(buttonTextPalette);
+		_btnNext->statePalette = _palette;
+		_btnNext->setTextPalette(buttonTextPalette);
+		_btnInfo->statePalette = _palette;
+		_btnInfo->setTextPalette(buttonTextPalette);
 		ArticleState::initLayout();
 
-		// add other elements
-		add(_txtTitle);
-
 		// Set up objects
-		_game->getMod()->getSurface(defs->image_id)->blitNShade(_bg, 0, 0);
+		if (bpp == 8)
+		{
+			_game->getMod()->getSurface(defs->image_id)->blitNShade(_bg, 0, 0);
+		}
+		else
+		{
+			Surface surf;
+			get32Surf("32_" + defs->image_id, defs->image_id, &surf, "PAL_GEOSCAPE")->blitNShade32(_bg, 0, 0);
+		}
+
 		_btnOk->setColor(_buttonColor);
 		_btnPrev->setColor(_buttonColor);
 		_btnNext->setColor(_buttonColor);
 		_btnInfo->setColor(_buttonColor);
 		_btnInfo->setVisible(true);
 
+		// add screen elements
+		_txtTitle = new Text(200 * scaleX, 32 * scaleY, 5 * scaleX, 24 * scaleY, bpp);
+		_txtTitle->setScale(scaleX, scaleY);
+		add(_txtTitle);
 		_txtTitle->setColor(_textColor);
 		_txtTitle->setBig();
 		_txtTitle->setWordWrap(true);
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
 
-		_txtInfo = new Text(310, 32 + offset, 5, 160 - offset);
+		_txtInfo = new Text(310 * scaleX, (32 + offset) * scaleY, 5 * scaleX, (160 - offset)*scaleY, bpp);
+		_txtInfo->setScale(scaleX, scaleY);
 		add(_txtInfo);
-
 		_txtInfo->setColor(_textColor);
 		_txtInfo->setSecondaryColor(_textColor2);
 		_txtInfo->setWordWrap(true);
 		_txtInfo->setText(tr(defs->getTextForPage(_state->current_page)));
 
-		_lstInfo = new TextList(250, 111 - offset, 5, 80);
+		_lstInfo = new TextList(250 * scaleX, (111 - offset) * scaleY, 5 * scaleX, 80 * scaleY, bpp);
+		_lstInfo->setScale(scaleX, scaleY);
 		add(_lstInfo);
 		_lstInfo->setVisible(category != CWC_EQUIPMENT);
-
 		_lstInfo->setColor(_listColor1);
-		_lstInfo->setColumns(2, 180, 70);
+		_lstInfo->statePalette = _palette;
+		_lstInfo->textPalette = _palette;
+		_lstInfo->textColor = _textColor;
+		_lstInfo->textColor2 = _textColor2;
+		_lstInfo->setColumns(2, 180*scaleX, 70*scaleY);
 		_lstInfo->setDot(true);
 		_lstInfo->setBig();
 

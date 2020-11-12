@@ -448,7 +448,7 @@ static inline void scriptExe(ScriptWorkerBase& data, const Uint8* proc)
 
 void ScriptWorkerBlit::executeBlit(Surface* src, Surface* dest, int x, int y, int shade)
 {
-	executeBlit(src, dest, x, y, shade, GraphSubset{ dest->getWidth(), dest->getHeight() } );
+	executeBlit(src, dest, x, y, shade, GraphSubset{ dest->getWidth(), dest->getHeight() });
 }
 /**
  * Blitting one surface to another using script.
@@ -459,73 +459,73 @@ void ScriptWorkerBlit::executeBlit(Surface* src, Surface* dest, int x, int y, in
  */
 void ScriptWorkerBlit::executeBlit(Surface* src, Surface* dest, int x, int y, int shade, GraphSubset mask)
 {
-	ShaderMove<Uint8> srcShader(src, x, y);
-	ShaderMove<Uint8> destShader(dest, 0, 0);
+		ShaderMove<Uint8> srcShader(src, x, y);
+		ShaderMove<Uint8> destShader(dest, 0, 0);
 
-	destShader.setDomain(mask);
+		destShader.setDomain(mask);
 
-	if (_proc)
-	{
-		if (_events)
+		if (_proc)
 		{
-			ShaderDrawFunc(
-				[&](Uint8& destStuff, const Uint8& srcStuff)
-				{
-					if (srcStuff)
+			if (_events)
+			{
+				ShaderDrawFunc(
+					[&](Uint8& destStuff, const Uint8& srcStuff)
 					{
-						ScriptWorkerBlit::Output arg = { srcStuff, destStuff };
-						set(arg);
-						auto ptr = _events;
-						while (*ptr)
+						if (srcStuff)
 						{
-							reset(arg);
-							scriptExe(*this, ptr->data());
+							ScriptWorkerBlit::Output arg = { srcStuff, destStuff };
+							set(arg);
+							auto ptr = _events;
+							while (*ptr)
+							{
+								reset(arg);
+								scriptExe(*this, ptr->data());
+								++ptr;
+							}
 							++ptr;
+
+							reset(arg);
+							scriptExe(*this, _proc);
+
+							while (*ptr)
+							{
+								reset(arg);
+								scriptExe(*this, ptr->data());
+								++ptr;
+							}
+							++ptr;
+
+							get(arg);
+							if (arg.getFirst()) destStuff = arg.getFirst();
 						}
-						++ptr;
-
-						reset(arg);
-						scriptExe(*this, _proc);
-
-						while (*ptr)
+					},
+					destShader,
+						srcShader
+						);
+			}
+			else
+			{
+				ShaderDrawFunc(
+					[&](Uint8& destStuff, const Uint8& srcStuff)
+					{
+						if (srcStuff)
 						{
-							reset(arg);
-							scriptExe(*this, ptr->data());
-							++ptr;
+							ScriptWorkerBlit::Output arg = { srcStuff, destStuff };
+							set(arg);
+							scriptExe(*this, _proc);
+							get(arg);
+							if (arg.getFirst()) destStuff = arg.getFirst();
 						}
-						++ptr;
-
-						get(arg);
-						if (arg.getFirst()) destStuff = arg.getFirst();
-					}
-				},
-				destShader,
-				srcShader
-			);
+					},
+					destShader,
+						srcShader
+						);
+			}
 		}
 		else
 		{
-			ShaderDrawFunc(
-				[&](Uint8& destStuff, const Uint8& srcStuff)
-				{
-					if (srcStuff)
-					{
-						ScriptWorkerBlit::Output arg = { srcStuff, destStuff };
-						set(arg);
-						scriptExe(*this, _proc);
-						get(arg);
-						if (arg.getFirst()) destStuff = arg.getFirst();
-					}
-				},
-				destShader,
-				srcShader
-			);
+			ShaderDraw<helper::StandardShade>(destShader, srcShader, ShaderScalar(shade));
 		}
-	}
-	else
-	{
-		ShaderDraw<helper::StandardShade>(destShader, srcShader, ShaderScalar(shade));
-	}
 }
 
 /**

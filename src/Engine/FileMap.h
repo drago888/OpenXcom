@@ -126,7 +126,8 @@ namespace FileMap
 
 	/// Unzip a file from a .zip into memory.
 	SDL_RWops *zipGetFileByName(const std::string& zipfile, const std::string& fullpath);
-
+	// check if it is a png file
+	bool isPng(SDL_RWops* file);
 }
 
 }

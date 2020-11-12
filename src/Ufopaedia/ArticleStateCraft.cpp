@@ -29,6 +29,7 @@
 #include "../Engine/Unicode.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextButton.h"
+#include "../Engine/Screen.h"
 
 namespace OpenXcom
 {
@@ -37,48 +38,76 @@ namespace OpenXcom
 	{
 		RuleCraft *craft = _game->getMod()->getCraft(defs->id, true);
 
-		// add screen elements
-		_txtTitle = new Text(210, 32, 5, 24);
+		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
+		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
+		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
+
 
 		// Set palette
-		if (defs->customPalette)
+		if (defs->customPalette && bpp == 8)
 		{
 			setCustomPalette(_game->getMod()->getSurface(defs->image_id)->getPalette(), Mod::UFOPAEDIA_CURSOR);
 		}
-		else
+		else if (bpp == 8)
 		{
 			setStandardPalette("PAL_UFOPAEDIA");
 		}
+		else
+		{
+			genPediaPal();
+			_cursorColor = Mod::UFOPAEDIA_CURSOR;
+		}
 
+		// set buttons palette before adding to state
+		_btnOk->statePalette = _palette;
+		_btnOk->setTextPalette(buttonTextPalette);
+		_btnPrev->statePalette = _palette;
+		_btnPrev->setTextPalette(buttonTextPalette);
+		_btnNext->statePalette = _palette;
+		_btnNext->setTextPalette(buttonTextPalette);
+		_btnInfo->statePalette = _palette;
+		_btnInfo->setTextPalette(buttonTextPalette);
 		ArticleState::initLayout();
 
-		// add other elements
-		add(_txtTitle);
 
 		// Set up objects
-		_game->getMod()->getSurface(defs->image_id)->blitNShade(_bg, 0, 0);
+		if (Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH)
+		{
+			_game->getMod()->getSurface(defs->image_id)->blitNShade(_bg, 0, 0);
+		}
+		else
+		{
+			Surface surf;
+			get32Surf("32_" +defs-> image_id, defs->image_id, &surf, "PAL_GEOSCAPE")->blitNShade32(_bg, 0, 0);
+		}
 		_btnOk->setColor(Palette::blockOffset(15)-1);
 		_btnPrev->setColor(Palette::blockOffset(15)-1);
 		_btnNext->setColor(Palette::blockOffset(15)-1);
 		_btnInfo->setColor(Palette::blockOffset(15)-1);
 		_btnInfo->setVisible(_game->getMod()->getShowPediaInfoButton());
 
+		// add screen elements
+		_txtTitle = new Text(210 * scaleX, 32 * scaleY, 5 * scaleX, 24 * scaleY, bpp);
+		_txtTitle->setScale(scaleX, scaleY);
+		add(_txtTitle);
 		_txtTitle->setColor(Palette::blockOffset(14)+15);
 		_txtTitle->setBig();
 		_txtTitle->setWordWrap(true);
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
 
-		_txtInfo = new Text(defs->rect_text.width, defs->rect_text.height, defs->rect_text.x, defs->rect_text.y);
-		add(_txtInfo);
 
+		_txtInfo = new Text(defs->rect_text.width * scaleX, defs->rect_text.height * scaleY, defs->rect_text.x * scaleX, defs->rect_text.y * scaleY, bpp);
+		_txtInfo->setScale(scaleX, scaleY);
+		add(_txtInfo);
 		_txtInfo->setColor(Palette::blockOffset(14)+15);
 		_txtInfo->setSecondaryColor(Palette::blockOffset(15) + 4);
 		_txtInfo->setWordWrap(true);
 		_txtInfo->setText(tr(defs->getTextForPage(_state->current_page)));
 
-		_txtStats = new Text(defs->rect_stats.width, defs->rect_stats.height, defs->rect_stats.x, defs->rect_stats.y);
+		_txtStats = new Text(defs->rect_stats.width * scaleX, defs->rect_stats.height * scaleY, defs->rect_stats.x * scaleX, defs->rect_stats.y * scaleY, bpp);
+		_txtStats->setScale(scaleX, scaleY);
 		add(_txtStats);
-
 		_txtStats->setColor(Palette::blockOffset(14)+15);
 		_txtStats->setSecondaryColor(Palette::blockOffset(15)+4);
 

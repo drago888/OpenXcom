@@ -1668,13 +1668,13 @@ int RuleItem::getSpecialChance() const
  * @param texture Pointer to the surface set to get the sprite from.
  * @param surface Pointer to the surface to draw to.
  */
-void RuleItem::drawHandSprite(SurfaceSet *texture, Surface *surface, BattleItem *item, int animFrame) const
+void RuleItem::drawHandSprite(SurfaceSet *texture, Surface *surface, BattleItem *item, int animFrame, int bpp) const
 {
 	Surface *frame = nullptr;
 	if (item)
 	{
 		frame = item->getBigSprite(texture, animFrame);
-		if (frame)
+		if (frame && bpp == 8)
 		{
 			ScriptWorkerBlit scr;
 			BattleItem::ScriptFill(&scr, item, BODYPART_ITEM_INVENTORY, animFrame, 0);
@@ -1684,7 +1684,15 @@ void RuleItem::drawHandSprite(SurfaceSet *texture, Surface *surface, BattleItem 
 	else
 	{
 		frame = texture->getFrame(this->getBigSprite());
-		frame->blitNShade(surface, this->getHandSpriteOffX(), this->getHandSpriteOffY());
+		if (bpp == 8)
+		{
+			frame->blitNShade(surface, this->getHandSpriteOffX(), this->getHandSpriteOffY());
+		}
+		else
+		{
+			frame->blitNShade32(surface, this->getHandSpriteOffX() * Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH,
+				this->getHandSpriteOffY() * Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT );
+		}
 	}
 }
 

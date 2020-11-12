@@ -34,7 +34,7 @@ namespace OpenXcom
  * @param x X position in pixels.
  * @param y Y position in pixels.
  */
-Cursor::Cursor(int width, int height, int x, int y) : Surface(width, height, x, y), _color(0)
+Cursor::Cursor(int width, int height, int x, int y) : Surface(width, height, x, y), _color(0), scale(1)
 {
 }
 
@@ -88,7 +88,7 @@ void Cursor::draw()
 	int x1 = 0, y1 = 0, x2 = getWidth() - 1, y2 = getHeight() - 1;
 
 	lock();
-	for (int i = 0; i < 4; ++i)
+	for (int i = 0; i < 4 * scale; ++i)
 	{
 		drawLine(x1, y1, x1, y2, color);
 		drawLine(x1, y1, x2, getWidth() - 1, color);
@@ -98,7 +98,14 @@ void Cursor::draw()
 		x2--;
 		color++;
 	}
-	this->setPixel(4, 8, --color);
+	for (int i = 0; i <= scale / 2; i++)
+	{
+		for (int j = 0; j <= scale / 2; j++)
+		{
+			this->setPixel(4 * scale + i, 8 * scale + j, --color);
+		}
+	}
+
 	unlock();
 }
 

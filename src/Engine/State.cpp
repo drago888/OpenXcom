@@ -37,6 +37,9 @@
 #include "../Interface/FpsCounter.h"
 #include "../Savegame/SavedBattleGame.h"
 #include "../Mod/RuleInterface.h"
+#include "../Engine/Screen.h"
+#include "../Mod/ExtraSprites.h"
+#include <utility>
 
 namespace OpenXcom
 {
@@ -49,7 +52,8 @@ Game* State::_game = 0;
  * By default states are full-screen.
  * @param game Pointer to the core game.
  */
-State::State() : _screen(true), _soundPlayed(false), _modal(0), _ruleInterface(0), _ruleInterfaceParent(0)
+State::State() : _screen(true), _soundPlayed(false), _modal(0), _ruleInterface(0), _ruleInterfaceParent(0), resetScreen(false),
+	_resX(Screen::ORIGINAL_WIDTH), _resY(Screen::ORIGINAL_HEIGHT), _bpp(8)
 {
 	// initialize palette to all black
 	memset(_palette, 0, sizeof(_palette));
@@ -65,6 +69,114 @@ State::~State()
 	{
 		delete *i;
 	}
+}
+
+
+/**
+* Generate the default palette
+* Red will have 7 choice (each increment is 1B) - 0x2B, 0x46, 0x61, 0x7C, 0x97, 0xB2, 0xCD
+* Green and blue will have 6 choices (each increment is 1B) - 0x3B, 0x56, 0x71, 0x8C, 0xA7, 0xC2
+*/
+void State::genDefPal()
+{
+	_palette[0].r = 0, _palette[0].g = 0, _palette[0].b = 0, _palette[0].unused = SDL_ALPHA_OPAQUE;
+	_palette[1].r = 0x10, _palette[1].g = 0x20, _palette[1].b = 0x20, _palette[1].unused = SDL_ALPHA_OPAQUE;
+	Uint8 r, g, b, i = 2;
+
+
+	for (r = 0x2B; r < 0xEF; r+=0x1B)
+	for (g = 0x3B; g < 0xDF; g+=0x1B)
+	for (b = 0x3B; b < 0xDF; b+=0x1B)
+			_palette[i].r = r, _palette[i].g = g, _palette[i].b = b, _palette[i++].unused = SDL_ALPHA_OPAQUE;
+
+
+
+	_palette[254].r = 0xef, _palette[254].g = 0xdf, _palette[254].b = 0xdf, _palette[254].unused = SDL_ALPHA_OPAQUE;
+	_palette[255].r = 0xff, _palette[255].g = 0xff, _palette[255].b = 0xff, _palette[255].unused = SDL_ALPHA_OPAQUE;
+}
+
+/**
+* Generate the cutscene palette
+*/
+void State::genCutPal()
+{
+	setStatePalette(_game->getMod()->getPalettes().find("PAL_UFOPAEDIA")->second->getColors());
+}
+
+/**
+* Generate the ufopedia articles palette
+*/
+void State::genPediaPal()
+{
+	setStatePalette(_game->getMod()->getPalettes().find("PAL_UFOPAEDIA")->second->getColors());
+}
+
+/*
+* Get the 32 bit surface.
+* If not existing, convert the 8 bit surface to 32 bits
+* @param id32 the 32 bit id
+* @param id8 the 8 bit id
+* @param newSurf the new surface if need to convert 8 bit to 32 bits
+* @param palName palette name to use if no palette found in 8 bits
+* @param usePal use the palette passed in
+* @return the 32 bit surface
+*/
+Surface* State::get32Surf(std::string id32, std::string id8, Surface* newSurf, std::string palName, bool usePal)
+{
+	Surface* surf;
+	try
+	{
+		surf = _game->getMod()->getSurface(id32, Options::pediaBgResolutionX, Options::pediaBgResolutionY);
+	}
+	catch (Exception& ex)
+	{
+		surf = nullptr; // just to ignore any exception when 32 surface does not exists
+	}
+
+	if (!surf)
+	{
+		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
+		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+		surf = _game->getMod()->getSurface(id8);
+		Palette pal = Palette();
+		if (!usePal && surf->getPalette())
+		{
+			pal.setColors(surf->getPalette(), surf->getSurface()->format->palette->ncolors);
+		}
+		else
+		{
+			pal.setColors(_game->getMod()->getPalettes().find(palName)->second->getColors(), 255);
+		}
+		*newSurf = *surf;
+		newSurf->setScale(scaleX, scaleY);
+		newSurf->doScale();
+		newSurf->convertTo32Bits(newSurf, pal.getColors(), true); // always use the palette passed in
+		surf = newSurf;
+	}
+
+	return surf;
+}
+
+/*
+* Get the 32 bit sprites type id
+* @param id the 8 bit sprite type id
+* @return the typeid to use
+*/
+std::string State::getTypeId(std::string id, int bpp)
+{
+	if (bpp != 8 && _game->getMod()->getExtraSprites().find(id)->second.size() > 0)
+	{
+		ExtraSprites* sprite = _game->getMod()->getExtraSprites().find(id)->second[0];
+
+		std::string first_sprite = sprite->getSprites() && sprite->getSprites()->size() > 0 ? sprite->getSprites()->begin()->second : "";
+
+		if (OpenXcom::in32BitsFolder(first_sprite))
+		{
+			return "32_" + id;
+		}
+	}
+
+	return id;
 }
 
 /**
@@ -145,10 +257,14 @@ void State::add(Surface *surface)
 {
 	// Set palette
 	surface->setPalette(_palette);
+	surface->statePalette = _palette;
+
 
 	// Set default text resources
 	if (_game->getLanguage() && _game->getMod())
-		surface->initText(_game->getMod()->getFont("FONT_BIG"), _game->getMod()->getFont("FONT_SMALL"), _game->getLanguage());
+		surface->initText(_game->getMod()->getFont("FONT_BIG",true,(int)surface->getScaleX(),(int)surface->getScaleY()),
+			              _game->getMod()->getFont("FONT_SMALL",true,(int)surface->getScaleX(),(int)surface->getScaleY()),
+			              _game->getLanguage());
 
 	_surfaces.push_back(surface);
 }
@@ -258,9 +374,11 @@ void State::init()
 {
 	_game->getScreen()->setPalette(_palette);
 	_game->getCursor()->setPalette(_palette);
+	_game->getCursor()->statePalette = _palette;
 	_game->getCursor()->setColor(_cursorColor);
 	_game->getCursor()->draw();
 	_game->getFpsCounter()->setPalette(_palette);
+	_game->getFpsCounter()->statePalette = _palette;
 	_game->getFpsCounter()->setColor(_cursorColor);
 	_game->getFpsCounter()->draw();
 
@@ -324,6 +442,12 @@ void State::handle(Action *action)
  */
 void State::blit()
 {
+	if (resetScreen)
+	{
+		resetScreen = !resetScreen;
+
+		_game->getScreen()->resetDisplay(true, false, _resX, _resY, _bpp);
+	}
 	for (std::vector<Surface*>::iterator i = _surfaces.begin(); i != _surfaces.end(); ++i)
 		(*i)->blit(_game->getScreen()->getSurface());
 }
@@ -519,8 +643,10 @@ void State::setModPalette()
 {
 	{
 		_game->getCursor()->setPalette(_palette);
+		_game->getCursor()->statePalette = _palette;
 		_game->getCursor()->draw();
 		_game->getFpsCounter()->setPalette(_palette);
+		_game->getFpsCounter()->statePalette = _palette;
 		_game->getFpsCounter()->draw();
 	}
 }

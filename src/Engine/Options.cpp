@@ -385,7 +385,10 @@ void create()
 	_info.push_back(OptionInfo("FPSInactive", &FPSInactive, 30, "STR_FPS_INACTIVE_LIMIT", "STR_GENERAL"));
 	_info.push_back(OptionInfo("vSyncForOpenGL", &vSyncForOpenGL, true, "STR_VSYNC_FOR_OPENGL", "STR_GENERAL"));
 #endif
-
+	_info.push_back(OptionInfo("cutsceneResolutionX", &cutsceneResolutionX, 320));
+	_info.push_back(OptionInfo("cutsceneResolutionY", &cutsceneResolutionY, 200));
+	_info.push_back(OptionInfo("pediaBgResolutionX", &pediaBgResolutionX, 320));
+	_info.push_back(OptionInfo("pediaBgResolutionY", &pediaBgResolutionY, 200));
 }
 
 // we can get fancier with these detection routines, but for now just look for

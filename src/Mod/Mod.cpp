@@ -106,6 +106,7 @@
 #include "RuleConverter.h"
 #include "RuleSoldierTransformation.h"
 #include "RuleSoldierBonus.h"
+#include "../Engine/Screen.h"
 
 #define ARRAYLEN(x) (std::size(x))
 
@@ -158,6 +159,41 @@ constexpr size_t MaxDifficultyLevels = 5;
 const std::string ModNameMaster = "master";
 /// Predefined name for current mod that is loading rulesets.
 const std::string ModNameCurrent = "current";
+
+/**
+* Check that the file is in the list of subfolders provided
+*/
+bool in32BitsFolder(std::string file)
+{
+	std::vector<std::pair<std::string, bool>>str_chk = { {"Resources/", true}, // not in subfolder
+														 {"Resources/Backgrounds/", false},
+														 {"Resources/Weapons/", false},
+														 {"Resources/Pedia/", false},
+														 {"Resources/Cutscenes",false},
+														 {"Resources/Awards", false} };
+
+	for (int i = 0; i < str_chk.size(); ++i)
+	{
+		// ignore subfolder
+		if (str_chk[i].second)
+		{
+			if (file.size() > str_chk[i].first.size() && file.substr(0, str_chk[i].first.size()) == str_chk[i].first
+				&& file.substr(str_chk[i].first.size(), std::string::npos).find("/") == std::string::npos)
+			{
+				return true;
+			}
+		}
+		else // apply for any in subfolder
+		{
+			if (file.size() > str_chk[i].first.size() && file.substr(0, str_chk[i].first.size()) == str_chk[i].first)
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
 
 void Mod::resetGlobalStatics()
 {
@@ -747,9 +783,9 @@ T *Mod::getRule(const std::string &id, const std::string &name, const std::map<s
  * @param name Name of the font.
  * @return Pointer to the font.
  */
-Font *Mod::getFont(const std::string &name, bool error) const
+Font *Mod::getFont(const std::string &name, bool error, int scaleX, int scaleY) const
 {
-	return getRule(name, "Font", _fonts, error);
+	return getRule(name +","+std::to_string(scaleX)+","+std::to_string(scaleY), "Font", _fonts, error);
 }
 
 /**
@@ -757,7 +793,7 @@ Font *Mod::getFont(const std::string &name, bool error) const
  * it's first requested.
  * @param name Surface name.
  */
-void Mod::lazyLoadSurface(const std::string &name)
+void Mod::lazyLoadSurface(const std::string &name, int width, int height)
 {
 	if (Options::lazyLoadResources)
 	{
@@ -766,7 +802,7 @@ void Mod::lazyLoadSurface(const std::string &name)
 		{
 			for (std::vector<ExtraSprites*>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
-				loadExtraSprite(*j);
+				loadExtraSprite(*j, width, height);
 			}
 		}
 	}
@@ -777,9 +813,9 @@ void Mod::lazyLoadSurface(const std::string &name)
  * @param name Name of the surface.
  * @return Pointer to the surface.
  */
-Surface *Mod::getSurface(const std::string &name, bool error)
+Surface *Mod::getSurface(const std::string &name, bool error, int width, int height)
 {
-	lazyLoadSurface(name);
+	lazyLoadSurface(name, width, height);
 	return getRule(name, "Sprite", _surfaces, error);
 }
 
@@ -793,7 +829,11 @@ SurfaceSet *Mod::getSurfaceSet(const std::string &name, bool error)
 	lazyLoadSurface(name);
 	return getRule(name, "Sprite Set", _sets, error);
 }
-
+SurfaceSet* Mod::getSurfaceSet32(const std::string& name, bool error, int width, int height)
+{
+	lazyLoadSurface(name, width, height);
+	return getRule(name, "Sprite Set", _sets, error);
+}
 /**
  * Returns a specific music from the mod.
  * @param name Name of the music.
@@ -1669,6 +1709,7 @@ void Mod::loadAll()
 	loadVanillaResources();
 	_surfaceOffsetBasebits = _sets["BASEBITS.PCK"]->getMaxSharedFrames();
 	_surfaceOffsetBigobs = _sets["BIGOBS.PCK"]->getMaxSharedFrames();
+	_surfaceOffsetBigobs32 = _sets["32_BIGOBS.PCK"]->getMaxSharedFrames();
 	_surfaceOffsetFloorob = _sets["FLOOROB.PCK"]->getMaxSharedFrames();
 	_surfaceOffsetHandob = _sets["HANDOB.PCK"]->getMaxSharedFrames();
 	_surfaceOffsetHit = _sets["HIT.PCK"]->getMaxSharedFrames();
@@ -1870,6 +1911,25 @@ void Mod::loadAll()
 	sortLists();
 	loadExtraResources();
 	modResources();
+
+	// if any images in 32_BIGOBS.PCK is 8 bits, change it to 32bits
+	if (Options::pediaBgResolutionX != Screen::ORIGINAL_WIDTH)
+	{
+		for (int i = 0; i < _sets["32_BIGOBS.PCK"]->getTotalFrames(); ++i)
+		{
+			Surface* frame = _sets["32_BIGOBS.PCK"]->getFrame(i);
+			if (!frame || !frame->getSurface() || frame->getSurface()->format->BitsPerPixel != 8 ||
+				!_sets["BIGOBS.PCK"]->getFrame(i) || !_sets["BIGOBS.PCK"]->getFrame(i)->getSurface())
+			{
+				continue;
+			}
+				
+			*frame = *_sets["BIGOBS.PCK"]->getFrame(i);
+			frame->setScale(Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH, Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT);
+			frame->doScale();
+			frame->convertTo32Bits(frame, _palettes["PAL_BATTLESCAPE"]->getColors(), true); // use the palette passed in
+		}
+	}
 }
 
 /**
@@ -2039,6 +2099,7 @@ void Mod::loadConstants(const YAML::Node &node)
 	EXTENDED_TERRAIN_MELEE = node["extendedTerrainMelee"].as<int>(EXTENDED_TERRAIN_MELEE);
 	EXTENDED_UNDERWATER_THROW_FACTOR = node["extendedUnderwaterThrowFactor"].as<int>(EXTENDED_UNDERWATER_THROW_FACTOR);
 }
+
 
 /**
  * Loads a ruleset's contents from a YAML file.
@@ -2584,6 +2645,26 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 				data = &_modData.at(0);
 			extraSprites->load(*i, data);
 			_extraSprites[type].push_back(extraSprites);
+
+
+			std::string first_sprite = extraSprites->getSprites() && extraSprites->getSprites()->size() > 0  ? extraSprites->getSprites()->begin()->second : "";
+
+			if (in32BitsFolder(first_sprite) && Screen::ORIGINAL_WIDTH != Options::pediaBgResolutionX)
+			{
+				ExtraSprites* sprites32bits = new ExtraSprites(*extraSprites);
+				for (std::map<int, std::string>::iterator it = sprites32bits->getSprites()->begin(); it != sprites32bits->getSprite()->end(); ++it)
+				{
+					std::string filename = it->second;
+					if (in32BitsFolder(filename))
+					{
+						it->second = filename.substr(0, filename.size() - 4) + "32" + filename.substr(filename.size() - 4, std::string::npos);
+					}
+				}
+				sprites32bits->setType("32_" + extraSprites->getType());
+				sprites32bits->setWidth(sprites32bits->getWidth() * Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH);
+				sprites32bits->setHeight(sprites32bits->getHeight() * Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT);
+				_extraSprites[sprites32bits->getType()].push_back(sprites32bits);
+			}
 		}
 		else if ((*i)["delete"])
 		{
@@ -4633,6 +4714,7 @@ void Mod::loadVanillaResources()
 			"INTICON.PCK",
 			"CustomArmorPreviews",
 			"CustomItemPreviews",
+			"32_BIGOBS.PCK",
 		};
 
 		for (size_t i = 0; i < ARRAYLEN(surfaceNames); ++i)
@@ -4728,8 +4810,25 @@ void Mod::loadBattlescapeResources()
 		if (fname != "BIGOBS.PCK")
 			_sets[fname] = new SurfaceSet(32, 40);
 		else
+		{
 			_sets[fname] = new SurfaceSet(32, 48);
+		}
 		_sets[fname]->loadPck("UNITS/" + *i, "UNITS/" + CrossPlatform::noExt(*i) + ".TAB");
+	}
+	int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
+	int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+	int width = 32 * scaleX;
+	int height = 48 * scaleY;
+	// set up 32_BIGOBS.PCK
+	_sets["32_BIGOBS.PCK"] = new SurfaceSet(width, height);
+	for (int cnt = 0; cnt < _sets["BIGOBS.PCK"]->getTotalFrames(); ++cnt)
+	{
+		_sets["32_BIGOBS.PCK"]->addFrame(cnt);
+		Surface surf = Surface(*_sets["BIGOBS.PCK"]->getFrame(cnt));
+		surf.setScale(scaleX, scaleY);
+		surf.doScale();
+		surf.convertTo32Bits(&surf, _palettes["PAL_BATTLESCAPE"]->getColors(), true);
+		*_sets["32_BIGOBS.PCK"]->getFrame(cnt) = surf;
 	}
 	// incomplete chryssalid set: 1.0 data: stop loading.
 	if (_sets.find("CHRYS.PCK") != _sets.end() && !_sets["CHRYS.PCK"]->getFrame(225))
@@ -4986,15 +5085,38 @@ void Mod::loadBattlescapeResources()
  */
 void Mod::loadExtraResources()
 {
+	std::set<std::pair<int, int>> scales = { {
+		std::make_pair(Options::cutsceneResolutionX / Screen::ORIGINAL_WIDTH, Options::cutsceneResolutionY / Screen::ORIGINAL_HEIGHT),
+		std::make_pair(Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH, Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT),
+	} };
+
 	// Load fonts
 	YAML::Node doc = FileMap::getYAML("Language/" + _fontName);
 	Log(LOG_INFO) << "Loading fonts... " << _fontName;
 	for (YAML::const_iterator i = doc["fonts"].begin(); i != doc["fonts"].end(); ++i)
 	{
-		std::string id = (*i)["id"].as<std::string>();
+		std::string id = (*i)["id"].as<std::string>()+",1,1";
 		Font *font = new Font();
 		font->load(*i);
 		_fonts[id] = font;
+
+		for (std::set<std::pair<int, int>>::iterator it = scales.begin(); it != scales.end(); it++)
+		{
+			// scale the fonts
+			Font* font2 = new Font(*font);
+			for (std::vector<FontImage>::iterator iter = font2->getFontImages()->begin(); iter != font2->getFontImages()->end(); iter++)
+			{
+				iter->width = iter->width * it->first, iter->height = iter->height * it->second, iter->spacing = iter->spacing * it->first;
+				iter->surface->setScale(it->first, it->second);
+				iter->surface->doScale(true);
+			}
+			for (std::unordered_map< UCode, std::pair<size_t, SDL_Rect> >::iterator iter = font2->getCharsList()->begin(); iter != font2->getCharsList()->end(); iter++)
+			{
+				iter->second.second.w = iter->second.second.w * it->first, iter->second.second.h = iter->second.second.h * it->second,
+					iter->second.second.x = iter->second.second.x * it->first, iter->second.second.y = iter->second.second.y * it->second;
+			}
+			_fonts[(*i)["id"].as<std::string>() + "," + std::to_string(it->first) + "," + std::to_string(it->second)] = font2;
+		}
 	}
 
 #ifndef __NO_MUSIC
@@ -5160,7 +5282,7 @@ void Mod::loadExtraResources()
 	Window::soundPopup[2] = getSound("GEO.CAT", Mod::WINDOW_POPUP[2]);
 }
 
-void Mod::loadExtraSprite(ExtraSprites *spritePack)
+void Mod::loadExtraSprite(ExtraSprites *spritePack, int width, int height)
 {
 	if (spritePack->isLoaded())
 		return;
@@ -5174,7 +5296,7 @@ void Mod::loadExtraSprite(ExtraSprites *spritePack)
 			surface = i->second;
 		}
 
-		_surfaces[spritePack->getType()] = spritePack->loadSurface(surface);
+		_surfaces[spritePack->getType()] = spritePack->loadSurface(surface, width, height);
 		if (_statePalette)
 		{
 			if (spritePack->getType().find("_CPAL") == std::string::npos)
@@ -5218,6 +5340,8 @@ void Mod::modResources()
 	getSurfaceSet("HANDOB.PCK");
 	getSurfaceSet("FLOOROB.PCK");
 	getSurfaceSet("BIGOBS.PCK");
+	getSurfaceSet32("32_BIGOBS.PCK");
+
 
 	// embiggen the geoscape background by mirroring the contents
 	// modders can provide their own backgrounds via ALTGEOBORD.SCR
@@ -5595,6 +5719,7 @@ void Mod::ScriptRegister(ScriptParserBase *parser)
 	mod.add<&offset<&Mod::_soundOffsetGeo>>("getSoundOffsetGeo");
 	mod.add<&offset<&Mod::_surfaceOffsetBasebits>>("getSpriteOffsetBasebits");
 	mod.add<&offset<&Mod::_surfaceOffsetBigobs>>("getSpriteOffsetBigobs");
+	mod.add<&offset<&Mod::_surfaceOffsetBigobs32>>("getSpriteOffsetBigobs32");
 	mod.add<&offset<&Mod::_surfaceOffsetFloorob>>("getSpriteOffsetFloorob");
 	mod.add<&offset<&Mod::_surfaceOffsetHandob>>("getSpriteOffsetHandob");
 	mod.add<&offset<&Mod::_surfaceOffsetHit>>("getSpriteOffsetHit");

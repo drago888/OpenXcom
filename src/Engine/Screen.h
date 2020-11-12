@@ -42,6 +42,7 @@ private:
 	SDL_Surface *_screen;
 	int _bpp;
 	int _baseWidth, _baseHeight;
+	int _imageWidth, _imageHeight; // this is used to handle sizing screen
 	double _scaleX, _scaleY;
 	int _topBlackBand, _bottomBlackBand, _leftBlackBand, _rightBlackBand, _cursorTopBlackBand, _cursorLeftBlackBand;
 	Uint32 _flags;
@@ -53,7 +54,7 @@ private:
 	Surface::UniqueBufferPtr _buffer;
 	Surface::UniqueSurfacePtr _surface;
 	/// Sets the _flags and _bpp variables based on game options; needed in more than one place now
-	void makeVideoFlags();
+	void makeVideoFlags(int forcedBpp = 0);
 public:
 	static const int ORIGINAL_WIDTH;
 	static const int ORIGINAL_HEIGHT;
@@ -83,7 +84,7 @@ public:
 	/// Gets the screen's height.
 	int getHeight() const;
 	/// Resets the screen display.
-	void resetDisplay(bool resetVideo = true, bool noShaders = false);
+	void resetDisplay(bool resetVideo = true, bool noShaders = false, int width = ORIGINAL_WIDTH, int height = ORIGINAL_HEIGHT, int forcedBpp = 0);
 	/// Gets the screen's X scale.
 	double getXScale() const;
 	/// Gets the screen's Y scale.

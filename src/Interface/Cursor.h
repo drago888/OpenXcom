@@ -35,6 +35,7 @@ private:
 	Uint8 _color;
 
 public:
+	int scale;
 	/// Creates a new cursor with the specified size and position.
 	Cursor(int width, int height, int x = 0, int y = 0);
 	/// Cleans up the cursor.

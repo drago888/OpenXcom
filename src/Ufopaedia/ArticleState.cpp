@@ -28,9 +28,16 @@
 #include "../Mod/RuleItem.h"
 #include "../Mod/Mod.h"
 #include "../Savegame/SavedGame.h"
+#include "../Engine/Screen.h"
+#include "../Mod/ExtraSprites.h"
+#include "../Engine/Palette.h"
+#include <exception>
 
 namespace OpenXcom
 {
+	Cursor* ArticleState::_bigCursor = nullptr;
+	Cursor* ArticleState::_smallCursor = nullptr;
+	bool ArticleState::inPediaArticle = false;
 	/**
 	 * Change index position to next article.
 	 */
@@ -116,12 +123,32 @@ namespace OpenXcom
 	 */
 	ArticleState::ArticleState(const std::string &article_id, std::shared_ptr<ArticleCommonState> state) : _id(article_id)
 	{
+		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
+		_resX = Options::pediaBgResolutionX, _resY = Options::pediaBgResolutionY;
+		_bpp = bpp;
+
+		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
+		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+		if (!ArticleState::inPediaArticle)
+		{
+			_game->changeCursor(_bigCursor);
+			_game->mouseScaleXMul = scaleX;
+			_game->mouseScaleYMul = scaleY;
+			ArticleState::inPediaArticle = true;
+			resetScreen = true;
+		}
+
 		// init background and navigation elements
-		_bg = new Surface(320, 200, 0, 0);
-		_btnOk = new TextButton(30, 14, 5, 5);
-		_btnPrev = new TextButton(30, 14, 40, 5);
-		_btnNext = new TextButton(30, 14, 75, 5);
-		_btnInfo = new TextButton(40, 14, 110, 5);
+		_bg = new Surface(Options::pediaBgResolutionX, Options::pediaBgResolutionY, 0 * scaleX, 0 * scaleY, bpp);
+		_btnOk = new TextButton(30 * scaleX, 14 * scaleY, 5 * scaleX, 5 * scaleY, bpp, scaleX, scaleY);
+		_btnOk->setScale(scaleX, scaleY);
+		_btnPrev = new TextButton(30 * scaleX, 14 * scaleY, 40 * scaleX, 5 * scaleY, bpp, scaleX, scaleY);
+		_btnPrev->setScale(scaleX, scaleY);
+		_btnNext = new TextButton(30 * scaleX, 14 * scaleY, 75 * scaleX, 5 * scaleY, bpp, scaleX, scaleY);
+		_btnNext->setScale(scaleX, scaleY);
+		_btnInfo = new TextButton(40 * scaleX, 14 * scaleY, 110 * scaleX, 5 * scaleY, bpp, scaleX, scaleY);
+		_btnInfo->setScale(scaleX, scaleY);
+
 
 		_state = std::move(state);
 
@@ -133,7 +160,8 @@ namespace OpenXcom
 	 * Destructor
 	 */
 	ArticleState::~ArticleState()
-	{}
+	{
+	}
 
 	std::string ArticleState::getDamageTypeText(ItemDamageType dt) const
 	{
@@ -241,6 +269,11 @@ namespace OpenXcom
 	 */
 	void ArticleState::btnOkClick(Action *)
 	{
+		_game->getScreen()->resetDisplay(true, false, Screen::ORIGINAL_WIDTH, Screen::ORIGINAL_HEIGHT, 8);
+		_game->changeCursor(_smallCursor);
+		_game->mouseScaleXMul = 1;
+		_game->mouseScaleYMul = 1;
+		ArticleState::inPediaArticle = false;
 		_game->popState();
 	}
 

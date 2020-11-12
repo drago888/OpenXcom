@@ -50,7 +50,7 @@ protected:
 public:
 	static Sound *soundPress;
 	/// Creates a new text button with the specified size and position.
-	TextButton(int width, int height, int x = 0, int y = 0);
+	TextButton(int width, int height, int x = 0, int y = 0, int bpp = 8, int textScaleX = 1, int textScaleY = 1);
 	/// Cleans up the text button.
 	~TextButton();
 	/// Sets the text button's color.
@@ -88,6 +88,7 @@ public:
 	void setWidth(int width) override;
 	void setHeight(int height) override;
 	void setGeoscapeButton(bool geo);
+	void setTextPalette(SDL_Color* palette);
 };
 
 }

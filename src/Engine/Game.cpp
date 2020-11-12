@@ -43,18 +43,25 @@
 #include "../Menu/TestState.h"
 #include <algorithm>
 #include "../fallthrough.h"
+#include "../Ufopaedia/ArticleState.h"
 
 namespace OpenXcom
 {
-
 const double Game::VOLUME_GRADIENT = 10.0;
 
+void Game::changeCursor(Cursor* cur)
+{
+	_cursor = cur;
+
+	// trick to get cursor to appear near top left of screen
+	SDL_WarpMouse(100, 100);
+}
 /**
  * Starts up SDL with all the subsystems and SDL_mixer for audio processing,
  * creates the display screen and sets up the cursor.
  * @param title Title of the game window.
  */
-Game::Game(const std::string &title) : _screen(0), _cursor(0), _lang(0), _save(0), _mod(0), _quit(false), _init(false), _update(false),  _mouseActive(true), _timeUntilNextFrame(0)
+Game::Game(const std::string &title) : _screen(0), _cursor(0), _lang(0), _save(0), _mod(0), _quit(false), _init(false), _update(false),  _mouseActive(true), _timeUntilNextFrame(0), mouseScaleXMul(1), mouseScaleYMul(1)
 {
 	Options::reload = false;
 	Options::mute = false;
@@ -89,6 +96,9 @@ Game::Game(const std::string &title) : _screen(0), _cursor(0), _lang(0), _save(0
 
 	// Create cursor
 	_cursor = new Cursor(9, 13);
+	ArticleState::_smallCursor = _cursor;
+	ArticleState::_bigCursor = new Cursor(9 * Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH, 13 * Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT);
+	ArticleState::_bigCursor->scale = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 
 	// Create invisible hardware cursor to workaround bug with absolute positioning pointing devices
 	SDL_ShowCursor(SDL_ENABLE);
@@ -248,7 +258,7 @@ void Game::run()
 					// Go on, feed the event to others
 					FALLTHROUGH;
 				default:
-					Action action = Action(&_event, _screen->getXScale(), _screen->getYScale(), _screen->getCursorTopBlackBand(), _screen->getCursorLeftBlackBand());
+					Action action = Action(&_event, _screen->getXScale()/mouseScaleXMul, _screen->getYScale()/mouseScaleYMul, _screen->getCursorTopBlackBand(), _screen->getCursorLeftBlackBand());
 					_screen->handle(&action);
 					_cursor->handle(&action);
 					_fpsCounter->handle(&action);

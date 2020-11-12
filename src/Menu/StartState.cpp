@@ -50,6 +50,7 @@ std::string StartState::error;
  */
 StartState::StartState() : _anim(0)
 {
+	_game->getScreen()->resetDisplay(true, false, Options::displayWidth, Options::displayHeight);
 	//updateScale() uses newDisplayWidth/Height and needs to be set ahead of time
 	Options::newDisplayWidth = Options::displayWidth;
 	Options::newDisplayHeight = Options::displayHeight;
@@ -116,6 +117,7 @@ StartState::StartState() : _anim(0)
  */
 StartState::~StartState()
 {
+	_game->getScreen()->resetDisplay(true, false);
 	if (_thread != 0)
 	{
 		SDL_KillThread(_thread);

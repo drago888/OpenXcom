@@ -38,6 +38,12 @@ namespace OpenXcom
 	ArticleStateVehicle::ArticleStateVehicle(ArticleDefinitionVehicle *defs, std::shared_ptr<ArticleCommonState> state) : ArticleState(defs->id, std::move(state))
 	{
 		RuleItem *item = _game->getMod()->getItem(defs->id, true);
+
+		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
+		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
+		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
+
 		Unit *unit = item->getVehicleUnit();
 		if (!unit)
 		{
@@ -45,52 +51,100 @@ namespace OpenXcom
 		}
 		Armor *armor = unit->getArmor();
 
-		// add screen elements
-		_txtTitle = new Text(310, 17, 5, 23);
-		_txtInfo = new Text(300, 150, 10, 122);
-		_lstStats = new TextList(300, 89, 10, 48);
-
 		// Set palette
-		if (defs->customPalette)
+		if (defs->customPalette && bpp == 8)
 		{
 			setCustomPalette(_game->getMod()->getSurface(defs->image_id)->getPalette(), Mod::UFOPAEDIA_CURSOR);
 		}
-		else
+		else if (bpp == 8)
 		{
 			setStandardPalette("PAL_UFOPAEDIA");
 		}
+		else
+		{
+			genPediaPal();
+			_cursorColor = Mod::UFOPAEDIA_CURSOR;
+		}
 
+		// set buttons palette before adding to state
+		_btnOk->statePalette = _palette;
+		_btnOk->setTextPalette(buttonTextPalette);
+		_btnPrev->statePalette = _palette;
+		_btnPrev->setTextPalette(buttonTextPalette);
+		_btnNext->statePalette = _palette;
+		_btnNext->setTextPalette(buttonTextPalette);
+		_btnInfo->statePalette = _palette;
+		_btnInfo->setTextPalette(buttonTextPalette);
 		ArticleState::initLayout();
 
-		// add other elements
-		add(_txtTitle);
-		add(_txtInfo);
-		add(_lstStats);
+		_btnOk->setTextPalette(buttonTextPalette);
+		_btnPrev->setTextPalette(buttonTextPalette);
+		_btnNext->setTextPalette(buttonTextPalette);
 
 		// Set up objects
-		if (!defs->image_id.empty())
+		if (!defs->image_id.empty() && bpp == 8)
 		{
 			_game->getMod()->getSurface(defs->image_id)->blitNShade(_bg, 0, 0);
 		}
-		else
+		else if (bpp == 8)
 		{
 			_game->getMod()->getSurface("BACK10.SCR")->blitNShade(_bg, 0, 0);
 		}
-		_btnOk->setColor(Palette::blockOffset(5));
-		_btnPrev->setColor(Palette::blockOffset(5));
-		_btnNext->setColor(Palette::blockOffset(5));
+		else if (!defs->image_id.empty())  // 32 bits
+		{
+			Surface surf;
+			get32Surf("32_" +defs->image_id, defs->image_id, &surf, "PAL_UFOPAEDIA")->blitNShade32(_bg, 0, 0);
+		}
+		else // 32 bits
+		{
+			Surface surf;
+			get32Surf("32_BACK10.SCR", "BACK10.SCR", &surf, "PAL_UFOPAEDIA")->blitNShade32(_bg, 0, 0);
+		}
 
-		_txtTitle->setColor(Palette::blockOffset(15)+4);
+		// add screen elements
+		_txtTitle = new Text(310 * scaleX, 17 * scaleY, 5 * scaleX, 23 * scaleY, bpp);
+		_txtTitle->setScale(scaleX, scaleY);
+		add(_txtTitle);
 		_txtTitle->setBig();
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
 
-		_txtInfo->setColor(Palette::blockOffset(15)-1);
+		_txtInfo = new Text(300 * scaleX, 150 * scaleY, 10 * scaleX, 122 * scaleY, bpp);
+		_txtInfo->setScale(scaleX, scaleY);
+		add(_txtInfo);
 		_txtInfo->setSecondaryColor(Palette::blockOffset(15) + 4);
 		_txtInfo->setWordWrap(true);
 		_txtInfo->setText(tr(defs->getTextForPage(_state->current_page)));
 
-		_lstStats->setColor(Palette::blockOffset(15)+4);
-		_lstStats->setColumns(2, 175, 145);
+		_lstStats = new TextList(300 * scaleX, 89 * scaleX, 10 * scaleX, 48 * scaleY, bpp);
+		_lstStats->setScale(scaleX, scaleY);
+		add(_lstStats);
+
+		if (bpp == 8)
+		{
+			_btnOk->setColor(Palette::blockOffset(5));
+			_btnPrev->setColor(Palette::blockOffset(5));
+			_btnNext->setColor(Palette::blockOffset(5));
+			_txtTitle->setColor(Palette::blockOffset(15) + 4);
+			_txtInfo->setColor(Palette::blockOffset(15) - 1);
+			_lstStats->setColor(Palette::blockOffset(15) + 4);
+		}
+		else
+		{
+			_btnOk->setColor(Palette::blockOffset(15) - 1);
+			_btnPrev->setColor(Palette::blockOffset(15) - 1);
+			_btnNext->setColor(Palette::blockOffset(15) - 1);
+			_txtTitle->setColor(Palette::blockOffset(14) + 15);
+			_txtInfo->setColor(Palette::blockOffset(14) + 15);
+			_txtInfo->setSecondaryColor(Palette::blockOffset(15) + 4);
+			_lstStats->setColor(Palette::blockOffset(14) + 15);
+			_lstStats->setScale(scaleX, scaleY);
+			_lstStats->statePalette = _palette;
+			_lstStats->textPalette = _palette;
+			_lstStats->textColor = Palette::blockOffset(14) + 15;
+			_lstStats->textColor2 = Palette::blockOffset(15) + 4;
+		}
+
+		_lstStats->setColumns(2, 175 * scaleX, 145 * scaleY);
 		_lstStats->setDot(true);
 
 		std::ostringstream ss;
@@ -146,6 +200,7 @@ namespace OpenXcom
 			ss8 << item->getPower();
 			_lstStats->addRow(2, tr("STR_WEAPON_POWER").c_str(), ss8.str().c_str());
 		}
+
 		centerAllSurfaces();
 	}
 

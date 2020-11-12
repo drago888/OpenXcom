@@ -20,6 +20,7 @@
 #include <yaml-cpp/yaml.h>
 #include <string>
 #include <map>
+#include "../Engine/Screen.h"
 
 namespace OpenXcom
 {
@@ -46,6 +47,8 @@ private:
 public:
 	/// Creates a blank external sprite set.
 	ExtraSprites();
+	/// Copy constructor
+	ExtraSprites(ExtraSprites& sprite) = default;
 	/// Cleans up the external sprite set.
 	virtual ~ExtraSprites();
 	/// Loads the data from YAML.
@@ -69,11 +72,19 @@ public:
 	/// Checks if a filename is a valid image file.
 	static bool isImageFile(const std::string &filename);
 	/// Load the external sprite into a surface.
-	Surface *loadSurface(Surface *surface);
+	Surface *loadSurface(Surface *surface, int width = Screen::ORIGINAL_WIDTH, int height = Screen::ORIGINAL_HEIGHT);
 	/// Load the external sprite into a surface set.
 	SurfaceSet *loadSurfaceSet(SurfaceSet *set);
 	/// Gets mod data that define this surface.
 	const ModData* getModOwner() { return _current; }
+	/// set type
+	void setType(std::string type) { _type = type; }
+	/// set width
+	void setWidth(int width) { _width = width; }
+	/// set height
+	void setHeight(int height) { _height = height; }
+	/// get sprite
+	std::map<int, std::string>* getSprite() { return &_sprites; }
 };
 
 }

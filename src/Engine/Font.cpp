@@ -35,6 +35,24 @@ Font::Font() : _monospace(false)
 }
 
 /**
+ * Copy constructor
+ * @param fnt the font to make a copy of
+ */
+Font::Font(Font& fnt) 
+{
+	for (std::vector<FontImage>::iterator it = fnt._images.begin(); it != fnt._images.end(); it++)
+	{
+		Surface* surf = new Surface(*(it->surface));
+		FontImage fi;
+		fi.width = it->width, fi.height = it->height, fi.spacing = it->spacing, fi.surface = surf;
+		_images.push_back(fi);
+	}
+
+	std::tie(_chars, _monospace) = std::make_tuple(fnt._chars, fnt._monospace);
+}
+
+
+/**
  * Deletes the font's surface.
  */
 Font::~Font()
@@ -187,6 +205,10 @@ SurfaceCrop Font::getChar(UCode c) const
  */
 int Font::getWidth() const
 {
+	if (_images.empty())
+	{
+		return 0;
+	}
 	return _images[0].width;
 }
 
@@ -196,6 +218,10 @@ int Font::getWidth() const
  */
 int Font::getHeight() const
 {
+	if (_images.empty())
+	{
+		return 0;
+	}
 	return _images[0].height;
 }
 
@@ -207,6 +233,10 @@ int Font::getHeight() const
  */
 int Font::getSpacing() const
 {
+	if (_images.empty())
+	{
+		return 0;
+	}
 	return _images[0].spacing;
 }
 

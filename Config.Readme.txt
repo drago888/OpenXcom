@@ -1,0 +1,26 @@
+To use xpiratez,
+
+set the below to 
+cutsceneResolutionX : 1280
+cutsceneResolutionY : 800
+pediaBgResolutionX : 1280
+pediaBgResolutionY : 800
+
+
+To use back the original game,
+delete the above or change them to
+All X : 320
+All Y : 200
+
+
+--------------
+
+convert and replace the below with the enlarged version
+user/mods/Piratez/Resources/Cutscenes/
+user/mods/Piratez/Resources/Pedia/
+
+convert and add in the below with suffix 32.
+eg Akumal_Bck.png   add in another    Akumal_Bck32.png
+user/mods/Piratez/Resources/
+user/mods/Piratez/Resources/Backgrounds/
+standard/xcom1/Resources/Weapons/

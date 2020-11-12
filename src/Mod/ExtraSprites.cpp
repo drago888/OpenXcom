@@ -37,6 +37,7 @@ ExtraSprites::ExtraSprites() : _current(0), _width(320), _height(200), _singleIm
 {
 }
 
+
 /**
  * Cleans up the extra sprite set.
  */
@@ -173,7 +174,7 @@ bool ExtraSprites::isImageFile(const std::string &filename)
  * @param surface Existing surface.
  * @return New surface.
  */
-Surface *ExtraSprites::loadSurface(Surface *surface)
+Surface *ExtraSprites::loadSurface(Surface *surface, int width, int height)
 {
 	if (!_singleImage)
 		return surface;
@@ -188,7 +189,15 @@ Surface *ExtraSprites::loadSurface(Surface *surface)
 		Log(LOG_VERBOSE) << "Adding/Replacing single image: " << _type;
 		delete surface;
 	}
-	surface = new Surface(_width, _height);
+	if (width == Screen::ORIGINAL_WIDTH)
+	{
+		surface = new Surface(_width, _height);
+	}
+	else
+	{
+		surface = new Surface(width, height, 0, 0, 32);
+	}
+
 	surface->loadImage(_sprites.begin()->second);
 	return surface;
 }

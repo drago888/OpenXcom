@@ -39,32 +39,76 @@ namespace OpenXcom
 	{
 		RuleBaseFacility *facility = _game->getMod()->getBaseFacility(defs->id, true);
 
-		// add screen elements
-		_txtTitle = new Text(200, 17, 10, 24);
+		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
+		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
+		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
 
 		// Set palette
-		setStandardPalette("PAL_BASESCAPE");
+		if (bpp == 8)
+		{
+			setStandardPalette("PAL_BASESCAPE");
+		}
+		else
+		{
+			genPediaPal();
+			_cursorColor = Mod::UFOPAEDIA_CURSOR;
+		}
 
+		int textColor = Palette::blockOffset(14) + 15;
+		int textColor2 = Palette::blockOffset(15) + 4;
+
+		// set buttons palette before adding to state
+		_btnOk->statePalette = _palette;
+		_btnOk->setTextPalette(buttonTextPalette);
+		_btnPrev->statePalette = _palette;
+		_btnPrev->setTextPalette(buttonTextPalette);
+		_btnNext->statePalette = _palette;
+		_btnNext->setTextPalette(buttonTextPalette);
+		_btnInfo->statePalette = _palette;
+		_btnInfo->setTextPalette(buttonTextPalette);
 		ArticleState::initLayout();
+		if (bpp == 8)
+		{
+			_btnOk->setColor(Palette::blockOffset(4));
+			_btnPrev->setColor(Palette::blockOffset(4));
+			_btnNext->setColor(Palette::blockOffset(4));
+			_btnInfo->setColor(Palette::blockOffset(4));
+		}
+		else
+		{
+			_btnOk->setColor(Palette::blockOffset(15) - 1);
+			_btnPrev->setColor(Palette::blockOffset(15) - 1);
+			_btnNext->setColor(Palette::blockOffset(15) - 1);
+			_btnInfo->setColor(Palette::blockOffset(15) - 1);
+		}
 
-		// add other elements
-		add(_txtTitle);
-
-		// Set up objects
-		_game->getMod()->getSurface("BACK09.SCR")->blitNShade(_bg, 0, 0);
-		_btnOk->setColor(Palette::blockOffset(4));
-		_btnPrev->setColor(Palette::blockOffset(4));
-		_btnNext->setColor(Palette::blockOffset(4));
-		_btnInfo->setColor(Palette::blockOffset(4));
 		_btnInfo->setVisible(_game->getMod()->getShowPediaInfoButton());
 
-		_txtTitle->setColor(Palette::blockOffset(13)+10);
+		// add screen elements
+		_txtTitle = new Text(200 * scaleX, 17 * scaleY, 10 * scaleX, 24 * scaleY, bpp);
+		_txtTitle->setScale(scaleX, scaleY);
+		add(_txtTitle);
+		_txtTitle->setColor(Palette::blockOffset(13) + 10);
 		_txtTitle->setBig();
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
 
+		// Set up objects
+		if (bpp == 8)
+		{
+			_game->getMod()->getSurface("BACK09.SCR")->blitNShade(_bg, 0, 0);
+		}
+		else
+		{
+			Surface surf;
+			get32Surf("32_BACK09.SCR", "BACK09.SCR", &surf, "PAL_BASESCAPE")->blitNShade32(_bg, 0, 0);
+		}
+
+
+
 		// build preview image
 		int tile_size = 32;
-		_image = new Surface(tile_size*2, tile_size*2, 232, 16);
+		_image = new Surface(tile_size * 2 * scaleX, tile_size * 2 * scaleY, 232 * scaleX, 16 * scaleY, bpp);
 		add(_image);
 
 		SurfaceSet *graphic = _game->getMod()->getSurfaceSet("BASEBITS.PCK");
@@ -75,7 +119,8 @@ namespace OpenXcom
 
 		if (facility->getSize()==1)
 		{
-			x_offset = y_offset = tile_size/2;
+			x_offset = tile_size/2 * scaleX;
+			y_offset = tile_size / 2 * scaleY;
 		}
 		else
 		{
@@ -90,33 +135,64 @@ namespace OpenXcom
 			for (int x = 0; x < facility->getSize(); ++x)
 			{
 				frame = graphic->getFrame(facility->getSpriteShape() + num);
-				frame->blitNShade(_image, x_pos, y_pos);
+				if (bpp == 8)
+				{
+					frame->blitNShade(_image, x_pos, y_pos);
+				}
+				else
+				{
+					// no 32 bits images thus scale and convert 32 bits
+					Surface newSurf = Surface(*frame);
+					newSurf.setScale(scaleX, scaleY);
+					newSurf.doScale();
+					newSurf.convertTo32Bits(&newSurf, _game->getMod()->getPalette("PAL_BASESCAPE")->getColors(), true); // use palette passed in
+					newSurf.blitNShade32(_image, x_pos, y_pos);
+				}
+
 
 				if (facility->getSize()==1)
 				{
 					frame = graphic->getFrame(facility->getSpriteFacility() + num);
-					frame->blitNShade(_image, x_pos, y_pos);
+
+					if (bpp == 8)
+					{
+						frame->blitNShade(_image, x_pos, y_pos);
+					}
+					else
+					{
+						// no 32 bits images thus scale and convert 32 bits
+						Surface newSurf = Surface(*frame);
+						newSurf.setScale(scaleX, scaleY);
+						newSurf.doScale();
+						newSurf.convertTo32Bits(&newSurf, _game->getMod()->getPalette("PAL_BASESCAPE")->getColors(), true); // use palette passed in
+						newSurf.blitNShade32(_image, x_pos, y_pos);
+					}
 				}
 
-				x_pos += tile_size;
+				x_pos += tile_size * scaleX;
 				num++;
 			}
-			y_pos += tile_size;
+			y_pos += tile_size * scaleY;
 		}
 
-		_txtInfo = new Text(300, 90, 10, 104);
+		_txtInfo = new Text(300 * scaleX, 90 * scaleY, 10 * scaleX, 104 * scaleY, bpp);
+		_txtInfo->setScale(scaleX, scaleY);
 		add(_txtInfo);
-
 		_txtInfo->setColor(Palette::blockOffset(13)+10);
 		_txtInfo->setSecondaryColor(Palette::blockOffset(13));
 		_txtInfo->setWordWrap(true);
 		_txtInfo->setText(tr(defs->getTextForPage(_state->current_page)));
 
-		_lstInfo = new TextList(200, 42, 10, 42);
+		_lstInfo = new TextList(200 * scaleX, 42 * scaleY, 10 * scaleX, 42 * scaleY, bpp);
+		_lstInfo->setScale(scaleX, scaleY);
+		_lstInfo->statePalette = _palette;
+		_lstInfo->textPalette = _palette;
+		_lstInfo->textColor = textColor;
+		_lstInfo->textColor2 = textColor2;
 		add(_lstInfo);
 
 		_lstInfo->setColor(Palette::blockOffset(13)+10);
-		_lstInfo->setColumns(2, 140, 60);
+		_lstInfo->setColumns(2, 140 * scaleX, 60 * scaleY);
 		_lstInfo->setDot(true);
 
 		_lstInfo->addRow(2, tr("STR_CONSTRUCTION_TIME").c_str(), tr("STR_DAY", facility->getBuildTime()).c_str());

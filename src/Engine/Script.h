@@ -807,6 +807,7 @@ class ScriptWorkerBlit : public ScriptWorkerBase
 public:
 	/// Type of output value from script.
 	using Output = ScriptOutputArgs<int&, int>;
+	using Output32 = ScriptOutputArgs<Uint32&, Uint32>;
 
 	/// Default constructor.
 	ScriptWorkerBlit() : ScriptWorkerBase(), _proc(nullptr), _events(nullptr)

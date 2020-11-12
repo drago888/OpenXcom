@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include "SDL2Helpers.h"
 #include "FileMap.h"
+#include <SDL_rotozoom.h>
 #ifdef _WIN32
 #include <malloc.h>
 #endif
@@ -79,7 +80,22 @@ inline void RawCopySurf(const Surface::UniqueSurfacePtr& dest, const Surface::Un
 		ShaderMove<Uint8>(src.get())
 	);
 }
-
+/**
+ * Raw copy without any change of pixel index value between two SDL surface, palette is ignored
+ * @param dest Destination surface
+ * @param src Source surface
+ */
+inline void RawCopySurf32(const Surface::UniqueSurfacePtr& dest, const Surface::UniqueSurfacePtr& src)
+{
+	ShaderDrawFunc(
+		[](Uint32& destStuff, Uint32& srcStuff)
+		{
+			destStuff = srcStuff;
+		},
+		ShaderMove<Uint32>(dest.get()),
+			ShaderMove<Uint32>(src.get())
+			);
+}
 /**
  * TODO: function for purge, we should accept only "standard" surfaces
  * Helper function correcting graphic that should have index 0 as transparent,
@@ -173,7 +189,15 @@ Surface::UniqueSurfacePtr Surface::NewSdlSurface(SDL_Surface* surface)
  */
 Surface::UniqueSurfacePtr Surface::NewSdlSurface(const Surface::UniqueBufferPtr& buffer, int bpp, int width, int height)
 {
-	auto surface = SDL_CreateRGBSurfaceFrom(buffer.get(), width, height, bpp, GetPitch(bpp, width), 0, 0, 0, 0);
+	SDL_Surface* surface;
+	if (bpp == 8)
+	{
+		surface = SDL_CreateRGBSurfaceFrom(buffer.get(), width, height, bpp, GetPitch(bpp, width), 0, 0, 0, 0);
+	}
+	else
+	{
+		surface = SDL_CreateRGBSurfaceFrom((Uint32*)buffer.get(), width, height, bpp, GetPitch(bpp, width), 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
+	}
 	if (!surface)
 	{
 		throw Exception(SDL_GetError());
@@ -231,7 +255,7 @@ void Surface::UniqueSurfaceDeleter::operator ()(SDL_Surface* surf)
 /**
  * Default empty surface.
  */
-Surface::Surface() : _x{ }, _y{ }, _width{ }, _height{ }, _pitch{ }, _visible(true), _hidden(false), _redraw(false)
+Surface::Surface() : _x{ }, _y{ }, _width{ }, _height{ }, _pitch{ }, _visible(true), _hidden(false), _redraw(false), _scaleX(1.0), _scaleY(1.0), statePalette(nullptr)
 {
 
 }
@@ -248,9 +272,17 @@ Surface::Surface() : _x{ }, _y{ }, _width{ }, _height{ }, _pitch{ }, _visible(tr
  * @param y Y position in pixels.
  * @param bpp Bits-per-pixel depth.
  */
-Surface::Surface(int width, int height, int x, int y) : _x(x), _y(y), _visible(true), _hidden(false), _redraw(false)
+Surface::Surface(int width, int height, int x, int y, int bpp) : _x(x), _y(y), _visible(true), _hidden(false), _redraw(false), _scaleX(1.0), _scaleY(1.0), statePalette(nullptr)
 {
-	std::tie(_alignedBuffer, _surface) = Surface::NewPair8Bit(width, height);
+	if (bpp == 8)
+	{
+		std::tie(_alignedBuffer, _surface) = Surface::NewPair8Bit(width, height);
+	}
+	else
+	{
+		std::tie(_alignedBuffer, _surface) = Surface::NewPair32Bit(width, height);
+	}
+
 	_width = _surface->w;
 	_height = _surface->h;
 	_pitch = _surface->pitch;
@@ -269,19 +301,111 @@ Surface::Surface(const Surface& other) : Surface{ }
 	}
 	int width = other.getWidth();
 	int height = other.getHeight();
+	int bpp = other._surface->format->BitsPerPixel;
 	//move copy
-	*this = Surface(width, height, other._x, other._y);
+	
+	*this = Surface(width, height, other._x, other._y, bpp);
 	//cant call `setPalette` because its virtual function and it doesn't work correctly in constructor
-	SDL_SetColors(_surface.get(), other.getPalette(), 0, 255);
-	RawCopySurf(_surface, other._surface);
+	if (other.getPalette())
+	{
+		SDL_SetColors(_surface.get(), other.getPalette(), 0, 255);
+	}
+
+	if (other._surface->format->BitsPerPixel == 8)
+	{
+		RawCopySurf(_surface, other._surface);
+	}
+	else
+	{
+		RawCopySurf32(_surface, other._surface);
+	}
+
 
 	_x = other._x;
 	_y = other._y;
 	_visible = other._visible;
 	_hidden = other._hidden;
 	_redraw = other._redraw;
+	_scaleX = other._scaleX;
+	_scaleY = other._scaleY;
+	statePalette = other.statePalette;
 }
 
+/**
+ * Set the scaling (>1 to zoom), (<1 to shrink)
+ * @param x the x scale
+ * @param y the y scale
+ */
+void Surface::setScale(double x, double y)
+{
+	if (x > 0)
+	{
+		_scaleX = x;
+	}
+
+	if (y > 0)
+	{
+		_scaleY = y;
+	}
+}
+
+/**
+ * Scale the surface
+ */
+void Surface::doScale(bool useInt)
+{
+	if (_scaleX == 1 && _scaleY == 1)
+	{
+		return;
+	}
+
+	double zoomX = 1, zoomY = 1, shrinkX = 1, shrinkY = 1;
+
+	if (_scaleX > 1)
+	{
+		zoomX = (useInt? (int)_scaleX : _scaleX);
+	}
+	else if (_scaleX < 1)
+	{
+		shrinkX = (useInt? (int)(1.0/_scaleX) : 1.0/_scaleX);
+	}
+
+	if (_scaleY > 1)
+	{
+		zoomY = (useInt? (int)_scaleY : _scaleY);
+	}
+	else if (_scaleY < 1)
+	{
+		zoomY = (useInt? (int)(1.0/_scaleY) : 1.0/_scaleY);
+	}
+
+	SDL_Surface* newSurf = _surface.get();
+
+	if (zoomX != 1 || zoomY != 1) 
+	{
+		newSurf = zoomSurface(newSurf, zoomX, zoomY, SMOOTHING_ON);
+	}
+
+	if (shrinkX != 1 || shrinkY != 1)
+	{
+		newSurf = shrinkSurface(newSurf, zoomX, zoomY);
+	}
+
+	UniqueSurfacePtr surface = NewSdlSurface(newSurf);
+
+	if (surface)
+	{
+		*this = Surface(surface->w, surface->h, 0, 0);
+		if (surface->format->palette)
+		{
+			setPalette(surface->format->palette->colors, 0, surface->format->palette->ncolors);
+		}
+		RawCopySurf(_surface, surface);
+		FixTransparent(_surface, surface->format->colorkey);
+	}
+
+	_x*=_scaleX, _y*=_scaleY, _width=_surface->w, _height=_surface->h, _pitch=_surface->pitch;
+}
 /**
  * Deletes the surface from memory.
  */
@@ -340,6 +464,155 @@ void Surface::loadRaw(const std::vector<char> &bytes)
 	rawCopy(bytes);
 	unlock();
 }
+/**
+* Get the image to 32 bits
+*/
+void Surface::get32Bits(std::vector<Uint32>* dest, const void* image, int size, Uint8 bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask, Uint32 endian, SDL_Color* palette)
+{
+	if (bpp == 8 && palette)
+	{
+		for (int i = 0; i < size; ++i)
+		{
+			SDL_Color color = palette[((Uint8*)image)[i]];
+
+			dest->push_back(color.unused << 24 | color.r << 16 | color.g << 8 | color.b);
+		}
+	}
+	else
+	{
+		Uint32 temp[4];
+		size_t bytesPerPixel = bpp / 8;
+		enum { RED_MASK, GREEN_MASK, BLUE_MASK, ALPHA_MASK };
+		int noOfPixels = (size - 1) / bytesPerPixel; // noOfPixels is minus 1 from actual pixels
+		Uint32 colorMaskIndex[4] = { (Rmask == 0x00ff0000) | (Rmask == 0x0000ff00) * 2 | (Rmask == 0x000000ff) * 3,
+								  (Gmask == 0x00ff0000) | (Gmask == 0x0000ff00) * 2 | (Gmask == 0x000000ff) * 3,
+								  (Bmask == 0x00ff0000) | (Bmask == 0x0000ff00) * 2 | (Bmask == 0x000000ff) * 3,
+								  (Amask == 0x00ff0000) | (Amask == 0x0000ff00) * 2 | (Amask == 0x000000ff) * 3 };
+
+		int maxIndex = *std::max_element(colorMaskIndex, colorMaskIndex + 3);
+		if (bpp == 24 && maxIndex == 3)
+		{
+			for (int i = 0; i < 3; i++)
+			{
+				if (colorMaskIndex[i] > 0)
+				{
+					colorMaskIndex[i]--;
+				}
+			}
+		}
+
+		if (endian == SDL_LIL_ENDIAN)
+		{
+			maxIndex = *std::max_element(colorMaskIndex, colorMaskIndex + 4);
+			for (int i = 0; i < 4; i++)
+			{
+				colorMaskIndex[i] = abs((int)colorMaskIndex[i] - maxIndex);
+			}
+		}
+
+		// noOfPixels is minus one from actual pixels
+		for (size_t i = 0; i <= noOfPixels; i++)
+		{
+			temp[1] = ((Uint8*)image)[i * bytesPerPixel + colorMaskIndex[RED_MASK]];
+			temp[2] = ((Uint8*)image)[i * bytesPerPixel + colorMaskIndex[GREEN_MASK]];
+			temp[3] = ((Uint8*)image)[i * bytesPerPixel + +colorMaskIndex[BLUE_MASK]];
+
+			if (bpp != 32)
+			{
+				temp[0] = SDL_ALPHA_OPAQUE;
+			}
+			else
+			{
+				temp[0] = ((Uint8*)image)[i * bytesPerPixel + +colorMaskIndex[ALPHA_MASK]];
+			}
+
+
+			dest->push_back(temp[0] << 24 | temp[1] << 16 | temp[2] << 8 | temp[3]);
+		}
+	}
+}
+/**
+* Convert the surface from 8 bits into 32 bits
+* @param dest
+ * @param image the source surface
+ * @param size the size in bytes to copy
+ * @param bpp the bits per pixel of src
+ * @param Rmask the red mask of src
+ * @param Gmask the green mask of src
+ * @param Bmask the blue mask of src
+ * @param Amask the alpha mask of src
+ * @return the 32 bits new surface
+*/
+Surface* Surface::convertTo32Bits(Surface* src, SDL_Color* pal, bool usePal)
+{
+	if (src->_surface->format->BitsPerPixel != 8)
+	{
+		return this;
+	}
+
+	std::vector<Uint32> image32;
+	Palette palette = Palette();
+	if (!usePal && src->getPalette())
+	{
+		palette.setColors(src->_surface->format->palette->colors, src->_surface->format->palette->ncolors);
+	}
+	else
+	{
+		palette.setColors(pal, 256);
+	}
+	get32Bits(&image32, src->_surface->pixels, src->_surface->w * src->_surface->h, src->_surface->format->BitsPerPixel,
+		src->_surface->format->Rmask, src->_surface->format->Gmask, src->_surface->format->Bmask, src->_surface->format->Amask, SDL_BYTEORDER,
+		palette.getColors());
+
+	*this = Surface(src->_surface->w, src->_surface->h, 0, 0, 32);
+	lock();
+	ShaderDrawFunc(
+		[](Uint32& dest, Uint32& src)
+		{
+			dest = src;
+		},
+		ShaderSurface((SurfaceRaw<Uint32>)this),
+			ShaderSurface(SurfaceRaw<Uint32>(image32, src->_surface->w, src->_surface->h))
+			);
+	unlock();
+	return this;
+}
+/**
+ * Copy into the current Surface from dest with RGBA 32bits
+ * Only support 24 and 32 bits bpps
+ * @param image the source surface
+ * @size the size in bytes to copy
+ * @bpp the bits per pixel of src
+ * @Rmask the red mask of src
+ * @Gmask the green mask of src
+ * @Bmask the blue mask of src
+ * @Amask the alpha mask of src
+ * @e
+ */
+void Surface::convertToRGBA(const void* image, int size, int width, int height, Uint8 bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask, Uint32 endian)
+{
+	if (bpp != 24 && bpp != 32)
+	{
+		return;
+	}
+
+	std::vector<Uint32> image32;
+
+	get32Bits(&image32, image, size, bpp, Rmask, Gmask, Bmask, Amask, endian);
+
+	*this = Surface(width, height, 0, 0, 32);
+	lock();
+	ShaderDrawFunc(
+		[](Uint32& dest, Uint32& src)
+		{
+			dest = src;
+		},
+		ShaderSurface((SurfaceRaw<Uint32>)this),
+			ShaderSurface(SurfaceRaw<Uint32>(image32, width, height))
+			);
+	unlock();
+}
+
 
 /**
  * Loads the contents of an X-Com SCR image file into
@@ -371,7 +644,8 @@ void Surface::loadImage(const std::string &filename)
 	if (!rw) { return; } // relevant message gets logged in FileMap.
 
 	// Try loading with LodePNG first
-	if (CrossPlatform::compareExt(filename, "png"))
+	//if (CrossPlatform::compareExt(filename, "png"))
+	if (FileMap::isPng(rw))
 	{
 		size_t size;
 		void *data = SDL_LoadFile_RW(rw, &size, SDL_FALSE);
@@ -419,6 +693,15 @@ void Surface::loadImage(const std::string &filename)
 						Log(LOG_WARNING) << "Image " << filename << " (from lodepng) has incorrect transparent color index " << transparent << " (instead of 0).";
 					}
 				}
+				else if (bpp == 24 || bpp == 32)
+				{
+					convertToRGBA(image.data(), image.size(), width, height, bpp, 0xff000000, 0x00ff0000, 0x0000ff00, 0x000000ff, SDL_BIG_ENDIAN);
+				}
+				else // other than 8, 24 and 32 bits
+				{
+					std::string err = filename + ": OpenXcom does not support " + std::to_string(bpp) + " bits png images.";
+					throw Exception(err);
+				}
 			} else {
 				Log(LOG_ERROR) << "Image " << filename << " lodepng failed:" << lodepng_error_text(error);
 			}
@@ -438,19 +721,36 @@ void Surface::loadImage(const std::string &filename)
 			std::string err = filename + ":" + IMG_GetError();
 			throw Exception(err);
 		}
-		if (surface->format->BitsPerPixel != 8)
+		if (surface->format->BitsPerPixel != 8 && surface->format->BitsPerPixel != 24 && surface->format->BitsPerPixel != 32)
 		{
-			std::string err = filename + ": OpenXcom supports only 8bit images.";
+			std::string err = filename + ": OpenXcom does not support " + std::to_string(surface->format->BitsPerPixel) + " bits non-png images.";
 			throw Exception(err);
 		}
 
-		*this = Surface(surface->w, surface->h, 0, 0);
-		setPalette(surface->format->palette->colors, 0, surface->format->palette->ncolors);
-		RawCopySurf(_surface, surface);
-		FixTransparent(_surface, surface->format->colorkey);
-		if (surface->format->colorkey != 0)
+		if (surface->format->BitsPerPixel == 8)
 		{
-			Log(LOG_WARNING) << "Image " << filename << " (from SDL) has incorrect transparent color index " << surface->format->colorkey << " (instead of 0).";
+			*this = Surface(surface->w, surface->h, 0, 0);
+			setPalette(surface->format->palette->colors, 0, surface->format->palette->ncolors);
+			RawCopySurf(_surface, surface);
+			FixTransparent(_surface, surface->format->colorkey);
+			if (surface->format->colorkey != 0)
+			{
+				Log(LOG_WARNING) << "Image " << filename << " (from SDL) has incorrect transparent color index " << surface->format->colorkey << " (instead of 0).";
+			}
+		}
+		else
+		{
+			convertToRGBA(surface.get()->pixels,
+				surface.get()->w * surface.get()->h * surface.get()->format->BytesPerPixel,
+				surface.get()->w,
+				surface.get()->h,
+				surface.get()->format->BitsPerPixel,
+				surface.get()->format->Rmask,
+				surface.get()->format->Gmask,
+				surface.get()->format->Bmask,
+				surface.get()->format->Amask,
+				SDL_BYTEORDER
+			);
 		}
 	}
 }
@@ -675,6 +975,41 @@ void Surface::invert(Uint8 mid)
 }
 
 /**
+ * Inverts all the colors in the surface according to a middle point.
+ * Used for effects like shifting a button between pressed and unpressed.
+ * @param mid Middle point.
+ * @param palette the palette to use
+ */
+void Surface::invert32(Uint8 mid, SDL_Color* palette)
+{
+	if (!palette)
+	{
+		return;
+	}
+
+	// Lock the surface
+	lock();
+
+	for (int x = 0, y = 0; x < getWidth() && y < getHeight();)
+	{
+		Uint32 pixel = getPixel32(x, y);
+		if (pixel > 0)
+		{
+			SDL_Color col;
+			SDL_GetRGBA(pixel, _surface->format, &col.r, &col.g, &col.b, &col.unused);
+			col.r = ~col.r, col.g = ~col.g, col.b = ~col.b;
+			setPixelIterative32(&x, &y, col.r << 16 | col.g << 8 | col.b | col.unused << 24);
+		}
+		else
+		{
+			setPixelIterative32(&x, &y, 0);
+		}
+	}
+
+	// Unlock the surface
+	unlock();
+}
+/**
  * Runs any code the surface needs to keep updating every
  * game cycle, like animations and other real-time elements.
  */
@@ -764,6 +1099,17 @@ void Surface::drawRect(SDL_Rect *rect, Uint8 color)
 {
 	SDL_FillRect(_surface.get(), rect, color);
 }
+
+/**
+ * Draws a filled rectangle on the surface.
+ * @param rect Pointer to Rect.
+ * @param color Color of the rectangle.
+ */
+void Surface::drawRect32(SDL_Rect* rect, Uint32 color)
+{
+	SDL_FillRect(_surface.get(), rect, color);
+}
+
 
 /**
  * Draws a filled rectangle on the surface.
@@ -960,7 +1306,24 @@ void Surface::blitRaw(SurfaceRaw<Uint8> destSurf, SurfaceRaw<const Uint8> srcSur
 		ShaderDraw<helper::StandardShade>(ShaderSurface(destSurf), src, ShaderScalar(shade));
 	}
 }
-
+void Surface::blitRaw(SurfaceRaw<Uint32> destSurf, SurfaceRaw<const Uint32> srcSurf, SDL_PixelFormat* format, int x, int y, int shade, bool half, SDL_Color newBaseColor)
+{
+	ShaderMove<const Uint32> src(srcSurf, x, y);
+	if (half)
+	{
+		GraphSubset g = src.getDomain();
+		g.beg_x = g.end_x / 2;
+		src.setDomain(g);
+	}
+	if (!(newBaseColor.r == 0 && newBaseColor.g == 0 && newBaseColor.b == 0 && newBaseColor.unused == 0))
+	{
+		ShaderDraw<helper::ColorReplace32>(ShaderSurface(destSurf), ShaderScalar(shade), ShaderScalar(newBaseColor));
+	}
+	else
+	{
+		ShaderDraw<helper::StandardShade32>(ShaderSurface(destSurf), src, ShaderScalar(format) , ShaderScalar(shade));
+	}
+}
 /**
  * Specific blit function to blit battlescape terrain data in different shades in a fast way.
  * Notice there is no surface locking here - you have to make sure you lock the surface yourself
@@ -975,6 +1338,10 @@ void Surface::blitRaw(SurfaceRaw<Uint8> destSurf, SurfaceRaw<const Uint8> srcSur
 void Surface::blitNShade(SurfaceRaw<Uint8> surface, int x, int y, int shade, bool half, int newBaseColor) const
 {
 	blitRaw(surface, SurfaceRaw<const Uint8>(this), x, y, shade, half, newBaseColor);
+}
+void Surface::blitNShade32(SurfaceRaw<Uint32> surface, int x, int y, int shade, bool half, SDL_Color newBaseColor) const
+{
+	blitRaw(surface, SurfaceRaw<const Uint32>(this), _surface->format, x, y, shade, half, newBaseColor);
 }
 
 /**
@@ -1077,5 +1444,21 @@ void SurfaceCrop::blit(Surface* dest)
 		);
 	}
 }
+void SurfaceCrop::blit32(Surface* dest)
+{
+	if (_surface)
+	{
+		auto srcShader = ShaderCrop32(*this, _x, _y);
+		auto destShader = ShaderMove<Uint32>(dest, 0, 0);
 
+		ShaderDrawFunc(
+			[](Uint32& d, Uint32 s)
+			{
+				if (s) d = s;
+			},
+			destShader,
+				srcShader
+				);
+	}
+}
 }

@@ -56,7 +56,7 @@ private:
 	int getLineX(int line) const;
 public:
 	/// Creates a new text with the specified size and position.
-	Text(int width, int height, int x = 0, int y = 0);
+	Text(int width, int height, int x = 0, int y = 0, int bpp = 8);
 	/// Cleans up the text.
 	~Text();
 	/// Sets the text size to big.

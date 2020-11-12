@@ -60,6 +60,8 @@ public:
 
 	/// Creates a blank font.
 	Font();
+	/// copy constructor
+	Font(Font& fnt);
 	/// Cleans up the font.
 	~Font();
 	/// Loads the font from YAML.
@@ -76,6 +78,9 @@ public:
 	int getSpacing() const;
 	/// Gets the size of a particular character;
 	SDL_Rect getCharSize(UCode c) const;
+    /// Gets the font images
+	std::vector<FontImage>* getFontImages() { return &_images; }
+	std::unordered_map< UCode, std::pair<size_t, SDL_Rect> >* getCharsList() { return &_chars; }
 };
 
 }

@@ -47,7 +47,6 @@ namespace OpenXcom
 		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
 		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
-		int titleAddHeight = 0;
 
 		int bottomOffset = 20;
 		std::string accuracyModifier;
@@ -189,6 +188,11 @@ namespace OpenXcom
 		_btnInfo->statePalette = _palette;
 		_btnInfo->setTextPalette(buttonTextPalette);
 		ArticleState::initLayout();
+		_btnOk->setColor(_buttonColor);
+		_btnPrev->setColor(_buttonColor);
+		_btnNext->setColor(_buttonColor);
+		_btnInfo->setColor(_buttonColor);
+		_btnInfo->setVisible(_game->getMod()->getShowPediaInfoButton());
 
 		// add screen elements
 
@@ -203,12 +207,6 @@ namespace OpenXcom
 			get32Surf("32_BACK08.SCR", "BACK08.SCR", &surf, "PAL_BATTLEPEDIA")->blitNShade32(_bg, 0, 0);
 		}
 
-		_btnOk->setColor(_buttonColor);
-		_btnPrev->setColor(_buttonColor);
-		_btnNext->setColor(_buttonColor);
-		_btnInfo->setColor(_buttonColor);
-		_btnInfo->setVisible(_game->getMod()->getShowPediaInfoButton());
-
 		_txtTitle = new Text(148 * scaleX, 32 * scaleY, 5 * scaleX, 24 * scaleY, bpp);
 		_txtTitle->setScale(scaleX, scaleY);
 		add(_txtTitle);
@@ -217,14 +215,14 @@ namespace OpenXcom
 		_txtTitle->setWordWrap(true);
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
 
-		_txtWeight = new Text(88 * scaleX, 8 * scaleY, 104 * scaleX, 55 * scaleY + titleAddHeight, bpp);
+		_txtWeight = new Text(88 * scaleX, 8 * scaleY, 104 * scaleX, 55 * scaleY, bpp);
 		_txtWeight->setScale(scaleX, scaleY);
 		add(_txtWeight);
 		_txtWeight->setColor(_textColor);
 		_txtWeight->setAlign(ALIGN_RIGHT);
 
 		// IMAGE
-		_image = new Surface(32 * scaleX, 48 * scaleY, 157 * scaleX, 5 * scaleY + titleAddHeight, bpp);
+		_image = new Surface(32 * scaleX, 48 * scaleY, 157 * scaleX, 5 * scaleY, bpp);
 		//add(_image);
 
 		if (bpp == 8)
@@ -258,28 +256,28 @@ namespace OpenXcom
 		// SHOT STATS TABLE (for firearms and melee only)
 		if (item->getBattleType() == BT_FIREARM || item->getBattleType() == BT_MELEE)
 		{
-			_txtShotType = new Text(100 * scaleX, 17 * scaleY, 8 * scaleX, 66 * scaleY + titleAddHeight, bpp);
+			_txtShotType = new Text(100 * scaleX, 17 * scaleY, 8 * scaleX, 66 * scaleY, bpp);
 			_txtShotType->setScale(scaleX, scaleY);
 			add(_txtShotType);
 			_txtShotType->setColor(_textColor);
 			_txtShotType->setWordWrap(true);
 			_txtShotType->setText(tr("STR_SHOT_TYPE"));
 
-			_txtAccuracy = new Text(50 * scaleX, 17 * scaleY, 104 * scaleX, 66 * scaleY + titleAddHeight, bpp);
+			_txtAccuracy = new Text(50 * scaleX, 17 * scaleY, 104 * scaleX, 66 * scaleY, bpp);
 			_txtAccuracy->setScale(scaleX, scaleY);
 			add(_txtAccuracy);
 			_txtAccuracy->setColor(_textColor);
 			_txtAccuracy->setWordWrap(true);
 			_txtAccuracy->setText(tr("STR_ACCURACY_UC"));
 
-			_txtTuCost = new Text(60 * scaleX, 17 * scaleY, 158 * scaleX, 66 * scaleY + titleAddHeight, bpp);
+			_txtTuCost = new Text(60 * scaleX, 17 * scaleY, 158 * scaleX, 66 * scaleY, bpp);
 			_txtTuCost->setScale(scaleX, scaleY);
 			add(_txtTuCost);
 			_txtTuCost->setColor(_textColor);
 			_txtTuCost->setWordWrap(true);
 			_txtTuCost->setText(tr("STR_TIME_UNIT_COST"));
 
-			_lstInfo = new TextList(204 * scaleX, 55 * scaleY, 8 * scaleX, 82 * scaleY + titleAddHeight, bpp);
+			_lstInfo = new TextList(204 * scaleX, 55 * scaleY, 8 * scaleX, 82 * scaleY, bpp);
 			_lstInfo->setScale(scaleX, scaleY);
 			add(_lstInfo);
 
@@ -329,7 +327,7 @@ namespace OpenXcom
 			{
 				shift -= (2 - current_row) * 16;
 			}
-			_txtInfo = new Text((ammo_data->size()<3 ? 300 : 180) * scaleX, (56 + shift - bottomOffset) * scaleY, 8 * scaleX, (138 - shift) * scaleY + titleAddHeight, bpp);
+			_txtInfo = new Text((ammo_data->size()<3 ? 300 : 180) * scaleX, (56 + shift - bottomOffset) * scaleY, 8 * scaleX, (138 - shift) * scaleY, bpp);
 			_txtInfo->setScale(scaleX, scaleY);
 			add(_txtInfo);
 		}
@@ -340,14 +338,14 @@ namespace OpenXcom
 			addAttack(current_row, "STR_SHOT_TYPE_MELEE", item->getCostMelee(), item->getFlatMelee(), item->getConfigMelee());
 
 			// text_info is BELOW the info table (with 1 row only)
-			_txtInfo = new Text(300 * scaleX, (88 - bottomOffset) * scaleY, 8 * scaleX, 106 * scaleY + titleAddHeight, bpp);
+			_txtInfo = new Text(300 * scaleX, (88 - bottomOffset) * scaleY, 8 * scaleX, 106 * scaleY, bpp);
 			_txtInfo->setScale(scaleX, scaleY);
 			add(_txtInfo);
 		}
 		else
 		{
 			// text_info is larger and starts on top
-			_txtInfo = new Text(300 * scaleX, (125 - bottomOffset) * scaleY, 8 * scaleX, 67 * scaleY + titleAddHeight, bpp);
+			_txtInfo = new Text(300 * scaleX, (125 - bottomOffset) * scaleY, 8 * scaleX, 67 * scaleY, bpp);
 			_txtInfo->setScale(scaleX, scaleY);
 			add(_txtInfo);
 		}
@@ -359,9 +357,9 @@ namespace OpenXcom
 
 
 		// STATS FOR NERDS extract
-		_txtAccuracyModifier = new Text(300 * scaleX, 9 * scaleY, 8 * scaleX, 174 * scaleY + titleAddHeight, bpp);
+		_txtAccuracyModifier = new Text(300 * scaleX, 9 * scaleY, 8 * scaleX, 174 * scaleY, bpp);
 		_txtAccuracyModifier->setScale(scaleX, scaleY);
-		_txtPowerBonus = new Text(300 * scaleX, 17 * scaleY, 8 * scaleX, 183 * scaleY + titleAddHeight, bpp);
+		_txtPowerBonus = new Text(300 * scaleX, 17 * scaleY, 8 * scaleX, 183 * scaleY, bpp);
 		_txtPowerBonus->setScale(scaleX, scaleY);
 
 		if (bottomOffset > 0)
@@ -389,7 +387,7 @@ namespace OpenXcom
 
 		for (int i = 0; i<3; ++i)
 		{
-			_txtAmmoType[i] = new Text(82 * scaleX, 16 * scaleY, 194 * scaleX, (20 + i*49) * scaleY + titleAddHeight, bpp);
+			_txtAmmoType[i] = new Text(82 * scaleX, 16 * scaleY, 194 * scaleX, (20 + i*49) * scaleY, bpp);
 			_txtAmmoType[i]->setScale(scaleX, scaleY);
 			add(_txtAmmoType[i]);
 			_txtAmmoType[i]->setColor(_textColor);
@@ -397,14 +395,14 @@ namespace OpenXcom
 			_txtAmmoType[i]->setVerticalAlign(ALIGN_MIDDLE);
 			_txtAmmoType[i]->setWordWrap(true);
 
-			_txtAmmoDamage[i] = new Text(82 * scaleX, 17 * scaleY, 194 * scaleX, (40 + i*49) * scaleY + titleAddHeight, bpp);
+			_txtAmmoDamage[i] = new Text(82 * scaleX, 17 * scaleY, 194 * scaleX, (40 + i*49) * scaleY, bpp);
 			_txtAmmoDamage[i]->setScale(scaleX, scaleY);
 			add(_txtAmmoDamage[i]);
 			_txtAmmoDamage[i]->setColor(_ammoColor);
 			_txtAmmoDamage[i]->setAlign(ALIGN_CENTER);
 			_txtAmmoDamage[i]->setBig();
 
-			_imageAmmo[i] = new Surface(32 * scaleX, 48 * scaleY, 280 * scaleX, (16 + i*49) * scaleY + titleAddHeight, bpp);
+			_imageAmmo[i] = new Surface(32 * scaleX, 48 * scaleY, 280 * scaleX, (16 + i*49) * scaleY, bpp);
 			add(_imageAmmo[i]);
 		}
 
@@ -427,14 +425,14 @@ namespace OpenXcom
 		{
 			case BT_FIREARM:
 				if (item->getHidePower()) break;
-				_txtDamage = new Text(82 * scaleX, 10 * scaleY, 194 * scaleX, 7 * scaleY + titleAddHeight, bpp);
+				_txtDamage = new Text(82 * scaleX, 10 * scaleY, 194 * scaleX, 7 * scaleY, bpp);
 				_txtDamage->setScale(scaleX, scaleY);
 				add(_txtDamage);
 				_txtDamage->setColor(_textColor);
 				_txtDamage->setAlign(ALIGN_CENTER);
 				_txtDamage->setText(tr("STR_DAMAGE_UC"));
 
-				_txtAmmo = new Text(50 * scaleX, 10 * scaleY, 268 * scaleX, 7 * scaleY + titleAddHeight, bpp);
+				_txtAmmo = new Text(50 * scaleX, 10 * scaleY, 268 * scaleX, 7 * scaleY, bpp);
 				_txtAmmo->setScale(scaleX, scaleY);
 				add(_txtAmmo);
 				_txtAmmo->setColor(_textColor);
@@ -487,7 +485,7 @@ namespace OpenXcom
 			case BT_PROXIMITYGRENADE:
 			case BT_MELEE:
 				if (item->getHidePower()) break;
-				_txtDamage = new Text(82 * scaleX, 10 * scaleY, 194 * scaleX, 7 * scaleY + titleAddHeight, bpp);
+				_txtDamage = new Text(82 * scaleX, 10 * scaleY, 194 * scaleX, 7 * scaleY, bpp);
 				_txtDamage->setScale(scaleX, scaleY);
 				add(_txtDamage);
 				_txtDamage->setColor(_textColor);
@@ -500,7 +498,7 @@ namespace OpenXcom
 		}
 
 		// multi-page indicator
-		_txtArrows = new Text(32 * scaleX, 9 * scaleY, 280 * scaleX, 183 *scaleY + titleAddHeight, bpp);
+		_txtArrows = new Text(32 * scaleX, 9 * scaleY, 280 * scaleX, 183 *scaleY, bpp);
 		_txtArrows->setScale(scaleX, scaleY);
 		add(_txtArrows);
 		_txtArrows->setColor(_arrowColor);

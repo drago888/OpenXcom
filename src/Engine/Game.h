@@ -109,6 +109,8 @@ public:
 	bool getUpdateFlag() const { return _update; }
 	/// change cursor
 	void changeCursor(Cursor* cur);
+	/// get state
+	std::list<State*>* getStates() { return &_states; }
 };
 
 }

@@ -53,7 +53,7 @@ Game* State::_game = 0;
  * @param game Pointer to the core game.
  */
 State::State() : _screen(true), _soundPlayed(false), _modal(0), _ruleInterface(0), _ruleInterfaceParent(0), resetScreen(false),
-	_resX(Screen::ORIGINAL_WIDTH), _resY(Screen::ORIGINAL_HEIGHT), _bpp(8)
+	_resX(Screen::ORIGINAL_WIDTH), _resY(Screen::ORIGINAL_HEIGHT), _bpp(8), _pediaId("")
 {
 	// initialize palette to all black
 	memset(_palette, 0, sizeof(_palette));

@@ -126,6 +126,7 @@ namespace OpenXcom
 		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
 		_resX = Options::pediaBgResolutionX, _resY = Options::pediaBgResolutionY;
 		_bpp = bpp;
+		_pediaId = article_id;
 
 		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
@@ -134,8 +135,26 @@ namespace OpenXcom
 			_game->changeCursor(_bigCursor);
 			_game->mouseScaleXMul = scaleX;
 			_game->mouseScaleYMul = scaleY;
+			// to prevent screen flickering, use inPediaArticle and resetScreen in tandem
 			ArticleState::inPediaArticle = true;
 			resetScreen = true;
+		}
+		else 
+		{
+			// handle more than 1 pedia been opened (eg during research completion)
+			for (std::list<State*>::reverse_iterator it = _game->getStates()->rbegin(); it != _game->getStates()->rend(); it++)
+			{
+				// went past the first pedia
+				if (_pediaId == "")
+				{
+					break;
+				}
+				if ((*it)->resetScreen)
+				{
+					// copy the resetScreen
+					resetScreen = true;
+				}
+			}
 		}
 
 		// init background and navigation elements

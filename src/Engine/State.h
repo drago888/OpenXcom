@@ -61,6 +61,8 @@ protected:
 
 	int _resX, _resY, _bpp;
 
+	std::string _pediaId; 
+
 public:
 	bool resetScreen;
 	/// Creates a new state linked to a game.

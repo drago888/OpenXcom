@@ -169,7 +169,8 @@ bool in32BitsFolder(std::string file)
 														 {"Resources/Backgrounds/", false},
 														 {"Resources/Weapons/", false},
 														 {"Resources/Pedia/", false},
-														 {"Resources/Cutscenes",false} };
+														 {"Resources/Cutscenes",false},
+														 {"Resources/Awards", false} };
 
 	for (int i = 0; i < str_chk.size(); ++i)
 	{

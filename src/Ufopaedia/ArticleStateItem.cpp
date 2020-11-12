@@ -204,7 +204,7 @@ namespace OpenXcom
 		else
 		{
 			Surface surf;
-			get32Surf("32_BACK08.SCR", "BACK08.SCR", &surf, "PAL_BATTLEPEDIA")->blitNShade32(_bg, 0, 0);
+			get32Surf("32_BACK08.SCR", "BACK08.SCR", &surf, "PAL_BATTLEPEDIA")->blitNShade32(_bg, 0, 0, -30); //brighten the background
 		}
 
 		_txtTitle = new Text(148 * scaleX, 32 * scaleY, 5 * scaleX, 24 * scaleY, bpp);

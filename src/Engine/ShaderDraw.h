@@ -183,9 +183,11 @@ struct ColorReplace32
 	*/
 	static inline void func(Uint32& dest, const int& shade, const SDL_Color newColor)
 	{
-			const Uint8 newShade = 20 * shade;
+			const Uint8 newShade = shade;
 			SDL_Color color;
-			color.r = newColor.r - newShade, color.g = newColor.g - newShade, color.b = newColor.b - newShade;
+			color.r = std::min(0xff, std::max(0x00, (int)newColor.r - newShade));
+			color.g = std::min(0xff, std::max(0x00, (int)newColor.g - newShade));
+			color.b = std::min(0xff, std::max(0x00, (int)newColor.b - newShade));
 			dest = color.r << 16 | color.g << 8 | color.b | color.unused << 24;
 	}
 
@@ -249,10 +251,12 @@ struct StandardShade32
 	{
 		if (src)
 		{
-			int newShade = 20 * shade;
+			int newShade = shade;
 			SDL_Color newColor;
 			SDL_GetRGBA(src, format, &newColor.r, &newColor.g, &newColor.b, &newColor.unused);
-			newColor.r = std::max(0x00, (int)newColor.r - newShade), newColor.g = std::max(0x00, (int)newColor.g - newShade), newColor.b = std::max(0x00, (int)newColor.b - newShade);
+			newColor.r = std::min(0xff, std::max(0x00, (int)newColor.r - newShade));
+			newColor.g = std::min(0xff, std::max(0x00, (int)newColor.g - newShade));
+			newColor.b = std::min(0xff, std::max(0x00, (int)newColor.b - newShade));
 			dest = newColor.r << 16 | newColor.g << 8 | newColor.b  | newColor.unused << 24;
 		}
 	}

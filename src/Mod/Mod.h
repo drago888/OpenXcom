@@ -106,6 +106,8 @@ struct StatAdjustment;
 
 enum GameDifficulty : int;
 
+bool in32BitsFolder(std::string file);
+
 /**
  * Mod data used when loading resources
  */

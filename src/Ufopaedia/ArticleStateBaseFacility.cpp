@@ -145,7 +145,7 @@ namespace OpenXcom
 					Surface newSurf = Surface(*frame);
 					newSurf.setScale(scaleX, scaleY);
 					newSurf.doScale();
-					newSurf.convertTo32Bits(&newSurf, _game->getMod()->getPalette("PAL_BASESCAPE")->getColors());
+					newSurf.convertTo32Bits(&newSurf, _game->getMod()->getPalette("PAL_BASESCAPE")->getColors(), true); // use palette passed in
 					newSurf.blitNShade32(_image, x_pos, y_pos);
 				}
 
@@ -164,7 +164,7 @@ namespace OpenXcom
 						Surface newSurf = Surface(*frame);
 						newSurf.setScale(scaleX, scaleY);
 						newSurf.doScale();
-						newSurf.convertTo32Bits(&newSurf, _game->getMod()->getPalette("PAL_BASESCAPE")->getColors());
+						newSurf.convertTo32Bits(&newSurf, _game->getMod()->getPalette("PAL_BASESCAPE")->getColors(), true); // use palette passed in
 						newSurf.blitNShade32(_image, x_pos, y_pos);
 					}
 				}

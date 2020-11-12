@@ -38,6 +38,8 @@
 #include "../Savegame/SavedBattleGame.h"
 #include "../Mod/RuleInterface.h"
 #include "../Engine/Screen.h"
+#include "../Mod/ExtraSprites.h"
+#include <utility>
 
 namespace OpenXcom
 {
@@ -108,6 +110,75 @@ void State::genPediaPal()
 {
 	setStatePalette(_game->getMod()->getPalettes().find("PAL_UFOPAEDIA")->second->getColors());
 }
+
+/*
+* Get the 32 bit surface.
+* If not existing, convert the 8 bit surface to 32 bits
+* @param id32 the 32 bit id
+* @param id8 the 8 bit id
+* @param newSurf the new surface if need to convert 8 bit to 32 bits
+* @param palName palette name to use if no palette found in 8 bits
+* @param usePal use the palette passed in
+* @return the 32 bit surface
+*/
+Surface* State::get32Surf(std::string id32, std::string id8, Surface* newSurf, std::string palName, bool usePal)
+{
+	Surface* surf;
+	try
+	{
+		surf = _game->getMod()->getSurface(id32, Options::pediaBgResolutionX, Options::pediaBgResolutionY);
+	}
+	catch (Exception& ex)
+	{
+		surf = nullptr; // just to ignore any exception when 32 surface does not exists
+	}
+
+	if (!surf)
+	{
+		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
+		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+		surf = _game->getMod()->getSurface(id8);
+		Palette pal = Palette();
+		if (!usePal && surf->getPalette())
+		{
+			pal.setColors(surf->getPalette(), surf->getSurface()->format->palette->ncolors);
+		}
+		else
+		{
+			pal.setColors(_game->getMod()->getPalettes().find(palName)->second->getColors(), 255);
+		}
+		*newSurf = *surf;
+		newSurf->setScale(scaleX, scaleY);
+		newSurf->doScale();
+		newSurf->convertTo32Bits(newSurf, pal.getColors(), true); // always use the palette passed in
+		surf = newSurf;
+	}
+
+	return surf;
+}
+
+/*
+* Get the 32 bit sprites type id
+* @param id the 8 bit sprite type id
+* @return the typeid to use
+*/
+std::string State::getTypeId(std::string id, int bpp)
+{
+	if (bpp != 8 && _game->getMod()->getExtraSprites().find(id)->second.size() > 0)
+	{
+		ExtraSprites* sprite = _game->getMod()->getExtraSprites().find(id)->second[0];
+
+		std::string first_sprite = sprite->getSprites() && sprite->getSprites()->size() > 0 ? sprite->getSprites()->begin()->second : "";
+
+		if (OpenXcom::in32BitsFolder(first_sprite))
+		{
+			return "32_" + id;
+		}
+	}
+
+	return id;
+}
+
 /**
  * Set interface data from the ruleset, also sets the palette for the state.
  * @param category Name of the interface set.

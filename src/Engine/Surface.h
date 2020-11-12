@@ -116,7 +116,7 @@ protected:
 	void convertToRGBA(const void* image, int size, int width, int height, Uint8 bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask, Uint32 endian = SDL_BYTEORDER);
 public:
 	/// Convert to 32bits
-	Surface* convertTo32Bits(Surface* src, SDL_Color* palette);
+	Surface* convertTo32Bits(Surface* src, SDL_Color* palette, bool usePal = false);
 	/// Set the scaleX and scaleY
 	void setScale(double x, double y);
 	/// Scale the surface

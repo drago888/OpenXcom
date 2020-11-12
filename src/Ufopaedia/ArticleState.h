@@ -89,10 +89,6 @@ namespace OpenXcom
 		/// return the article id
 		std::string getId() const { return _id; }
 		static bool inPediaArticle;
-		// get the 32 bits typeid
-		std::string getTypeId(std::string id, int bpp = 8);
-		// get the 32 surface and if not existing get the 8 bits surface and convert to 32 bits surface
-		Surface* get32Surf(std::string id32, std::string id8, Surface* newSurf, std::string palName, bool usePal = false);
 
 	protected:
 

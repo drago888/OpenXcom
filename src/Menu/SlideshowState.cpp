@@ -53,14 +53,21 @@ SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std
 		InteractiveSurface* slide =
 			new InteractiveSurface(Options::cutsceneResolutionX, Options::cutsceneResolutionY, 0, 0);
 		add(slide);
-		slide->loadImage(it->imagePath);
-		if (_bpp != 8 && slide->getWidth() == Screen::ORIGINAL_WIDTH)
+		if (_bpp == 8)
 		{
-			Palette pal = Palette();
-			pal.setColors(slide->getSurface()->format->palette->colors, slide->getSurface()->format->palette->ncolors);
+			slide->loadImage(it->imagePath);
+		}
+		else if (OpenXcom::in32BitsFolder(it->imagePath))
+		{
+			slide->loadImage(it->imagePath.substr(0, it->imagePath.find_last_of(".")) + "32"
+				+ it->imagePath.substr(it->imagePath.find_last_of("."), it->imagePath.npos));
+		}
+		else // 32 bits but no 32 bits image
+		{
+			slide->loadImage(it->imagePath);
 			slide->setScale(scaleX, scaleY);
 			slide->doScale();
-			slide->convertTo32Bits(slide, pal.getColors());
+			slide->convertTo32Bits(slide, _game->getMod()->getPalettes().find("PAL_BATTLESCAPE")->second->getColors());
 		}
 		slide->onMouseClick((ActionHandler)&SlideshowState::screenClick);
 		slide->onKeyboardPress((ActionHandler)&SlideshowState::screenClick, Options::keyOk);

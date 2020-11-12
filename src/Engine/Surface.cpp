@@ -543,7 +543,7 @@ void Surface::get32Bits(std::vector<Uint32>* dest, const void* image, int size, 
  * @param Amask the alpha mask of src
  * @return the 32 bits new surface
 */
-Surface* Surface::convertTo32Bits(Surface* src, SDL_Color* palette)
+Surface* Surface::convertTo32Bits(Surface* src, SDL_Color* pal, bool usePal)
 {
 	if (src->_surface->format->BitsPerPixel != 8)
 	{
@@ -551,9 +551,18 @@ Surface* Surface::convertTo32Bits(Surface* src, SDL_Color* palette)
 	}
 
 	std::vector<Uint32> image32;
+	Palette palette = Palette();
+	if (!usePal && src->getPalette())
+	{
+		palette.setColors(src->_surface->format->palette->colors, src->_surface->format->palette->ncolors);
+	}
+	else
+	{
+		palette.setColors(pal, 256);
+	}
 	get32Bits(&image32, src->_surface->pixels, src->_surface->w * src->_surface->h, src->_surface->format->BitsPerPixel,
 		src->_surface->format->Rmask, src->_surface->format->Gmask, src->_surface->format->Bmask, src->_surface->format->Amask, SDL_BYTEORDER,
-		palette);
+		palette.getColors());
 
 	*this = Surface(src->_surface->w, src->_surface->h, 0, 0, 32);
 	lock();

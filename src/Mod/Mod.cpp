@@ -160,6 +160,40 @@ const std::string ModNameMaster = "master";
 /// Predefined name for current mod that is loading rulesets.
 const std::string ModNameCurrent = "current";
 
+/**
+* Check that the file is in the list of subfolders provided
+*/
+bool in32BitsFolder(std::string file)
+{
+	std::vector<std::pair<std::string, bool>>str_chk = { {"Resources/", true}, // not in subfolder
+														 {"Resources/Backgrounds/", false},
+														 {"Resources/Weapons/", false},
+														 {"Resources/Pedia/", false},
+														 {"Resources/Cutscenes",false} };
+
+	for (int i = 0; i < str_chk.size(); ++i)
+	{
+		// ignore subfolder
+		if (str_chk[i].second)
+		{
+			if (file.size() > str_chk[i].first.size() && file.substr(0, str_chk[i].first.size()) == str_chk[i].first
+				&& file.substr(str_chk[i].first.size(), std::string::npos).find("/") == std::string::npos)
+			{
+				return true;
+			}
+		}
+		else // apply for any in subfolder
+		{
+			if (file.size() > str_chk[i].first.size() && file.substr(0, str_chk[i].first.size()) == str_chk[i].first)
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 void Mod::resetGlobalStatics()
 {
 	DOOR_OPEN = 3;
@@ -1892,7 +1926,7 @@ void Mod::loadAll()
 			*frame = *_sets["BIGOBS.PCK"]->getFrame(i);
 			frame->setScale(Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH, Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT);
 			frame->doScale();
-			frame->convertTo32Bits(frame, _palettes["PAL_BATTLESCAPE"]->getColors(0));
+			frame->convertTo32Bits(frame, _palettes["PAL_BATTLESCAPE"]->getColors(), true); // use the palette passed in
 		}
 	}
 }
@@ -2064,6 +2098,7 @@ void Mod::loadConstants(const YAML::Node &node)
 	EXTENDED_TERRAIN_MELEE = node["extendedTerrainMelee"].as<int>(EXTENDED_TERRAIN_MELEE);
 	EXTENDED_UNDERWATER_THROW_FACTOR = node["extendedUnderwaterThrowFactor"].as<int>(EXTENDED_UNDERWATER_THROW_FACTOR);
 }
+
 
 /**
  * Loads a ruleset's contents from a YAML file.
@@ -2610,28 +2645,16 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			extraSprites->load(*i, data);
 			_extraSprites[type].push_back(extraSprites);
 
-			std::string str_chk = "Resources/Backgrounds/";
-			std::string str_chk2 = "Resources/";
-			std::string str_chk3 = "Resources/Weapons/";
-			std::string str_chk4 = "Resources/Pedia/";
+
 			std::string first_sprite = extraSprites->getSprites() && extraSprites->getSprites()->size() > 0  ? extraSprites->getSprites()->begin()->second : "";
 
-			if ((( first_sprite.size() > str_chk.size() && first_sprite.substr(0, str_chk.size()) == str_chk) ||
-				(first_sprite.size() > str_chk2.size() && first_sprite.substr(0, str_chk2.size()) == str_chk2
-					&& first_sprite.substr(str_chk2.size(), std::string::npos).find("/") == std::string::npos) ||
-				(first_sprite.size() > str_chk3.size() && first_sprite.substr(0, str_chk3.size()) == str_chk3) ||
-				(first_sprite.size() > str_chk4.size() && first_sprite.substr(0, str_chk4.size()) == str_chk4))
-				&& Screen::ORIGINAL_WIDTH != Options::pediaBgResolutionX)
+			if (in32BitsFolder(first_sprite) && Screen::ORIGINAL_WIDTH != Options::pediaBgResolutionX)
 			{
 				ExtraSprites* sprites32bits = new ExtraSprites(*extraSprites);
 				for (std::map<int, std::string>::iterator it = sprites32bits->getSprites()->begin(); it != sprites32bits->getSprite()->end(); ++it)
 				{
 					std::string filename = it->second;
-					if ((filename.size() > str_chk.size() && filename.substr(0, str_chk.size()) == str_chk) ||
-						(filename.size() > str_chk2.size() && filename.substr(0, str_chk2.size()) == str_chk2
-							&& filename.substr(str_chk2.size(), std::string::npos).find("/") == std::string::npos) ||
-						(filename.size() > str_chk3.size() && filename.substr(0, str_chk3.size()) == str_chk3) ||
-						(filename.size() > str_chk4.size() && filename.substr(0, str_chk4.size()) == str_chk4))
+					if (in32BitsFolder(filename))
 					{
 						it->second = filename.substr(0, filename.size() - 4) + "32" + filename.substr(filename.size() - 4, std::string::npos);
 					}
@@ -4803,7 +4826,7 @@ void Mod::loadBattlescapeResources()
 		Surface surf = Surface(*_sets["BIGOBS.PCK"]->getFrame(cnt));
 		surf.setScale(scaleX, scaleY);
 		surf.doScale();
-		surf.convertTo32Bits(&surf, _palettes["PAL_BATTLESCAPE"]->getColors(0));
+		surf.convertTo32Bits(&surf, _palettes["PAL_BATTLESCAPE"]->getColors(), true);
 		*_sets["32_BIGOBS.PCK"]->getFrame(cnt) = surf;
 	}
 	// incomplete chryssalid set: 1.0 data: stop loading.

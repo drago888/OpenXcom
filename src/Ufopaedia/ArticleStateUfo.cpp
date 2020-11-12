@@ -89,7 +89,8 @@ namespace OpenXcom
 		else
 		{
 			Surface surf;
-			get32Surf("32_BACK11.SCR", "BACK11.SCR", &surf, "PAL_UFOPAEDIA")->blitNShade32(_bg, 0, 0);
+			// this background does not exists thus force this palette
+			get32Surf("32_BACK11.SCR", "BACK11.SCR", &surf, "PAL_GEOSCAPE", true)->blitNShade32(_bg, 0, 0);
 		}
 
 		// add screen elements

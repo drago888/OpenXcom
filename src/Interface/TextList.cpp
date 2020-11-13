@@ -156,7 +156,7 @@ void TextList::unpress(State *state)
  */
 void TextList::setCellColor(size_t row, size_t column, Uint8 color)
 {
-	if (_texts.empty())
+	if (_texts.empty() || _texts.size() < row || _texts[row].size() < column)
 	{
 		return;
 	}
@@ -171,7 +171,7 @@ void TextList::setCellColor(size_t row, size_t column, Uint8 color)
  */
 void TextList::setRowColor(size_t row, Uint8 color)
 {
-	if (_texts.empty())
+	if (_texts.empty() || _texts.size() < row)
 	{
 		return;
 	}
@@ -190,7 +190,7 @@ void TextList::setRowColor(size_t row, Uint8 color)
  */
 std::string TextList::getCellText(size_t row, size_t column) const
 {
-	if (_texts.empty())
+	if (_texts.empty() || _texts.size() < row)
 	{
 		return "";
 	}
@@ -205,6 +205,10 @@ std::string TextList::getCellText(size_t row, size_t column) const
  */
 void TextList::setCellText(size_t row, size_t column, const std::string &text)
 {
+	if (_texts.empty() || _texts.size() < row || _texts[row].size() < column)
+	{
+		return;
+	}
 	_texts[row][column]->setText(text);
 	_redraw = true;
 }
@@ -216,7 +220,7 @@ void TextList::setCellText(size_t row, size_t column, const std::string &text)
  */
 int TextList::getColumnX(size_t column) const
 {
-	if (_texts.empty())
+	if (_texts.empty() || _texts[0].size() < column)
 	{
 		return 0;
 	}
@@ -230,7 +234,7 @@ int TextList::getColumnX(size_t column) const
  */
 int TextList::getRowY(size_t row) const
 {
-	if (_texts.empty())
+	if (_texts.empty() || _texts.size() < row)
 	{
 		return 0;
 	}
@@ -244,7 +248,7 @@ int TextList::getRowY(size_t row) const
  */
 int TextList::getTextHeight(size_t row) const
 {
-	if (_texts.empty())
+	if (_texts.empty() || _texts.size() < row)
 	{
 		return 0;
 	}
@@ -258,7 +262,7 @@ int TextList::getTextHeight(size_t row) const
  */
 int TextList::getNumTextLines(size_t row) const
 {
-	if (_texts.empty())
+	if (_texts.empty() || _texts.size() < row)
 	{
 		return 0;
 	}

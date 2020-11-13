@@ -156,7 +156,7 @@ void TextList::unpress(State *state)
  */
 void TextList::setCellColor(size_t row, size_t column, Uint8 color)
 {
-	if (_texts.empty() || _texts.size() < row || _texts[row].size() < column)
+	if (_texts.empty() || _texts.size() - 1 < row || _texts[row].size() - 1 < column)
 	{
 		return;
 	}
@@ -171,7 +171,7 @@ void TextList::setCellColor(size_t row, size_t column, Uint8 color)
  */
 void TextList::setRowColor(size_t row, Uint8 color)
 {
-	if (_texts.empty() || _texts.size() < row)
+	if (_texts.empty() || _texts.size() - 1 < row)
 	{
 		return;
 	}
@@ -190,7 +190,7 @@ void TextList::setRowColor(size_t row, Uint8 color)
  */
 std::string TextList::getCellText(size_t row, size_t column) const
 {
-	if (_texts.empty() || _texts.size() < row)
+	if (_texts.empty() || _texts.size() - 1 < row || _texts[row].size() - 1 < column)
 	{
 		return "";
 	}
@@ -205,7 +205,7 @@ std::string TextList::getCellText(size_t row, size_t column) const
  */
 void TextList::setCellText(size_t row, size_t column, const std::string &text)
 {
-	if (_texts.empty() || _texts.size() < row || _texts[row].size() < column)
+	if (_texts.empty() || _texts.size() - 1 < row || _texts[row].size() - 1 < column)
 	{
 		return;
 	}
@@ -220,7 +220,7 @@ void TextList::setCellText(size_t row, size_t column, const std::string &text)
  */
 int TextList::getColumnX(size_t column) const
 {
-	if (_texts.empty() || _texts[0].size() < column)
+	if (_texts.empty() || _texts[0].size() - 1 < column)
 	{
 		return 0;
 	}
@@ -234,7 +234,7 @@ int TextList::getColumnX(size_t column) const
  */
 int TextList::getRowY(size_t row) const
 {
-	if (_texts.empty() || _texts.size() < row)
+	if (_texts.empty() || _texts.size() - 1 < row || _texts[row].empty())
 	{
 		return 0;
 	}
@@ -248,7 +248,7 @@ int TextList::getRowY(size_t row) const
  */
 int TextList::getTextHeight(size_t row) const
 {
-	if (_texts.empty() || _texts.size() < row)
+	if (_texts.empty() || _texts.size() - 1 < row || _texts[row].empty())
 	{
 		return 0;
 	}
@@ -262,7 +262,7 @@ int TextList::getTextHeight(size_t row) const
  */
 int TextList::getNumTextLines(size_t row) const
 {
-	if (_texts.empty() || _texts.size() < row)
+	if (_texts.empty() || _texts.size() - 1 < row || _texts[row].empty())
 	{
 		return 0;
 	}
@@ -1367,7 +1367,7 @@ void TextList::mouseOver(Action *action, State *state)
 			Text *selText = _texts[_rows[_selRow]].front();
 			int y = getY() + selText->getY();
 			int actualHeight = selText->getHeight() + _font->getSpacing(); //current line height
-			Uint32 selectorY = getY() + getRowY(_selRow) - getRowY(_scroll);
+			Uint32 selectorY = getY() + getRowY(_rows[_selRow]) - getRowY(_rows[_scroll]);
 			if (y < getY() || y + actualHeight > getY() + getHeight())
 			{
 				actualHeight /= 2;

@@ -39,6 +39,22 @@ namespace OpenXcom
 	Cursor* ArticleState::_smallCursor = nullptr;
 	bool ArticleState::inPediaArticle = false;
 	/**
+    * Blits all the visible Surface child elements onto the
+    * display screen, by order of addition.
+    */
+	void ArticleState::blit()
+	{
+		if (resetScreen)
+		{
+			int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
+			int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+			_game->changeCursor(_bigCursor);
+			_game->mouseScaleXMul = scaleX;
+			_game->mouseScaleYMul = scaleY;
+		}
+		State::blit();
+	}
+	/**
 	 * Change index position to next article.
 	 */
 	void ArticleCommonState::nextArticle()
@@ -330,7 +346,15 @@ namespace OpenXcom
 	 */
 	void ArticleState::btnInfoClick(Action *)
 	{
+		_game->getScreen()->resetDisplay(true, false, Screen::ORIGINAL_WIDTH, Screen::ORIGINAL_HEIGHT, 8);
+		_game->changeCursor(_smallCursor);
+		_game->mouseScaleXMul = 1;
+		_game->mouseScaleYMul = 1;
+		ArticleState::inPediaArticle = false;
 		Ufopaedia::openArticleDetail(_game, _id);
+		// to prevent screen flickering, use inPediaArticle and resetScreen in tandem
+		ArticleState::inPediaArticle = true;
+		resetScreen = true;
 	}
 
 }

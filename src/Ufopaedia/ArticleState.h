@@ -89,6 +89,8 @@ namespace OpenXcom
 		/// return the article id
 		std::string getId() const { return _id; }
 		static bool inPediaArticle;
+		/// Blits the state to the screen.
+		void blit() override;
 
 	protected:
 

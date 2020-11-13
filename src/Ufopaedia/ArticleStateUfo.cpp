@@ -97,7 +97,14 @@ namespace OpenXcom
 		_txtTitle = new Text(155 * scaleX, 32 * scaleY, 5 * scaleX, 24 * scaleY, bpp);
 		_txtTitle->setScale(scaleX, scaleY);
 		add(_txtTitle);
-		_txtTitle->setColor(Palette::blockOffset(8)+5);
+		if (bpp == 8)
+		{
+			_txtTitle->setColor(Palette::blockOffset(8) + 5);
+		}
+		else
+		{
+			_txtTitle->setColor(Palette::blockOffset(4) + 12);
+		}
 		_txtTitle->setBig();
 		_txtTitle->setWordWrap(true);
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
@@ -161,7 +168,14 @@ namespace OpenXcom
 		_txtInfo = new Text(300 * scaleX, 50 * scaleY, 10 * scaleX, 140 * scaleY, bpp);
 		_txtInfo->setScale(scaleX, scaleY);
 		add(_txtInfo);
-		_txtInfo->setColor(Palette::blockOffset(8)+5);
+		if (bpp == 8)
+		{
+			_txtInfo->setColor(Palette::blockOffset(8) + 5);
+		}
+		else
+		{
+			_txtInfo->setColor(Palette::blockOffset(4) + 8);
+		}
 		_txtInfo->setSecondaryColor(Palette::blockOffset(8) + 10);
 		_txtInfo->setWordWrap(true);
 		_txtInfo->setText(tr(defs->getTextForPage(_state->current_page)));

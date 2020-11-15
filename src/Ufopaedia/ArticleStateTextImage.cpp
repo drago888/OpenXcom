@@ -92,7 +92,7 @@ namespace OpenXcom
 		else
 		{
 			Surface surf;
-			get32Surf("32_" + defs->image_id, defs->image_id, &surf, "PAL_BATTLEPEDIA")->blitNShade32(_bg, 0, 0);
+			get32Surf("32_" + defs->image_id, defs->image_id, &surf, "PAL_UFOPAEDIA", true)->blitNShade32(_bg, 0, 0);
 		}
 
 

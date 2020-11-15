@@ -121,48 +121,36 @@ namespace OpenXcom
 		crop.getCrop()->y = 0;
 		crop.getCrop()->w = _image->getWidth();
 		crop.getCrop()->h = _image->getHeight();
-		_image->drawRect(crop.getCrop(), 15);
-		if (bpp == 8)
-		{
-			crop.blit(_image);
-		}
-		else
-		{
-			crop.blit32(_image);
-		}
-
-		Surface cropSurf;
+		//_image->drawRect(crop.getCrop(), 15);
+		crop.getCrop()->w = _image->getWidth() / scaleX;
+		crop.getCrop()->h = _image->getHeight() / scaleY;
+		crop.blit(_image);
 
 		if (ufo->getModSprite().empty())
 		{
-			crop.getCrop()->y = (dogfightInterface->getElement("previewMid")->y + dogfightInterface->getElement("previewMid")->h * ufo->getSprite()) * scaleY;
-			crop.getCrop()->h = dogfightInterface->getElement("previewMid")->h * scaleY;
+			crop.getCrop()->y = dogfightInterface->getElement("previewMid")->y + dogfightInterface->getElement("previewMid")->h * ufo->getSprite();
+			crop.getCrop()->h = dogfightInterface->getElement("previewMid")->h;
 		}
 		else
 		{
-			if (bpp == 8)
-			{
-				crop = _game->getMod()->getSurface(ufo->getModSprite())->getCrop();
-			}
-			else
-			{
-				Surface* sprite = _game->getMod()->getSurface(ufo->getModSprite());
-				cropSurf = *sprite;
-				cropSurf.setScale(scaleX, scaleY);
-				cropSurf.doScale();
-				cropSurf.convertTo32Bits(&cropSurf, _game->getMod()->getPalettes().find("PAL_GEOSCAPE")->second->getColors());
-				crop = cropSurf.getCrop();
-			}
+			crop = _game->getMod()->getSurface(ufo->getModSprite())->getCrop();
 		}
 		crop.setX(0);
 		crop.setY(0);
+
 		if (bpp == 8)
 		{
 			crop.blit(_image);
 		}
 		else
 		{
-			crop.blit32(_image);
+			// don't combine with 8 bits for 8 bits performance
+			Surface surf = Surface(160, 52, 160, 6);
+			crop.blit(&surf);
+			surf.setScale(scaleX, scaleY);
+			surf.doScale();
+			surf.convertTo32Bits(&surf, _game->getMod()->getPalettes().find("PAL_GEOSCAPE")->second->getColors(), true);
+			surf.blitNShade32(_image, 0, 0);
 		}
 
 		_txtInfo = new Text(300 * scaleX, 50 * scaleY, 10 * scaleX, 140 * scaleY, bpp);

@@ -92,7 +92,14 @@ namespace OpenXcom
 		else
 		{
 			Surface surf;
-			get32Surf("32_" + defs->image_id, defs->image_id, &surf, "PAL_UFOPAEDIA", true)->blitNShade32(_bg, 0, 0);
+			bool use_pal = false;
+
+			// default to true if image_id have . in it eg .spk but is not bigobs.pck_
+			if (defs->image_id != "BIGOBS.PCK" && defs->image_id.find(".") != std::string::npos)
+			{
+				use_pal = true;
+			}
+			get32Surf("32_" + defs->image_id, defs->image_id, &surf, "PAL_UFOPAEDIA", use_pal)->blitNShade32(_bg, 0, 0);
 		}
 
 

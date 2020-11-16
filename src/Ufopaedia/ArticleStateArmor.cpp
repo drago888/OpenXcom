@@ -49,7 +49,17 @@ namespace OpenXcom
 		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
 
 		// Set palette
-		auto customArmorSprite = defs->image_id.empty() ? nullptr : _game->getMod()->getSurface(defs->image_id, true);
+		Surface* customArmorSprite = nullptr;
+		if (!defs->image_id.empty() && bpp == 8)
+		{
+			_game->getMod()->getSurface(defs->image_id, true);
+		}
+		else if (!defs->image_id.empty())
+		{
+			Surface surf2;
+			customArmorSprite = get32Surf("32_" + defs->image_id, defs->image_id, &surf2, "PAL_BATTLESCAPE", true);
+		}
+
 		if (defs->customPalette && customArmorSprite && bpp == 8)
 		{
 			setCustomPalette(customArmorSprite->getPalette(), Mod::BATTLESCAPE_CURSOR);
@@ -112,7 +122,15 @@ namespace OpenXcom
 		if (customArmorSprite)
 		{
 			// blit on the background, so that text and button are always visible
-			customArmorSprite->blitNShade(_bg, 0, 0);
+			if (bpp == 8)
+			{
+				customArmorSprite->blitNShade(_bg, 0, 0);
+			}
+			else
+			{
+				customArmorSprite->blitNShade32(_bg, 0, 0);
+			}
+
 		}
 		else if (!armor->getLayersDefaultPrefix().empty())
 		{

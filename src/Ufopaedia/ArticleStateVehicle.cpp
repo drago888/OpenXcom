@@ -192,7 +192,7 @@ namespace OpenXcom
 
 			_lstStats->addRow(2, tr("STR_ROUNDS").c_str(), ss9.str().c_str());
 
-			_txtInfo->setY(138);
+			_txtInfo->setY(138 * scaleY);
 		}
 		else
 		{

@@ -79,7 +79,7 @@ namespace OpenXcom
 		else
 		{
 			Surface surf;
-			get32Surf("32_" +defs-> image_id, defs->image_id, &surf, "PAL_GEOSCAPE")->blitNShade32(_bg, 0, 0);
+			get32Surf("32_" +defs-> image_id, defs->image_id, &surf, "PAL_UFOPAEDIA", true)->blitNShade32(_bg, 0, 0);
 		}
 		_btnOk->setColor(Palette::blockOffset(15)-1);
 		_btnPrev->setColor(Palette::blockOffset(15)-1);

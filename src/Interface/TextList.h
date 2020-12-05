@@ -61,6 +61,7 @@ private:
 	int _noScrollLeftEdge, _noScrollRightEdge;
 	ComboBox *_comboBox;
 	std::vector<std::vector<std::string>> _rowValues;
+	int _wrappedTopY;
 
 	/// Updates the arrow buttons.
 	void updateArrows();

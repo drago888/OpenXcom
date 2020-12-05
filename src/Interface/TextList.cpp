@@ -45,7 +45,7 @@ TextList::TextList(int width, int height, int x, int y, int bpp) : InteractiveSu
 	_bg(0), _selector(0), _margin(0), _scrolling(true), _arrowPos(-1), _scrollPos(4), _arrowType(ARROW_VERTICAL),
 	_leftClick(0), _leftPress(0), _leftRelease(0), _rightClick(0), _rightPress(0), _rightRelease(0),
 	_arrowsLeftEdge(0), _arrowsRightEdge(0), _noScrollLeftEdge(0), _noScrollRightEdge(0), _comboBox(0), textPalette(nullptr),
-	textColor(0), textColor2(0)
+	textColor(0), textColor2(0), _wrappedTopY(0)
 {
 	_up = new ArrowButton(ARROW_BIG_UP, 13, 14, getX() + getWidth() + _scrollPos, getY());
 	_up->setVisible(false);
@@ -1127,6 +1127,7 @@ void TextList::blitText(SDL_Surface* surface, int xpos, int ypos)
 		{
 			y -= _font->getHeight() + _font->getSpacing();
 		}
+		_wrappedTopY = y;
 		for (size_t i = _rows[_scroll]; i < _texts.size() && i < _rows[_scroll] + _visibleRows; ++i)
 		{
 			int z = 0;
@@ -1368,7 +1369,14 @@ void TextList::mouseOver(Action *action, State *state)
 			int y = getY() + selText->getY();
 			int actualHeight = selText->getHeight() + _font->getSpacing(); //current line height
 			Uint32 selectorY = getY() + getRowY(_rows[_selRow]) - getRowY(_rows[_scroll]);
-			if (y < getY() || y + actualHeight > getY() + getHeight())
+			// if not top wrapped element
+			if (getY() <= selectorY + _wrappedTopY)
+			{
+				selectorY += _wrappedTopY;
+			}
+			//if (y < getY() || y + actualHeight > getY() + getHeight())
+			// if top or bottom in list is only partially shown, half the height
+			if (getY() > selectorY + _wrappedTopY || getY() + getHeight() < selectorY + actualHeight )
 			{
 				actualHeight /= 2;
 			}
@@ -1376,13 +1384,13 @@ void TextList::mouseOver(Action *action, State *state)
 			{
 				y = getY();
 			}
-			/*if (_selector->getHeight() != actualHeight)
+			if (_selector->getHeight() != actualHeight)
 			{
 				// resizing doesn't work, but recreating does, so let's do that!
 				delete _selector;
 				_selector = new Surface(getWidth(), actualHeight, getX(), y);
 				_selector->setPalette(getPalette());
-			}*/
+			}
 			//_selector->setY(y);
 			_selector->setY(selectorY);
 			_selector->copy(_bg);

@@ -811,7 +811,7 @@ void ProjectileFlyBState::think()
 									{
 										projectileHitUnit(proj->getPosition(offset));
 									}
-									Explosion *explosion = new Explosion(proj->getPosition(offset), _ammo->getRules()->getHitAnimation());
+									Explosion *explosion = new Explosion(proj->getPosition(offset), _ammo->getRules()->getHitAnimation(), 0, false, false, _ammo->getRules()->getHitAnimationFrames());
 									int power = _ammo->getRules()->getPowerBonus(attack) - _ammo->getRules()->getPowerRangeReduction(proj->getDistance());
 									_parent->getMap()->getExplosions()->push_back(explosion);
 									_parent->getSave()->getTileEngine()->hit(attack, proj->getPosition(offset), power, _ammo->getRules()->getDamageType());
@@ -1004,13 +1004,6 @@ void ProjectileFlyBState::projectileHitUnit(Position pos)
 				_unit->setTurnsLeftSpottedForSnipers(std::max(victim->getSpotterDuration(), _unit->getTurnsLeftSpottedForSnipers()));
 			}
 		}
-		// Record the last unit to hit our victim. If a victim dies without warning*, this unit gets the credit.
-		// *Because the unit died in a fire or bled out.
-		victim->setMurdererId(_unit->getId());
-		if (_action.weapon != 0)
-			victim->setMurdererWeapon(_action.weapon->getRules()->getName());
-		if (_ammo != 0)
-			victim->setMurdererWeaponAmmo(_ammo->getRules()->getName());
 	}
 }
 

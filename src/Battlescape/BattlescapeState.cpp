@@ -1843,7 +1843,11 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
 		{
 			// show rank (vanilla behaviour)
 			SurfaceSet *texture = _game->getMod()->getSurfaceSet("SMOKE.PCK");
-			texture->getFrame(soldier->getRankSpriteBattlescape())->blitNShade(_rank, 0, 0);
+			auto frame = texture->getFrame(soldier->getRankSpriteBattlescape());
+			if (frame)
+			{
+				frame->blitNShade(_rank, 0, 0);
+			}
 		}
 		else
 		{
@@ -3547,8 +3551,8 @@ void BattlescapeState::stopScrolling(Action *action)
 	else
 	{
 		SDL_WarpMouse(_cursorPosition.x, _cursorPosition.y);
-		action->setMouseAction(_cursorPosition.x/action->getXScale(), _cursorPosition.y/action->getYScale(), 0, 0);
-		_map->setSelectorPosition(_cursorPosition.x / action->getXScale(), _cursorPosition.y / action->getYScale());
+		action->setMouseAction(_cursorPosition.x, _cursorPosition.y, _map->getX(), _map->getY());
+		_map->setSelectorPosition(action->getAbsoluteXMouse(), action->getAbsoluteYMouse());
 	}
 	// reset our "mouse position stored" flag
 	_cursorPosition.z = 0;

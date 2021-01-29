@@ -21,7 +21,7 @@
 #include <string>
 #include <yaml-cpp/yaml.h>
 #include "RuleBaseFacilityFunctions.h"
-#include "../Engine/Script.h"
+#include "ModScript.h"
 
 namespace OpenXcom
 {
@@ -164,6 +164,7 @@ private:
 	char _weaponTypes[WeaponMax][WeaponTypeMax];
 	std::string _refuelItem;
 	std::string _weaponStrings[WeaponMax];
+	std::string _fixedWeaponNames[WeaponMax];
 	int _repairRate, _refuelRate, _transferTime, _score;
 	RuleTerrain *_battlescapeTerrainData;
 	int _maxSkinIndex;
@@ -175,6 +176,8 @@ private:
 	RuleCraftStats _stats;
 	int _shieldRechargeAtBase;
 	bool _mapVisible, _forceShowInMonthlyCosts;
+
+	ModScript::CraftScripts::Container _craftScripts;
 	ScriptValues<RuleCraft> _scriptValues;
 
 public:
@@ -264,6 +267,8 @@ public:
 	int getWeaponTypesRaw(int slot, int subslot) const;
 	/// Get description string of weapon slot.
 	const std::string &getWeaponSlotString(int slot) const;
+	/// Gets the string ID of a fixed weapon in a given slot.
+	const std::string &getFixedWeaponInSlot(int slot) const;
 	/// Get basic statistic of craft.
 	const RuleCraftStats& getStats() const;
 	/// Gets how high this craft can go.
@@ -278,6 +283,10 @@ public:
 	bool forceShowInMonthlyCosts() const;
 	/// Calculate the theoretical range of the craft in nautical miles
 	int calculateRange(int type);
+
+	/// Gets script.
+	template<typename Script>
+	const typename Script::Container &getScript() const { return _craftScripts.get<Script>(); }
 	/// Get all script values.
 	const ScriptValues<RuleCraft>& getScriptValuesRaw() const { return _scriptValues; }
 };

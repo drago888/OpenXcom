@@ -2302,16 +2302,16 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
 		return false;
 	}
 
-	const int wounds = target->getFatalWounds();
 	const int healthOrig = target->getHealth();
 	const int stunLevelOrig = target->getStunlevel();
 	const int adjustedDamage = target->damage(relative, damage, type, _save, attack);
 
+	const int healthDamage = healthOrig - target->getHealth();
+	const int stunDamage = target->getStunlevel() - stunLevelOrig;
+
 	// hit log
 	if (attack.attacker)
 	{
-		int healthDamage = healthOrig - target->getHealth();
-		int stunDamage = target->getStunlevel() - stunLevelOrig;
 		if (healthDamage > 0 || stunDamage > 0)
 		{
 			int damagePercent = ((healthDamage + stunDamage) * 100) / target->getBaseStats()->health;
@@ -2327,15 +2327,6 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
 		else
 		{
 			_save->appendToHitLog(HITLOG_NO_DAMAGE, attack.attacker->getFaction());
-		}
-	}
-
-	if (attack.attacker && target->getFaction() != FACTION_PLAYER)
-	{
-		// if it's going to bleed to death and it's not a player, give credit for the kill.
-		if (wounds < target->getFatalWounds())
-		{
-			target->killedBy(attack.attacker->getFaction());
 		}
 	}
 
@@ -2392,7 +2383,17 @@ bool TileEngine::hitUnit(BattleActionAttack attack, BattleUnit *target, const Po
 		}
 	}
 
-	if (attack.attacker)
+	// Use case: an xcom soldier throwing a smoke grenade on a dying unit should not override the previously remembered murderer
+	bool isRelevant = true;
+	if (attack.attacker
+		&& healthDamage <= 0
+		&& target->getMurdererId() > 0
+		&& (target->getFire() > 0 || target->getFatalWounds() > 0 || target->hasNegativeHealthRegen()))
+	{
+		isRelevant = false;
+	}
+
+	if (isRelevant && attack.attacker)
 	{
 		// Record the last unit to hit our victim. If a victim dies without warning*, this unit gets the credit.
 		// *Because the unit died in a fire or bled out.

@@ -188,7 +188,6 @@ BattlescapeGame::BattlescapeGame(SavedBattleGame *save, BattlescapeState *parent
 
 	_debugPlay = false;
 
-	spawnFromPrimedItems();
 	checkForCasualties(nullptr, BattleActionAttack{ }, true);
 	cancelCurrentAction();
 }
@@ -677,6 +676,7 @@ void BattlescapeGame::checkForCasualties(const RuleDamageType *damageType, Battl
 			if ((*i)->getId() == origMurderer->getMurdererId())
 			{
 				origMurderer = (*i);
+				break;
 			}
 		}
 	}

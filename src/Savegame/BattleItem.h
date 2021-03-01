@@ -108,6 +108,9 @@ public:
 
 	/// Spend one bullet. (Or spend a given amount of energy from a battery.)
 	bool spendBullet(int spendPerShot);
+
+	/// Check if owner is removed from game.
+	bool isOwnerIgnored() const;
 	/// Gets the item's owner.
 	BattleUnit *getOwner();
 	/// Gets the item's owner.
@@ -122,6 +125,9 @@ public:
 	void setPreviousOwner(BattleUnit *owner);
 	/// Removes the item from previous owner and moves to new owner.
 	void moveToOwner(BattleUnit *owner);
+
+	/// Checks if the item is a special built-in weapon (outside of the inventory).
+	bool isSpecialWeapon() const { return getOwner() && !getSlot(); }
 	/// Gets the item's inventory slot.
 	RuleInventory *getSlot() const;
 	/// Sets the item's inventory slot.

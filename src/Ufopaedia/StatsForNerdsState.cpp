@@ -296,9 +296,7 @@ void StatsForNerdsState::btnRefreshClick(Action *)
  */
 void StatsForNerdsState::btnOkClick(Action *)
 {
-	bool ctrlPressed = SDL_GetModState() & KMOD_CTRL;
-
-	if (ctrlPressed)
+	if (_game->isCtrlPressed())
 	{
 		Log(LOG_INFO) << _txtArticle->getText();
 		for (size_t row = 0; row < _lstRawData->getTexts(); ++row)
@@ -1928,10 +1926,23 @@ void StatsForNerdsState::initItemList()
 
 	addDouble(ss, itemRule->getSize(), "size");
 	addInteger(ss, itemRule->getBuyCost(), "costBuy", 0, true);
-	addInteger(ss, itemRule->getSellCost(), "costSell", 0, true);
 	addInteger(ss, itemRule->getTransferTime(), "transferTime", 24);
 	addInteger(ss, itemRule->getMonthlySalary(), "monthlySalary", 0, true);
 	addInteger(ss, itemRule->getMonthlyMaintenance(), "monthlyMaintenance", 0, true);
+	if (_game->getSavedGame()->getSellPriceCoefficient() == 100)
+	{
+		addInteger(ss, itemRule->getSellCost(), "costSell", 0, true);
+	}
+	else
+	{
+		addHeading("_calculatedValues", "STR_FOR_DIFFICULTY", true);
+		{
+			int adjustedCost = itemRule->getSellCost() * _game->getSavedGame()->getSellPriceCoefficient() / 100;
+			addInteger(ss, adjustedCost, "costSell", 0, true);
+
+			endHeading();
+		}
+	}
 
 	ModScript::scriptCallback<ModScript::StatsForNerdsItem>(itemRule, itemRule, this, _game->getSavedGame());
 
@@ -2524,6 +2535,7 @@ void StatsForNerdsState::initArmorList()
 		addInteger(ss, armorRule->getKneelHeight(), "kneelHeight", -1);
 		addInteger(ss, armorRule->getFloatHeight(), "floatHeight", -1);
 		addFloat(ss, armorRule->getOverKill(), "overKill", 0.5f);
+		addBoolean(ss, armorRule->isPilotArmor(), "isPilotArmor");
 		addBoolean(ss, armorRule->getAllowTwoMainWeapons(), "allowTwoMainWeapons");
 		addBoolean(ss, armorRule->getInstantWoundRecovery(), "instantWoundRecovery");
 

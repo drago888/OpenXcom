@@ -9,7 +9,6 @@ set ( basescape_src
   Basescape/BasescapeState.cpp
   Basescape/BaseView.cpp
   Basescape/BuildFacilitiesState.cpp
-  Basescape/ChangeHeadquartersState.cpp
   Basescape/CraftArmorState.cpp
   Basescape/CraftEquipmentLoadState.cpp
   Basescape/CraftEquipmentSaveState.cpp
@@ -85,6 +84,8 @@ set ( battlescape_src
   Battlescape/DebriefingState.cpp
   Battlescape/Explosion.cpp
   Battlescape/ExplosionBState.cpp
+  Battlescape/ExtendedBattlescapeLinksState.cpp
+  Battlescape/ExtendedInventoryLinksState.cpp
   Battlescape/InfoboxOKState.cpp
   Battlescape/InfoboxState.cpp
   Battlescape/Inventory.cpp
@@ -186,6 +187,7 @@ set ( geoscape_src
   Geoscape/DogfightErrorState.cpp
   Geoscape/DogfightExperienceState.cpp
   Geoscape/DogfightState.cpp
+  Geoscape/ExtendedGeoscapeLinksState.cpp
   Geoscape/FundingState.cpp
   Geoscape/GeoscapeCraftState.cpp
   Geoscape/GeoscapeEventState.cpp

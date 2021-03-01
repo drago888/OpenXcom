@@ -454,6 +454,16 @@ void BattleItem::spendHealingItemUse(BattleMediKitAction mediKitAction)
 		setHealQuantity(getHealQuantity() - 1);
 	}
 }
+
+
+/**
+ * Check if owner is removed from game.
+ */
+bool BattleItem::isOwnerIgnored() const
+{
+	return _owner && _owner->isIgnored();
+}
+
 /**
  * Gets the item's owner.
  * @return Pointer to Battleunit.
@@ -1458,6 +1468,7 @@ void BattleItem::ScriptRegister(ScriptParserBase* parser)
 	bi.add<&BattleItem::getGlow>("getGlow");
 	bi.add<&BattleItem::getTotalWeight>("getTotalWeight");
 	bi.add<&BattleItem::isAmmo>("isAmmo");
+	bi.add<&BattleItem::isSpecialWeapon>("isSpecialWeapon");
 
 	bi.add<&BattleItem::getAmmoQuantity>("getAmmoQuantity");
 	bi.add<&setAmmoQuantityScript>("setAmmoQuantity");

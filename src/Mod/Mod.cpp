@@ -146,6 +146,7 @@ std::string Mod::DEBRIEF_MUSIC_GOOD;
 std::string Mod::DEBRIEF_MUSIC_BAD;
 int Mod::DIFFICULTY_COEFFICIENT[5];
 int Mod::SELL_PRICE_COEFFICIENT[5];
+int Mod::DIFFICULTY_BASED_RETAL_DELAY[5];
 int Mod::UNIT_RESPONSE_SOUNDS_FREQUENCY[4];
 bool Mod::EXTENDED_ITEM_RELOAD_COST;
 bool Mod::EXTENDED_RUNNING_COST;
@@ -261,6 +262,12 @@ void Mod::resetGlobalStatics()
 	SELL_PRICE_COEFFICIENT[2] = 100;
 	SELL_PRICE_COEFFICIENT[3] = 100;
 	SELL_PRICE_COEFFICIENT[4] = 100;
+
+	DIFFICULTY_BASED_RETAL_DELAY[0] = 0;
+	DIFFICULTY_BASED_RETAL_DELAY[1] = 0;
+	DIFFICULTY_BASED_RETAL_DELAY[2] = 0;
+	DIFFICULTY_BASED_RETAL_DELAY[3] = 0;
+	DIFFICULTY_BASED_RETAL_DELAY[4] = 0;
 
 	UNIT_RESPONSE_SOUNDS_FREQUENCY[0] = 100; // select unit
 	UNIT_RESPONSE_SOUNDS_FREQUENCY[1] = 100; // start moving
@@ -1899,6 +1906,7 @@ void Mod::loadAll()
 	// fixed user options
 	if (!_fixedUserOptions.empty())
 	{
+		_fixedUserOptions.erase("oxceLinks");
 		_fixedUserOptions.erase("oxceUpdateCheck");
 		_fixedUserOptions.erase("maximizeInfoScreens"); // FIXME: make proper categorisations in the next release
 		_fixedUserOptions.erase("oxceAutoNightVisionThreshold");
@@ -2605,6 +2613,15 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		for (YAML::const_iterator i = doc["sellPriceCoefficient"].begin(); i != doc["sellPriceCoefficient"].end() && num < MaxDifficultyLevels; ++i)
 		{
 			SELL_PRICE_COEFFICIENT[num] = (*i).as<int>(SELL_PRICE_COEFFICIENT[num]);
+			++num;
+		}
+	}
+	if (doc["difficultyBasedRetaliationDelay"])
+	{
+		size_t num = 0;
+		for (YAML::const_iterator i = doc["difficultyBasedRetaliationDelay"].begin(); i != doc["difficultyBasedRetaliationDelay"].end() && num < MaxDifficultyLevels; ++i)
+		{
+			DIFFICULTY_BASED_RETAL_DELAY[num] = (*i).as<int>(DIFFICULTY_BASED_RETAL_DELAY[num]);
 			++num;
 		}
 	}
@@ -4506,6 +4523,7 @@ void Mod::loadVanillaResources()
 	_sets["CustomArmorPreviews"] = new SurfaceSet(12, 20);
 	_sets["CustomItemPreviews"] = new SurfaceSet(12, 20);
 	_sets["TinyRanks"] = new SurfaceSet(7, 7);
+	_sets["Touch"] = new SurfaceSet(32, 24);
 
 	// Load palettes
 	const char *pal[] = { "PAL_GEOSCAPE", "PAL_BASESCAPE", "PAL_GRAPHS", "PAL_UFOPAEDIA", "PAL_BATTLEPEDIA" };
@@ -4771,6 +4789,10 @@ void Mod::loadVanillaResources()
 		{
 			SurfaceSet* s = _sets["TinyRanks"];
 			s->setMaxSharedFrames(6);
+		}
+		{
+			SurfaceSet* s = _sets["Touch"];
+			s->setMaxSharedFrames(10);
 		}
 	}
 	{
@@ -5703,6 +5725,17 @@ void getSkillScript(const Mod* mod, const RuleSkill* &skill, const std::string &
 		skill = nullptr;
 	}
 }
+void getRuleResearch(const Mod* mod, const RuleResearch*& rule, const std::string& name)
+{
+	if (mod)
+	{
+		rule = mod->getResearch(name);
+	}
+	else
+	{
+		rule = nullptr;
+	}
+}
 void getSoldierScript(const Mod* mod, const RuleSoldier* &soldier, const std::string &name)
 {
 	if (mod)
@@ -5752,6 +5785,7 @@ void Mod::ScriptRegister(ScriptParserBase *parser)
 	mod.add<&getItemScript>("getRuleItem");
 	mod.add<&getArmorScript>("getRuleArmor");
 	mod.add<&getSkillScript>("getRuleSkill");
+	mod.add<&getRuleResearch>("getRuleResearch");
 	mod.add<&getSoldierScript>("getRuleSoldier");
 	mod.add<&getInvenotryScript>("getRuleInventory");
 	mod.add<&Mod::getInventoryRightHand>("getRuleInventoryRightHand");

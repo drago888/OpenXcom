@@ -131,7 +131,7 @@ void ProjectileFlyBState::init()
 	}
 
 	Tile *endTile = _parent->getSave()->getTile(_action.target);
-	int distance = Position::distance2d(_action.actor->getPosition(), _action.target);
+	int distanceSq = _action.actor->distance3dToPositionSq(_action.target);
 	bool isPlayer = _parent->getSave()->getSide() == FACTION_PLAYER;
 	if (isPlayer) _parent->getMap()->resetObstacles();
 	switch (_action.type)
@@ -140,25 +140,8 @@ void ProjectileFlyBState::init()
 	case BA_AIMEDSHOT:
 	case BA_AUTOSHOT:
 	case BA_LAUNCH:
-		if (distance > weapon->getRules()->getMaxRange())
+		if (weapon->getRules()->isOutOfRange(distanceSq))
 		{
-			// special handling for short ranges and diagonals
-			if (_action.actor->directionTo(_action.target) % 2 == 1)
-			{
-				// special handling for maxRange 1: allow it to target diagonally adjacent tiles, even though they are technically 2 tiles away.
-				if (weapon->getRules()->getMaxRange() == 1
-					&& distance == 2)
-				{
-					break;
-				}
-				// special handling for maxRange 2: allow it to target diagonally adjacent tiles on a level above/below, even though they are technically 3 tiles away.
-				else if (weapon->getRules()->getMaxRange() == 2
-					&& distance == 3
-					&& _action.target.z != _action.actor->getPosition().z)
-				{
-					break;
-				}
-			}
 			// out of range
 			_action.result = "STR_OUT_OF_RANGE";
 			_parent->popState();
@@ -304,7 +287,7 @@ void ProjectileFlyBState::init()
 	}
 
 	bool forceEnableObstacles = false;
-	if (_action.type == BA_LAUNCH || (Options::forceFire && (SDL_GetModState() & KMOD_CTRL) != 0 && isPlayer) || !_parent->getPanicHandled())
+	if (_action.type == BA_LAUNCH || (Options::forceFire && _parent->getSave()->isCtrlPressed(true) && isPlayer) || !_parent->getPanicHandled())
 	{
 		// target nothing, targets the middle of the tile
 		_targetVoxel = _action.target.toVoxel() + TileEngine::voxelTileCenter;
@@ -443,13 +426,14 @@ bool ProjectileFlyBState::createNewProjectile()
 		// Since we're just spraying, target the middle of the tile
 		_targetVoxel = _action.waypoints.back();
 		Position targetPosition = _targetVoxel.toTile();
-		Position actorPosition = _action.actor->getPosition();
-		int maxRange = _action.weapon->getRules()->getMaxRange();
 
 		// The waypoint targeting is possibly out of range of the gun, so move the voxel to the max range of the gun if it is
-		int distance = Position::distance2d(actorPosition, targetPosition);
-		if (distance > maxRange)
+		int distanceSq = _action.actor->distance3dToPositionSq(targetPosition);
+		if (_action.weapon->getRules()->isOutOfRange(distanceSq))
 		{
+			Position actorPosition = _action.actor->getPosition();
+			int maxRange = _action.weapon->getRules()->getMaxRange();
+			int distance = (int)std::ceil(sqrt(float(distanceSq)));
 			_targetVoxel = (actorPosition + (targetPosition - actorPosition) * maxRange / distance).toVoxel() + TileEngine::voxelTileCenter;
 			targetPosition = _targetVoxel.toTile();
 		}

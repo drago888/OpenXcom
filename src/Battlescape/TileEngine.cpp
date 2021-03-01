@@ -1169,7 +1169,7 @@ bool TileEngine::isTileInLOS(BattleAction *action, Tile *tile)
 	std::vector<Position> _trajectory;
 	bool seen = false;
 
-	bool forceFire = Options::forceFire && (SDL_GetModState() & KMOD_CTRL) != 0 && _save->getSide() == FACTION_PLAYER;
+	bool forceFire = Options::forceFire && _save->isCtrlPressed(true) && _save->getSide() == FACTION_PLAYER;
 
 	// Primary LOF check
 	if (forceFire)
@@ -1850,7 +1850,9 @@ std::vector<TileEngine::ReactionScore> TileEngine::getSpottingUnits(BattleUnit* 
 						{
 							BattleItem *weapon = rs.weapon;
 							int accuracy = BattleUnit::getFiringAccuracy(BattleActionAttack::GetBeforeShoot(rs.attackType, rs.unit, weapon), _save->getBattleGame()->getMod());
-							int distance = Position::distance2d((*i)->getPosition(), unit->getPosition());
+							int distanceSq = unit->distance3dToUnitSq((*i));
+							int distance = (int)std::ceil(sqrt(float(distanceSq)));
+
 							int upperLimit = weapon->getRules()->getSnapRange();
 							int lowerLimit = weapon->getRules()->getMinRange();
 							if (distance > upperLimit)
@@ -1862,7 +1864,7 @@ std::vector<TileEngine::ReactionScore> TileEngine::getSpottingUnits(BattleUnit* 
 								accuracy -= (lowerLimit - distance) * weapon->getRules()->getDropoff();
 							}
 
-							bool outOfRange = distance > weapon->getRules()->getMaxRange() + 1; // special handling for short ranges and diagonals simplified by +1
+							bool outOfRange = weapon->getRules()->isOutOfRange(distanceSq);
 
 							if (accuracy > _save->getBattleGame()->getMod()->getMinReactionAccuracy() && !outOfRange)
 							{
@@ -1978,7 +1980,7 @@ TileEngine::ReactionScore TileEngine::determineReactionType(BattleUnit *unit, Ba
 	{
 		// has a gun capable of snap shot with ammo
 		if (weapon->getRules()->getBattleType() == BT_FIREARM &&
-			Position::distance2d(unit->getPosition(), target->getPosition()) < weapon->getRules()->getMaxRange() &&
+			!weapon->getRules()->isOutOfRange(unit->distance3dToUnitSq(target)) &&
 			weapon->getAmmoForAction(BA_SNAPSHOT) &&
 			BattleActionCost(BA_SNAPSHOT, unit, weapon).haveTU())
 		{
@@ -4363,6 +4365,20 @@ void TileEngine::itemDropInventory(Tile *t, BattleUnit *unit, bool unprimeItems,
 			{
 				if (deleteFixedItems)
 				{
+					// first unload all ammo
+					for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
+					{
+						if (i->needsAmmoForSlot(slot) && i->getAmmoForSlot(slot))
+						{
+							// unload the existing ammo (if any) from the weapon
+							BattleItem* oldAmmo = i->setAmmoForSlot(slot, nullptr);
+							if (oldAmmo)
+							{
+								itemDrop(t, oldAmmo, false);
+							}
+						}
+					}
+
 					// delete fixed items completely (e.g. when changing armor)
 					i->setOwner(nullptr);
 					_save->removeItem(i);
@@ -4376,6 +4392,12 @@ void TileEngine::itemDropInventory(Tile *t, BattleUnit *unit, bool unprimeItems,
 			}
 		}
 	);
+
+	// handle special built-in items
+	if (deleteFixedItems)
+	{
+		unit->removeSpecialWeapons(_save);
+	}
 }
 
 /**

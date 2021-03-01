@@ -619,10 +619,6 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	_moraleRecovery = node["moraleRecovery"].as<int>(_moraleRecovery);
 	_painKillerRecovery = node["painKillerRecovery"].as<float>(_painKillerRecovery);
 	_medikitType = (BattleMediKitType)node["medikitType"].as<int>(_medikitType);
-	{
-		// FIXME: deprecated, backwards-compatibility only, remove by mid 2020
-		_medikitTargetSelf = node["allowSelfHeal"].as<bool>(_medikitTargetSelf);
-	}
 	_medikitTargetSelf = node["medikitTargetSelf"].as<bool>(_medikitTargetSelf);
 	_medikitTargetImmune = node["medikitTargetImmune"].as<bool>(_medikitTargetImmune);
 	_medikitTargetMatrix = node["medikitTargetMatrix"].as<int>(_medikitTargetMatrix);
@@ -2167,6 +2163,31 @@ int RuleItem::getListOrder() const
 int RuleItem::getMaxRange() const
 {
 	return _maxRange;
+}
+
+/**
+ * Checks whether a given distance is out of range for this item.
+ * @param distanceSq Given distance squared.
+ * @return True, if out of range.
+ */
+bool RuleItem::isOutOfRange(int distanceSq) const
+{
+	bool outOfRange = distanceSq > (_maxRange * _maxRange);
+	// special handling for short ranges and diagonals
+	if (outOfRange)
+	{
+		// special handling for maxRange 1: allow it to target diagonally adjacent tiles (one diagonal move)
+		if (_maxRange == 1 && distanceSq <= 3)
+		{
+			outOfRange = false;
+		}
+		// special handling for maxRange 2: allow it to target diagonally adjacent tiles (one diagonal move + one straight move)
+		else if (_maxRange == 2 && distanceSq <= 6)
+		{
+			outOfRange = false;
+		}
+	}
+	return outOfRange;
 }
 
 /**

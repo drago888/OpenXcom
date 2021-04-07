@@ -670,6 +670,24 @@ DebriefingState::DebriefingState() : _region(0), _country(0), _positiveScore(tru
 	}
 
 	_positiveScore = (total > 0);
+
+	std::vector<Soldier*> participants;
+	for (std::vector<BattleUnit*>::const_iterator i = _game->getSavedGame()->getSavedBattle()->getUnits()->begin();
+		i != _game->getSavedGame()->getSavedBattle()->getUnits()->end(); ++i)
+	{
+		if ((*i)->getGeoscapeSoldier())
+		{
+			if (Options::fieldPromotions && !(*i)->hasGainedAnyExperience())
+			{
+				// Note: difference from OXC, soldier needs to actually have done something during the mission
+				continue;
+			}
+			participants.push_back((*i)->getGeoscapeSoldier());
+		}
+	}
+	_promotions = _game->getSavedGame()->handlePromotions(participants, _game->getMod());
+
+	_game->getSavedGame()->setBattleGame(0);
 }
 
 /**
@@ -677,10 +695,6 @@ DebriefingState::DebriefingState() : _region(0), _country(0), _positiveScore(tru
  */
 DebriefingState::~DebriefingState()
 {
-	if (_game->isQuitting())
-	{
-		_game->getSavedGame()->setBattleGame(0);
-	}
 	for (std::vector<DebriefingStat*>::iterator i = _stats.begin(); i != _stats.end(); ++i)
 	{
 		delete *i;
@@ -833,21 +847,6 @@ void DebriefingState::btnTransferClick(Action *)
  */
 void DebriefingState::btnOkClick(Action *)
 {
-	std::vector<Soldier*> participants;
-	for (std::vector<BattleUnit*>::const_iterator i = _game->getSavedGame()->getSavedBattle()->getUnits()->begin();
-		i != _game->getSavedGame()->getSavedBattle()->getUnits()->end(); ++i)
-	{
-		if ((*i)->getGeoscapeSoldier())
-		{
-			if (Options::fieldPromotions && !(*i)->hasGainedAnyExperience())
-			{
-				// Note: difference from OXC, soldier needs to actually have done something during the mission
-				continue;
-			}
-			participants.push_back((*i)->getGeoscapeSoldier());
-		}
-	}
-	_game->getSavedGame()->setBattleGame(0);
 	_game->popState();
 	if (_game->getSavedGame()->getMonthsPassed() == -1)
 	{
@@ -865,7 +864,7 @@ void DebriefingState::btnOkClick(Action *)
 		}
 		if (!_destroyBase)
 		{
-			if (_game->getSavedGame()->handlePromotions(participants, _game->getMod()))
+			if (_promotions)
 			{
 				_game->pushState(new PromotionsState);
 			}
@@ -1178,7 +1177,7 @@ void DebriefingState::prepareDebriefing()
 
 	if (!base && _game->getSavedGame()->isIronman())
 	{
-		throw Exception("Your save is corrupted. Don't play Ironman or don't ragequit.");
+		throw Exception("Your save is corrupted. Try asking someone on the Openxcom forum/discord to fix it for you.");
 	}
 
 	// mission site disappears (even when you abort)
@@ -1388,9 +1387,16 @@ void DebriefingState::prepareDebriefing()
 	std::vector<BattleUnit*> waitingTransformations;
 	for (auto* u : *battle->getUnits())
 	{
-		if (u->getSpawnUnit() && u->getOriginalFaction() == FACTION_HOSTILE && (!u->isOut() || u->isIgnored()))
+		if (u->getSpawnUnit() && (!u->isOut() || u->isIgnored()))
 		{
-			waitingTransformations.push_back(u);
+			if (u->getOriginalFaction() == FACTION_HOSTILE)
+			{
+				waitingTransformations.push_back(u);
+			}
+			else
+			{
+				//if unit belong to XCOM or CIVILIANS we leave it as-is
+			}
 		}
 	}
 	for (auto* u : waitingTransformations)
@@ -1401,13 +1407,19 @@ void DebriefingState::prepareDebriefing()
 		// reason: zombies don't create unconscious bodies... ever.
 		// the only way we can get into this situation is if psi-capture is enabled.
 		// we can use that knowledge to our advantage to save having to make it unconscious and spawn a body item for it.
-		BattleUnit *newUnit = _game->getSavedGame()->getSavedBattle()->getBattleGame()->convertUnit(u);
-		u->killedBy(FACTION_HOSTILE); //skip counting as kill
-		newUnit->convertToFaction(faction);
 		if (ignore)
 		{
-			newUnit->goToTimeOut();
+			//simplified handling for unit from previous stage
+			BattleUnit *newUnit = battle->createTempUnit(u->getSpawnUnit(), u->getSpawnUnitFaction());
+			battle->getUnits()->push_back(newUnit);
+			newUnit->convertToFaction(faction);
 		}
+		else
+		{
+			BattleUnit *newUnit = _game->getSavedGame()->getSavedBattle()->getBattleGame()->convertUnit(u);
+			newUnit->convertToFaction(faction);
+		}
+		u->killedBy(FACTION_HOSTILE); //skip counting as kill
 	}
 
 	// time to care for units.
@@ -1857,11 +1869,12 @@ void DebriefingState::prepareDebriefing()
 	// recover all our goodies
 	if (playersSurvived > 0)
 	{
+		bool alienAlloysExist = (_recoveryStats.find(ALIEN_ALLOYS) != _recoveryStats.end());
 		for (std::vector<DebriefingStat*>::iterator i = _stats.begin(); i != _stats.end(); ++i)
 		{
 			// alien alloys recovery values are divided by 10 or divided by 150 in case of an alien base
 			int aadivider = 1;
-			if ((*i)->item == _recoveryStats[ALIEN_ALLOYS]->name)
+			if (alienAlloysExist && (*i)->item == _recoveryStats[ALIEN_ALLOYS]->name)
 			{
 				// hardcoded vanilla defaults, in case modders or players fail to install OXCE properly
 				aadivider = (target == "STR_UFO") ? 10 : 150;

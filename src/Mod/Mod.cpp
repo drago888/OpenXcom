@@ -1442,13 +1442,13 @@ void Mod::loadSoundOffset(const std::string &parent, std::vector<int>& sounds, c
 		{
 			for (YAML::const_iterator i = node.begin(); i != node.end(); ++i)
 			{
-				sounds.push_back(-1);
+				sounds.push_back(Mod::NO_SOUND);
 				loadOffsetNode(parent, sounds.back(), *i, maxShared, set, 1);
 			}
 		}
 		else
 		{
-			sounds.push_back(-1);
+			sounds.push_back(Mod::NO_SOUND);
 			loadOffsetNode(parent, sounds.back(), node, maxShared, set, 1);
 		}
 	}
@@ -5592,7 +5592,7 @@ void Mod::createTransparencyLUT(Palette *pal)
 				Uint8 closest = 0;
 				int lowestDifference = INT_MAX;
 				// now compare each color in the palette to find the closest match to our desired one
-				for (int comparator = 0; comparator < 256; ++comparator)
+				for (int comparator = 1; comparator < 256; ++comparator)
 				{
 					int currentDifference = Sqr(desiredColor.r - pal->getColors(comparator)->r) +
 						Sqr(desiredColor.g - pal->getColors(comparator)->g) +

@@ -402,9 +402,11 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	mod->loadSoundOffset(_type, _hitSound, node["hitSound"], "BATTLE.CAT");
 	mod->loadSoundOffset(_type, _hitMissSound, node["hitMissSound"], "BATTLE.CAT");
 	mod->loadSoundOffset(_type, _meleeSound, node["meleeSound"], "BATTLE.CAT");
+	mod->loadSoundOffset(_type, _meleeHitSound, node["meleeHitSound"], "BATTLE.CAT");
 	mod->loadSoundOffset(_type, _meleeMissSound, node["meleeMissSound"], "BATTLE.CAT");
 	mod->loadSoundOffset(_type, _psiSound, node["psiSound"], "BATTLE.CAT");
 	mod->loadSoundOffset(_type, _psiMissSound, node["psiMissSound"], "BATTLE.CAT");
+	mod->loadSoundOffset(_type, _explosionHitSound, node["explosionHitSound"], "BATTLE.CAT");
 
 	mod->loadSpriteOffset(_type, _hitAnimation, node["hitAnimation"], "SMOKE.PCK");
 	mod->loadSpriteOffset(_type, _hitMissAnimation, node["hitMissAnimation"], "SMOKE.PCK");
@@ -419,9 +421,6 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	_meleeMissAnimFrames = node["meleeMissAnimFrames"].as<int>(_meleeMissAnimFrames);
 	_psiAnimFrames = node["psiAnimFrames"].as<int>(_psiAnimFrames);
 	_psiMissAnimFrames = node["psiMissAnimFrames"].as<int>(_psiMissAnimFrames);
-
-	mod->loadSoundOffset(_type, _meleeHitSound, node["meleeHitSound"], "BATTLE.CAT");
-	mod->loadSoundOffset(_type, _explosionHitSound, node["explosionHitSound"], "BATTLE.CAT");
 
 	if (node["battleType"])
 	{
@@ -597,7 +596,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	_waypoints = node["waypoints"].as<int>(_waypoints);
 	_fixedWeapon = node["fixedWeapon"].as<bool>(_fixedWeapon);
 	_fixedWeaponShow = node["fixedWeaponShow"].as<bool>(_fixedWeaponShow);
-	_defaultInventorySlotName = node["defaultInventorySlot"].as<std::string>(_defaultInventorySlotName);
+	mod->loadNameNull(_type, _defaultInventorySlotName, node["defaultInventorySlot"]);
 	_defaultInvSlotX = node["defaultInvSlotX"].as<int>(_defaultInvSlotX);
 	_defaultInvSlotY = node["defaultInvSlotY"].as<int>(_defaultInvSlotY);
 	mod->loadUnorderedNames(_type, _supportedInventorySectionsNames, node["supportedInventorySections"]);
@@ -659,8 +658,8 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	mod->loadUnorderedNamesToNames(_type, _zombieUnitByArmorMale, node["zombieUnitByArmorMale"]);
 	mod->loadUnorderedNamesToNames(_type, _zombieUnitByArmorFemale, node["zombieUnitByArmorFemale"]);
 	mod->loadUnorderedNamesToNames(_type, _zombieUnitByType, node["zombieUnitByType"]);
-	_zombieUnit = node["zombieUnit"].as<std::string>(_zombieUnit);
-	_spawnUnit = node["spawnUnit"].as<std::string>(_spawnUnit);
+	mod->loadNameNull(_type, _zombieUnit, node["zombieUnit"]);
+	mod->loadNameNull(_type, _spawnUnit, node["spawnUnit"]);
 	_spawnUnitFaction = node["spawnUnitFaction"].as<int>(_spawnUnitFaction);
 	if (node["psiTargetMatrix"])
 	{
@@ -673,12 +672,15 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	_underwaterOnly = node["underwaterOnly"].as<bool>(_underwaterOnly);
 	_landOnly = node["landOnly"].as<bool>(_landOnly);
 	_specialType = node["specialType"].as<int>(_specialType);
-	_vaporColor = node["vaporColor"].as<int>(_vaporColor);
+
+	mod->loadTransparencyOffset(_type, _vaporColor, node["vaporColor"]);
 	_vaporDensity = node["vaporDensity"].as<int>(_vaporDensity);
 	_vaporProbability = node["vaporProbability"].as<int>(_vaporProbability);
-	_vaporColorSurface = node["vaporColorSurface"].as<int>(_vaporColorSurface);
+
+	mod->loadTransparencyOffset(_type, _vaporColorSurface, node["vaporColorSurface"]);
 	_vaporDensitySurface = node["vaporDensitySurface"].as<int>(_vaporDensitySurface);
 	_vaporProbabilitySurface = node["vaporProbabilitySurface"].as<int>(_vaporProbabilitySurface);
+
 	mod->loadSpriteOffset(_type, _customItemPreviewIndex, node["customItemPreviewIndex"], "CustomItemPreviews");
 	_kneelBonus = node["kneelBonus"].as<int>(_kneelBonus);
 	_oneHandedPenalty = node["oneHandedPenalty"].as<int>(_oneHandedPenalty);

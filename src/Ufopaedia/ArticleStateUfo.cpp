@@ -166,6 +166,7 @@ namespace OpenXcom
 		}
 		_txtInfo->setSecondaryColor(Palette::blockOffset(8) + 10);
 		_txtInfo->setWordWrap(true);
+		_txtInfo->setScrollable(true);
 		_txtInfo->setText(tr(defs->getTextForPage(_state->current_page)));
 
 		_lstInfo = new TextList(310 * scaleX, 64 * scaleY, 10 * scaleX, 68 * scaleY, bpp);

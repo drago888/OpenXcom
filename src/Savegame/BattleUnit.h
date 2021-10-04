@@ -192,6 +192,9 @@ private:
 	void applyPercentages(RuleItemUseCost &cost, const RuleItemUseCost &flat) const;
 public:
 	static const int MAX_SOLDIER_ID = 1000000;
+	static const int BUBBLES_FIRST_FRAME = 3;
+	static const int BUBBLES_LAST_FRAME = BUBBLES_FIRST_FRAME + 15;
+
 	/// Name of class used in script.
 	static constexpr const char *ScriptName = "BattleUnit";
 	/// Register all useful function used by script.
@@ -644,10 +647,14 @@ public:
 	bool isSelectable(UnitFaction faction, bool checkReselect, bool checkInventory) const;
 	/// Does this unit have an inventory?
 	bool hasInventory() const;
+
 	/// Is this unit breathing and if so what frame?
-	int getBreathFrame() const;
+	int getBreathExhaleFrame() const;
+	/// Count frames to next start of breath animation.
+	int getBreathInhaleFrame() const;
 	/// Start breathing and/or update the breathing frame.
 	void breathe();
+
 	/// Set the flag for "floor above me" meaning stop rendering bubbles.
 	void setFloorAbove(bool floor);
 	/// Get the flag for "floor above me".
@@ -664,6 +671,12 @@ public:
 	MovementType getMovementType() const;
 	/// Gets the turn cost.
 	int getTurnCost() const;
+	/// Gets cost of standing up from kneeling.
+	int getKneelUpCost() const { return 8; }
+	/// Gets cost of kneel down.
+	int getKneelDownCost() const { return 4; }
+	/// Gets cost of curret transiton form kneeling to standing or reverse.
+	int getKneelChangeCost() const { return isKneeled() ? getKneelUpCost() : getKneelDownCost(); }
 
 	/// Create special weapon for unit.
 	void setSpecialWeapon(SavedBattleGame *save, bool updateFromSave);
@@ -734,6 +747,8 @@ public:
 	void setAlreadyExploded(bool alreadyExploded) { _alreadyExploded = alreadyExploded; }
 	/// Gets whether this unit can be captured alive (applies to aliens).
 	bool getCapturable() const;
+	/// free up the patrol node target, to allow others to use it.
+	void freePatrolTarget();
 	/// Marks this unit as summoned by an item and therefore won't count for recovery or total player units left.
 	void setSummonedPlayerUnit(bool summonedPlayerUnit);
 	/// Was this unit summoned by an item?

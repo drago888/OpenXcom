@@ -402,7 +402,7 @@ bool SoldierDiary::manageCommendations(Mod *mod, std::vector<MissionStatistics*>
 				// Fetch the kill criteria list.
 				if (!(*i).second->getKillCriteria())
 					break;
-				std::vector<std::vector<std::pair<int, std::vector<std::string> > > > *_killCriteriaList = (*i).second->getKillCriteria();
+				const std::vector<std::vector<std::pair<int, std::vector<std::string> > > > *_killCriteriaList = (*i).second->getKillCriteria();
 
 				int totalKillGroups = 0; // holds the total number of kill groups which satisfy one of the OR criteria blocks
 				bool enoughForNextCommendation = false;
@@ -519,7 +519,7 @@ bool SoldierDiary::manageCommendations(Mod *mod, std::vector<MissionStatistics*>
 								enoughForNextCommendation = true;
 								break;
 							}
-							
+
 							// "killsWithCriteriaTurn" and "killsWithCriteriaMission" are "peak achivements", they are counted once per their respective time span if criteria are fulfilled
 							// so if we got them, we're skipping the rest of this time span to avoid counting more than once
 							// e.g. 20 kills in a mission will not be counted as "10 kills in a mission" criteria twice
@@ -534,7 +534,7 @@ bool SoldierDiary::manageCommendations(Mod *mod, std::vector<MissionStatistics*>
 							else if ((*j).first == "killsWithCriteriaCareer")
 							{
 								currentTotalCounters = 0;
-								for (int i = 0; i < currentBlockCounters.size(); i++)
+								for (std::size_t i = 0; i < currentBlockCounters.size(); i++)
 								{
 									currentBlockCounters[i] += referenceBlockCounters[i];
 									currentTotalCounters += std::max(currentBlockCounters[i], 0);

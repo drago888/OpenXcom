@@ -88,6 +88,7 @@ UnitDieBState::UnitDieBState(BattlescapeGame *parent, BattleUnit *unit, const Ru
 
 	_unit->clearVisibleTiles();
 	_unit->clearVisibleUnits();
+	_unit->freePatrolTarget();
 
 	if (!_parent->getSave()->isBeforeGame() && _unit->getFaction() == FACTION_HOSTILE)
 	{
@@ -314,6 +315,10 @@ void UnitDieBState::convertUnitToCorpse()
 					--i;
 				}
 			}
+		}
+		else
+		{
+			_parent->getSave()->getTileEngine()->applyGravity(_parent->getSave()->getTile(lastPosition));
 		}
 	}
 }

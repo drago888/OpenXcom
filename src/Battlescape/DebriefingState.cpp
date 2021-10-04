@@ -80,7 +80,7 @@ namespace OpenXcom
  * Initializes all the elements in the Debriefing screen.
  * @param game Pointer to the core game.
  */
-DebriefingState::DebriefingState() : _region(0), _country(0), _positiveScore(true), _destroyBase(false), _showSellButton(true), _pageNumber(0)
+DebriefingState::DebriefingState() : _region(0), _country(0), _positiveScore(true), _destroyBase(false), _showSellButton(true), _initDone(false), _pageNumber(0)
 {
 	_missionStatistics = new MissionStatistics();
 
@@ -289,6 +289,99 @@ DebriefingState::DebriefingState() : _region(0), _country(0), _positiveScore(tru
 	_lstRecoveredItems->setColumns(2, 254, 18);
 	_lstRecoveredItems->setAlign(ALIGN_LEFT);
 	_lstRecoveredItems->setDot(true);
+}
+
+/**
+ *
+ */
+DebriefingState::~DebriefingState()
+{
+	for (std::vector<DebriefingStat*>::iterator i = _stats.begin(); i != _stats.end(); ++i)
+	{
+		delete *i;
+	}
+	for (std::map<int, RecoveryItem*>::iterator i = _recoveryStats.begin(); i != _recoveryStats.end(); ++i)
+	{
+		delete i->second;
+	}
+	_recoveryStats.clear();
+	_rounds.clear();
+	_roundsPainKiller.clear();
+	_roundsStimulant.clear();
+	_roundsHeal.clear();
+	_recoveredItems.clear();
+}
+
+std::string DebriefingState::makeSoldierString(int stat)
+{
+	if (stat == 0) return "";
+
+	std::ostringstream ss;
+	ss << Unicode::TOK_COLOR_FLIP << '+' << stat << Unicode::TOK_COLOR_FLIP;
+	return ss.str();
+}
+
+void DebriefingState::applyVisibility()
+{
+	bool showScore = _pageNumber == 0;
+	bool showStats = _pageNumber == 1;
+	bool showItems = _pageNumber == 2;
+
+	// First page (scores)
+	_txtItem->setVisible(showScore || showItems);
+	_txtQuantity->setVisible(showScore);
+	_txtScore->setVisible(showScore);
+	_txtRecovery->setVisible(showScore);
+	_txtRating->setVisible(showScore);
+	_lstStats->setVisible(showScore);
+	_lstRecovery->setVisible(showScore);
+	_lstTotal->setVisible(showScore);
+
+	// Second page (soldier stats)
+	_txtSoldier->setVisible(showStats);
+	_txtTU->setVisible(showStats);
+	_txtStamina->setVisible(showStats);
+	_txtHealth->setVisible(showStats);
+	_txtBravery->setVisible(showStats);
+	_txtReactions->setVisible(showStats);
+	_txtFiring->setVisible(showStats);
+	_txtThrowing->setVisible(showStats);
+	_txtMelee->setVisible(showStats);
+	_txtStrength->setVisible(showStats);
+	_txtPsiStrength->setVisible(showStats);
+	_txtPsiSkill->setVisible(showStats);
+	_lstSoldierStats->setVisible(showStats);
+	_txtTooltip->setVisible(showStats);
+
+	// Third page (recovered items)
+	_lstRecoveredItems->setVisible(showItems);
+
+	// Set text on toggle button accordingly
+	_btnSell->setVisible(showItems && _showSellButton);
+	_btnTransfer->setVisible(showItems && _showSellButton && _game->getSavedGame()->getBases()->size() > 1);
+	if (showScore)
+	{
+		_btnStats->setText(tr("STR_STATS"));
+	}
+	else if (showStats)
+	{
+		_btnStats->setText(tr("STR_LOOT"));
+	}
+	else if (showItems)
+	{
+		_btnStats->setText(tr("STR_SCORE"));
+	}
+}
+
+void DebriefingState::init()
+{
+	State::init();
+
+	if (_initDone)
+	{
+		return;
+	}
+	_initDone = true;
 
 	prepareDebriefing();
 
@@ -316,7 +409,7 @@ DebriefingState::DebriefingState() : _region(0), _country(0), _positiveScore(tru
 	}
 
 	// compare stuff from after and before recovery
-	if (_base)
+	if (_base && _showSellButton)
 	{
 		int row = 0;
 		ItemContainer *origBaseItems = _game->getSavedGame()->getSavedBattle()->getBaseStorageItems();
@@ -688,93 +781,7 @@ DebriefingState::DebriefingState() : _region(0), _country(0), _positiveScore(tru
 	_promotions = _game->getSavedGame()->handlePromotions(participants, _game->getMod());
 
 	_game->getSavedGame()->setBattleGame(0);
-}
 
-/**
- *
- */
-DebriefingState::~DebriefingState()
-{
-	for (std::vector<DebriefingStat*>::iterator i = _stats.begin(); i != _stats.end(); ++i)
-	{
-		delete *i;
-	}
-	for (std::map<int, RecoveryItem*>::iterator i = _recoveryStats.begin(); i != _recoveryStats.end(); ++i)
-	{
-		delete i->second;
-	}
-	_recoveryStats.clear();
-	_rounds.clear();
-	_roundsPainKiller.clear();
-	_roundsStimulant.clear();
-	_roundsHeal.clear();
-	_recoveredItems.clear();
-}
-
-std::string DebriefingState::makeSoldierString(int stat)
-{
-	if (stat == 0) return "";
-
-	std::ostringstream ss;
-	ss << Unicode::TOK_COLOR_FLIP << '+' << stat << Unicode::TOK_COLOR_FLIP;
-	return ss.str();
-}
-
-void DebriefingState::applyVisibility()
-{
-	bool showScore = _pageNumber == 0;
-	bool showStats = _pageNumber == 1;
-	bool showItems = _pageNumber == 2;
-
-	// First page (scores)
-	_txtItem->setVisible(showScore || showItems);
-	_txtQuantity->setVisible(showScore);
-	_txtScore->setVisible(showScore);
-	_txtRecovery->setVisible(showScore);
-	_txtRating->setVisible(showScore);
-	_lstStats->setVisible(showScore);
-	_lstRecovery->setVisible(showScore);
-	_lstTotal->setVisible(showScore);
-
-	// Second page (soldier stats)
-	_txtSoldier->setVisible(showStats);
-	_txtTU->setVisible(showStats);
-	_txtStamina->setVisible(showStats);
-	_txtHealth->setVisible(showStats);
-	_txtBravery->setVisible(showStats);
-	_txtReactions->setVisible(showStats);
-	_txtFiring->setVisible(showStats);
-	_txtThrowing->setVisible(showStats);
-	_txtMelee->setVisible(showStats);
-	_txtStrength->setVisible(showStats);
-	_txtPsiStrength->setVisible(showStats);
-	_txtPsiSkill->setVisible(showStats);
-	_lstSoldierStats->setVisible(showStats);
-	_txtTooltip->setVisible(showStats);
-
-	// Third page (recovered items)
-	_lstRecoveredItems->setVisible(showItems);
-
-	// Set text on toggle button accordingly
-	_btnSell->setVisible(showItems && _showSellButton);
-	_btnTransfer->setVisible(showItems && _showSellButton && _game->getSavedGame()->getBases()->size() > 1);
-	if (showScore)
-	{
-		_btnStats->setText(tr("STR_STATS"));
-	}
-	else if (showStats)
-	{
-		_btnStats->setText(tr("STR_LOOT"));
-	}
-	else if (showItems)
-	{
-		_btnStats->setText(tr("STR_SCORE"));
-	}
-}
-
-void DebriefingState::init()
-{
-	State::init();
 	if (_positiveScore)
 	{
 		_game->getMod()->playMusic(Mod::DEBRIEF_MUSIC_GOOD);
@@ -1416,7 +1423,7 @@ void DebriefingState::prepareDebriefing()
 		}
 		else
 		{
-			BattleUnit *newUnit = _game->getSavedGame()->getSavedBattle()->getBattleGame()->convertUnit(u);
+			BattleUnit *newUnit = battle->convertUnit(u);
 			newUnit->convertToFaction(faction);
 		}
 		u->killedBy(FACTION_HOSTILE); //skip counting as kill
@@ -1985,6 +1992,10 @@ void DebriefingState::prepareDebriefing()
 	if (craft)
 	{
 		reequipCraft(base, craft, true);
+	}
+	else
+	{
+		hideSellTransferButtons();
 	}
 
 	if (target == "STR_BASE")
@@ -2555,10 +2566,10 @@ void DebriefingState::recoverCivilian(BattleUnit *from, Base *base)
 void DebriefingState::recoverAlien(BattleUnit *from, Base *base)
 {
 	// Transform a live alien into one or more recovered items?
-	RuleItem* liveAlienItemRule = _game->getMod()->getItem(from->getType());
-	if (liveAlienItemRule && !liveAlienItemRule->getRecoveryTransformations().empty())
+	auto* ruleLiveAlienItem = from->getUnitRules()->getLiveAlienGeoscape();
+	if (ruleLiveAlienItem && !ruleLiveAlienItem->getRecoveryTransformations().empty())
 	{
-		addItemsToBaseStores(liveAlienItemRule, base, 1, true);
+		addItemsToBaseStores(ruleLiveAlienItem, base, 1, true);
 
 		// Ignore everything else, e.g. no points for live/dead aliens (since you did NOT recover them)
 		// Also no points or anything else for the recovered items
@@ -2566,7 +2577,7 @@ void DebriefingState::recoverAlien(BattleUnit *from, Base *base)
 	}
 
 	// This ain't good! Let's display at least some useful info before we crash...
-	if (!liveAlienItemRule)
+	if (!ruleLiveAlienItem)
 	{
 		std::ostringstream ss;
 		ss << "Live alien item definition is missing. Unit ID = " << from->getId();
@@ -2582,8 +2593,6 @@ void DebriefingState::recoverAlien(BattleUnit *from, Base *base)
 		throw Exception(ss.str());
 	}
 
-	std::string type = from->getType();
-	RuleItem *ruleLiveAlienItem = _game->getMod()->getItem(type);
 	bool killPrisonersAutomatically = base->getAvailableContainment(ruleLiveAlienItem->getPrisonType()) == 0;
 	if (killPrisonersAutomatically)
 	{
@@ -2617,7 +2626,7 @@ void DebriefingState::recoverAlien(BattleUnit *from, Base *base)
 	}
 	else
 	{
-		RuleResearch *research = _game->getMod()->getResearch(type);
+		RuleResearch *research = _game->getMod()->getResearch(from->getUnitRules()->getType());
 		bool surrendered = (!from->isOut() || from->isIgnored())
 			&& (from->isSurrendering() || _game->getSavedGame()->getSavedBattle()->getChronoTrigger() == FORCE_WIN_SURRENDER);
 		if (research != 0 && !_game->getSavedGame()->isResearched(research))

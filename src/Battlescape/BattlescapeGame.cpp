@@ -450,7 +450,7 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
  */
 bool BattlescapeGame::kneel(BattleUnit *bu)
 {
-	int tu = bu->isKneeled() ? 8 : 4;
+	int tu = bu->getKneelChangeCost();
 	if (bu->getArmor()->allowsKneeling(bu->getType() == "SOLDIER") && !bu->isFloating() && ((!bu->isKneeled() && _save->getKneelReserved()) || checkReservedTU(bu, tu, 0)))
 	{
 		BattleAction kneel;
@@ -1360,7 +1360,7 @@ bool BattlescapeGame::checkReservedTU(BattleUnit *bu, int tu, int energy, bool j
 		cost.type = BA_AIMEDSHOT;
 		cost.updateTU();
 	}
-	const int tuKneel = (_save->getKneelReserved() && !bu->isKneeled()  && bu->getArmor()->allowsKneeling(bu->getType() == "SOLDIER")) ? 4 : 0;
+	const int tuKneel = (_save->getKneelReserved() && !bu->isKneeled()  && bu->getArmor()->allowsKneeling(bu->getType() == "SOLDIER")) ? bu->getKneelDownCost() : 0;
 	// no aimed shot available? revert to none.
 	if (cost.Time == 0 && cost.type == BA_AIMEDSHOT)
 	{
@@ -2077,59 +2077,9 @@ void BattlescapeGame::dropItem(Position position, BattleItem *item, bool removeI
  */
 BattleUnit *BattlescapeGame::convertUnit(BattleUnit *unit)
 {
-	// only ever respawn once
-	unit->setAlreadyRespawned(true);
+	_parentState->resetUiButton();
 
-	bool visible = unit->getVisible();
-
-	if (getSave()->getSelectedUnit() == unit)
-	{
-		getSave()->setSelectedUnit(nullptr);
-	}
-	getSave()->getBattleState()->resetUiButton();
-	// in case the unit was unconscious
-	getSave()->removeUnconsciousBodyItem(unit);
-
-	unit->instaKill();
-
-	auto tile = unit->getTile();
-	if (tile == nullptr)
-	{
-		auto pos = unit->getPosition();
-		if (pos != TileEngine::invalid)
-		{
-			tile = _save->getTile(pos);
-		}
-	}
-
-	// in case of unconscious unit someone could stand on top of it, or take curret unit to invenotry, then we skip spawning any thing
-	if (!tile || (tile->getUnit() != nullptr && tile->getUnit() != unit))
-	{
-		return nullptr;
-	}
-
-	getSave()->getTileEngine()->itemDropInventory(tile, unit, false, true);
-
-	// remove unit-tile link
-	unit->setTile(nullptr, _save);
-
-	const Unit* type = unit->getSpawnUnit();
-
-	BattleUnit *newUnit = _save->createTempUnit(type, unit->getSpawnUnitFaction());
-
-	getSave()->initUnit(newUnit);
-	newUnit->setTile(tile, _save);
-	newUnit->setPosition(unit->getPosition());
-	newUnit->setDirection(unit->getDirection());
-	newUnit->clearTimeUnits();
-	getSave()->getUnits()->push_back(newUnit);
-	newUnit->setVisible(visible);
-
-	getTileEngine()->calculateFOV(newUnit->getPosition());  //happens fairly rarely, so do a full recalc for units in range to handle the potential unit visible cache issues.
-	getTileEngine()->applyGravity(newUnit->getTile());
-	newUnit->dontReselect();
-	return newUnit;
-
+	return getSave()->convertUnit(unit);
 }
 
 /**
@@ -2251,7 +2201,7 @@ void BattlescapeGame::spawnFromPrimedItems()
 
 	for (std::vector<BattleItem*>::iterator i = _save->getItems()->begin(); i != _save->getItems()->end(); ++i)
 	{
-		if ((*i)->isOwnerIgnored())
+		if ((*i)->isOwnerIgnored() || !(*i)->getTile())
 		{
 			continue;
 		}

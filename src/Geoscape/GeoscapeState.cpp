@@ -914,7 +914,7 @@ void GeoscapeState::time5Seconds()
 		return;
 	}
 
-	auto crafts = updateActiveCrafts();
+	auto activeCrafts = updateActiveCrafts();
 
 	// Handle UFO logic
 	bool ufoIsAttacking = false;
@@ -954,17 +954,20 @@ void GeoscapeState::time5Seconds()
 						if (_game->getMod()->getEscortsJoinFightAgainstHK())
 						{
 							int secondaryTargets = 0;
-							for (auto craft : *crafts)
+							for (auto craft : *activeCrafts)
 							{
-								// craft is close enough and has at least one loaded weapon
-								if (craft != c && craft->getNumWeapons(true) > 0 && craft->getDistance(c) < Nautical(_game->getMod()->getEscortRange()))
+								if (!craft->getMissionComplete() && craft != c)
 								{
-									// only up to 4 dogfights = 1 main + 3 secondary
-									if (secondaryTargets < 3)
+									// craft is close enough and has at least one loaded weapon
+									if (craft->getNumWeapons(true) > 0 && craft->getDistance(c) < Nautical(_game->getMod()->getEscortRange()))
 									{
-										// Note: push_front() is used so that main target is attacked first
-										_dogfightsToBeStarted.push_front(new DogfightState(this, craft, *i, true));
-										secondaryTargets++;
+										// only up to 4 dogfights = 1 main + 3 secondary
+										if (secondaryTargets < 3)
+										{
+											// Note: push_front() is used so that main target is attacked first
+											_dogfightsToBeStarted.push_front(new DogfightState(this, craft, *i, true));
+											secondaryTargets++;
+										}
 									}
 								}
 							}
@@ -1238,10 +1241,9 @@ void GeoscapeState::time5Seconds()
 							{
 								// Start fighting escorts and other craft as well (if they are in escort range)
 								int secondaryTargets = 0;
-								for (auto craft : *crafts)
+								for (auto craft : *activeCrafts)
 								{
-									// craft is flying (i.e. not in base)
-									if (craft != (*j))
+									if (!craft->getMissionComplete() && craft != (*j))
 									{
 										// craft is close enough and has at least one loaded weapon
 										if (craft->getNumWeapons(true) > 0 && craft->getDistance((*j)) < Nautical(_game->getMod()->getEscortRange()))
@@ -1552,7 +1554,7 @@ void GeoscapeState::time10Minutes()
 
 void GeoscapeState::ufoHuntingAndEscorting()
 {
-	auto crafts = updateActiveCrafts();
+	auto activeCrafts = updateActiveCrafts();
 
 	for (std::vector<Ufo*>::iterator ufo = _game->getSavedGame()->getUfos()->begin(); ufo != _game->getSavedGame()->getUfos()->end(); ++ufo)
 	{
@@ -1576,7 +1578,7 @@ void GeoscapeState::ufoHuntingAndEscorting()
 			}
 
 			// look for more attractive target
-			for (auto craft : *crafts)
+			for (auto craft : *activeCrafts)
 			{
 				if (!craft->getMissionComplete() && !craft->getRules()->isUndetectable())
 				{
@@ -1642,7 +1644,7 @@ void GeoscapeState::ufoHuntingAndEscorting()
 
 void GeoscapeState::baseHunting()
 {
-	auto crafts = updateActiveCrafts();
+	auto activeCrafts = updateActiveCrafts();
 
 	for (std::vector<AlienBase*>::iterator ab = _game->getSavedGame()->getAlienBases()->begin(); ab != _game->getSavedGame()->getAlienBases()->end(); ++ab)
 	{
@@ -1656,7 +1658,7 @@ void GeoscapeState::baseHunting()
 			{
 				// Look for nearby craft
 				bool started = false;
-				for (auto craft : *crafts)
+				for (auto craft : *activeCrafts)
 				{
 					// Craft is flying (i.e. not in base)
 					if (craft->getStatus() == "STR_OUT" && !craft->isDestroyed() && !craft->getRules()->isUndetectable())
@@ -1847,7 +1849,7 @@ void GeoscapeState::time30Minutes()
 	}
 
 	// can be updated by previous loop
-	auto crafts = updateActiveCrafts();
+	auto activeCrafts = updateActiveCrafts();
 
 	// Handle UFO detection and give aliens points
 	for (auto ufo : *_game->getSavedGame()->getUfos())
@@ -1897,7 +1899,7 @@ void GeoscapeState::time30Minutes()
 					detected = maskBitOr(detected, base->detect(ufo, alreadyTracked));
 				}
 
-				for (auto craft : *crafts)
+				for (auto craft : *activeCrafts)
 				{
 					detected = maskBitOr(detected, craft->detect(ufo, alreadyTracked));
 				}
@@ -2096,13 +2098,25 @@ void GeoscapeState::time1Hour()
 			}
 		}
 	}
+	bool postpone = false;
 	for (std::vector<MissionSite*>::iterator i = _game->getSavedGame()->getMissionSites()->begin(); i != _game->getSavedGame()->getMissionSites()->end(); ++i)
 	{
 		if (!(*i)->getDetected())
 		{
+			postpone = true;
 			(*i)->setDetected(true);
 			popup(new MissionDetectedState(*i, this));
-			break;
+			break; // only one popup per hour!
+		}
+	}
+	if (postpone)
+	{
+		for (auto* mission : *_game->getSavedGame()->getMissionSites())
+		{
+			if (!mission->getDetected())
+			{
+				mission->setSecondsRemaining(mission->getSecondsRemaining() + 3600); // +1 hour
+			}
 		}
 	}
 
@@ -2747,7 +2761,9 @@ void GeoscapeState::globeClick(Action *action)
 		std::vector<Target*> v = _globe->getTargets(mouseX, mouseY, false, 0);
 		if (!v.empty())
 		{
-			_game->pushState(new MultipleTargetsState(v, 0, this));
+			// Pass empty vector
+			std::vector<Craft*> crafts;
+			_game->pushState(new MultipleTargetsState(v, crafts, this));
 		}
 	}
 

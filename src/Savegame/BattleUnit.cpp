@@ -2340,6 +2340,8 @@ void BattleUnit::prepareTimeUnits(int tu)
 		}
 		// Each fatal wound to the left or right leg reduces the soldier's TUs by 10%.
 		_tu -= (_tu * ((_fatalWounds[BODYPART_LEFTLEG]+_fatalWounds[BODYPART_RIGHTLEG]) * 10))/100;
+
+		setValueMax(_tu, 0, 0, getBaseStats()->tu);
 	}
 }
 
@@ -2926,7 +2928,7 @@ void BattleUnit::setVisible(bool flag)
  */
 bool BattleUnit::getVisible() const
 {
-	if (getFaction() == FACTION_PLAYER)
+	if (getFaction() == FACTION_PLAYER || _armor->isAlwaysVisible())
 	{
 		return true;
 	}
@@ -4448,11 +4450,35 @@ bool BattleUnit::hasInventory() const
  * If this unit is breathing, what frame should be displayed?
  * @return frame number.
  */
-int BattleUnit::getBreathFrame() const
+int BattleUnit::getBreathExhaleFrame() const
 {
-	if (_floorAbove)
-		return 0;
-	return _breathFrame;
+	if (_breathing)
+	{
+		auto frame = _breathFrame - BUBBLES_FIRST_FRAME;
+		if (frame >= 0)
+		{
+			return frame;
+		}
+	}
+
+	return -1;
+}
+
+/**
+ * Count frames to next start of breath animation.
+ */
+int BattleUnit::getBreathInhaleFrame() const
+{
+	if (_breathing)
+	{
+		auto frame = BUBBLES_FIRST_FRAME - _breathFrame;
+		if (frame >= 0)
+		{
+			return frame;
+		}
+	}
+
+	return -1;
 }
 
 /**
@@ -4461,17 +4487,25 @@ int BattleUnit::getBreathFrame() const
 void BattleUnit::breathe()
 {
 	// _breathFrame of -1 means this unit doesn't produce bubbles
-	if (_breathFrame < 0 || isOut())
+	if (_breathFrame < 0)
 	{
 		_breathing = false;
 		return;
 	}
 
-	if (!_breathing || _status == STATUS_WALKING)
+	// moving or knock out do not breathe, even when still alive :)
+	if (isOut() || _status == STATUS_WALKING)
+	{
+		_breathing = false;
+		_breathFrame = 0;
+		return;
+	}
+
+	if (!_breathing)
 	{
 		// deviation from original: TFTD used a static 10% chance for every animation frame,
 		// instead let's use 5%, but allow morale to affect it.
-		_breathing = (_status != STATUS_WALKING && RNG::seedless(0, 99) < (105 - _morale));
+		_breathing = RNG::seedless(0, 99) < (105 - _morale);
 		_breathFrame = 0;
 	}
 
@@ -4481,7 +4515,7 @@ void BattleUnit::breathe()
 		_breathFrame++;
 
 		// we've reached the end of the cycle, get rid of the bubbles
-		if (_breathFrame >= 17)
+		if (_breathFrame > BUBBLES_LAST_FRAME)
 		{
 			_breathFrame = 0;
 			_breathing = false;
@@ -4973,6 +5007,14 @@ bool BattleUnit::getCapturable() const
 	return _capturable;
 }
 
+void BattleUnit::freePatrolTarget()
+{
+	if (_currentAIState)
+	{
+		_currentAIState->freePatrolTarget();
+	}
+}
+
 /**
  * Marks this unit as summoned by an item or not.
  * @param summonedPlayerUnit summoned?
@@ -5173,6 +5215,7 @@ void getReactionScoreScript(const BattleUnit *bu, int &ret)
 	if (bu)
 	{
 		ret = (int)bu->getReactionScore();
+		return;
 	}
 	ret = 0;
 }
@@ -5351,6 +5394,15 @@ void isAimingScript(const BattleUnit *bu, int &ret)
 	ret = 0;
 }
 
+void makeVisibleScript(BattleUnit *bu)
+{
+	if (bu)
+	{
+		bu->setVisible(true);
+		return;
+	}
+}
+
 struct burnShadeScript
 {
 	static RetEnum func(int &curr, int burn, int shade)
@@ -5421,6 +5473,16 @@ void addBaseStatRangeScript(BattleUnit *bu, int val)
 		setBaseStatRangeScript<StatCurr, Min, Max>(bu, val + (bu->*StatCurr));
 	}
 }
+
+void setFireScript(BattleUnit *bu, int val)
+{
+	if (bu)
+	{
+		val = Clamp(val, 0, 1000);
+		bu->setFire(val);
+	}
+}
+
 
 void getVisibleUnitsCountScript(BattleUnit *bu, int &ret)
 {
@@ -5698,11 +5760,18 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 	bu.add<&isFlyingScript>("isFlying");
 	bu.add<&isCollapsingScript>("isCollapsing");
 	bu.add<&isAimingScript>("isAiming");
+	bu.add<&BattleUnit::isFearable>("isFearable");
+	bu.add<&BattleUnit::isWoundable>("isWoundable");
 	bu.add<&getReactionScoreScript>("getReactionScore");
 	bu.add<&BattleUnit::getDirection>("getDirection");
+	bu.add<&BattleUnit::getIntelligence>("getIntelligence");
+	bu.add<&BattleUnit::getAggression>("getAggression");
 	bu.add<&BattleUnit::getTurretDirection>("getTurretDirection");
 	bu.add<&BattleUnit::getWalkingPhase>("getWalkingPhase");
 	bu.add<&BattleUnit::disableIndicators>("disableIndicators");
+
+	bu.add<&BattleUnit::getVisible>("isVisible");
+	bu.add<&makeVisibleScript>("makeVisible");
 
 
 	bu.add<&setSpawnUnitScript>("setSpawnUnit", "set type of zombie will be spawn from curret unit, it will reset every thing to default (hostile & instant)");
@@ -5742,6 +5811,10 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 	bu.addFake<100>("getMoraleMax");
 	bu.add<&setBaseStatRangeScript<&BattleUnit::_morale, 0, 100>>("setMorale");
 	bu.add<&addBaseStatRangeScript<&BattleUnit::_morale, 0, 100>>("addMorale");
+
+
+	bu.add<&BattleUnit::getFire>("getFire");
+	bu.add<&setFireScript>("setFire");
 
 
 	bu.add<&setArmorValueScript>("setArmor", "first arg is side, second one is new value of armor");
@@ -5907,6 +5980,16 @@ void medikitBattleActionImpl(BindBase& b)
 	b.addCustomConst("medikit_action_painkiller", BMA_PAINKILLER);
 }
 
+void commonBattleUnitAnimations(ScriptParserBase* parser)
+{
+	Bind<BattleUnit> bu = { parser, BindBase::ExtensionBinding{} };
+
+	bu.add<&BattleUnit::getFloorAbove>("isFloorAbove", "check if floor is show above unit");
+	bu.add<&BattleUnit::getBreathExhaleFrame>("getBreathExhaleFrame", "return aninmation frame of breath bubbles, -1 mean no animation");
+	bu.add<&BattleUnit::getBreathInhaleFrame>("getBreathInhaleFrame", "return number of frames to next breath animation start, 0 mean animation started, -1 no animation");
+}
+
+
 }
 
 /**
@@ -5919,6 +6002,7 @@ ModScript::RecolorUnitParser::RecolorUnitParser(ScriptGlobal* shared, const std:
 	b.addCustomFunc<burnShadeScript>("add_burn_shade");
 
 	commonImpl(b, mod);
+	commonBattleUnitAnimations(this);
 
 	b.addCustomConst("blit_item_righthand", BODYPART_ITEM_RIGHTHAND);
 	b.addCustomConst("blit_item_lefthand", BODYPART_ITEM_LEFTHAND);
@@ -5936,6 +6020,7 @@ ModScript::SelectUnitParser::SelectUnitParser(ScriptGlobal* shared, const std::s
 	BindBase b { this };
 
 	commonImpl(b, mod);
+	commonBattleUnitAnimations(this);
 
 	setDefault("add sprite_index sprite_offset; return sprite_index;");
 }
@@ -5952,6 +6037,7 @@ ModScript::SelectMoveSoundUnitParser::SelectMoveSoundUnitParser(ScriptGlobal* sh
 	BindBase b { this };
 
 	commonImpl(b, mod);
+	commonBattleUnitAnimations(this);
 
 	moveTypesImpl(b);
 }
@@ -5964,7 +6050,7 @@ ModScript::ReactionUnitParser::ReactionUnitParser(ScriptGlobal* shared, const st
 	"distance",
 
 	"action_unit",
-	"reaction_unit", "reaction_weapon", "reaction_battle_action",
+	"reaction_unit", "reaction_weapon", "reaction_battle_action", "reaction_count",
 	"weapon", "skill", "battle_action", "action_target",
 	"move", "arc_to_action_unit", "battle_game" }
 {

@@ -369,9 +369,9 @@ void BattlescapeGame::handleAI(BattleUnit *unit)
 
 	if (unit->getCharging() != 0)
 	{
-		if (unit->getAggroSound() != -1 && !_playedAggroSound)
+		if (unit->hasAggroSound() && !_playedAggroSound)
 		{
-			getMod()->getSoundByDepth(_save->getDepth(), unit->getAggroSound())->play(-1, getMap()->getSoundAngle(unit->getPosition()));
+			getMod()->getSoundByDepth(_save->getDepth(), unit->getRandomAggroSound())->play(-1, getMap()->getSoundAngle(unit->getPosition()));
 			_playedAggroSound = true;
 		}
 	}
@@ -1067,7 +1067,7 @@ void BattlescapeGame::setupCursor()
 
 /**
  * Determines whether a playable unit is selected. Normally only player side units can be selected, but in debug mode one can play with aliens too :)
- * Is used to see if stats can be displayed and action buttons will work.
+ * Is used to see if stats can be displayed.
  * @return Whether a playable unit is selected.
  */
 bool BattlescapeGame::playableUnitSelected() const
@@ -2174,7 +2174,6 @@ void BattlescapeGame::spawnNewUnit(BattleActionAttack attack, Position position)
 		size_t itemLevel = (size_t)(getMod()->getAlienItemLevels().at(month).at(RNG::generate(0,9)));
 
 		// Initialize the unit and its position
-		getSave()->initUnit(newUnit, itemLevel);
 		newUnit->setTile(_save->getTile(position), _save);
 		newUnit->setPosition(position);
 		newUnit->setDirection(unitDirection);
@@ -2182,6 +2181,7 @@ void BattlescapeGame::spawnNewUnit(BattleActionAttack attack, Position position)
 		getSave()->getUnits()->push_back(newUnit);
 		bool visible = faction == FACTION_PLAYER;
 		newUnit->setVisible(visible);
+		getSave()->initUnit(newUnit, itemLevel);
 
 		getTileEngine()->calculateFOV(newUnit->getPosition());  //happens fairly rarely, so do a full recalc for units in range to handle the potential unit visible cache issues.
 		getTileEngine()->applyGravity(newUnit->getTile());

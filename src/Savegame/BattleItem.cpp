@@ -637,12 +637,12 @@ bool BattleItem::occupiesSlot(int x, int y, BattleItem *item) const
  * Gets the item's floor sprite.
  * @return Return current floor sprite.
  */
-Surface *BattleItem::getFloorSprite(SurfaceSet *set, int animFrame, int shade) const
+const Surface *BattleItem::getFloorSprite(const SurfaceSet *set, const SavedBattleGame *save, int animFrame, int shade) const
 {
 	int i = _rules->getFloorSprite();
 	if (i != -1)
 	{
-		Surface *surf = set->getFrame(i);
+		const Surface *surf = set->getFrame(i);
 		//enforce compatibility with basic version
 		if (surf == nullptr)
 		{
@@ -652,7 +652,7 @@ Surface *BattleItem::getFloorSprite(SurfaceSet *set, int animFrame, int shade) c
 		i = ModScript::scriptFunc2<ModScript::SelectItemSprite>(
 			_rules,
 			i, 0,
-			this, BODYPART_ITEM_FLOOR, animFrame, shade
+			this, save, BODYPART_ITEM_FLOOR, animFrame, shade
 		);
 		auto newSurf = set->getFrame(i);
 		if (newSurf == nullptr)
@@ -671,12 +671,12 @@ Surface *BattleItem::getFloorSprite(SurfaceSet *set, int animFrame, int shade) c
  * Gets the item's inventory sprite.
  * @return Return current inventory sprite.
  */
-Surface *BattleItem::getBigSprite(SurfaceSet *set, int animFrame) const
+const Surface *BattleItem::getBigSprite(const SurfaceSet *set, const SavedBattleGame *save, int animFrame) const
 {
 	int i = _rules->getBigSprite();
 	if (i != -1)
 	{
-		Surface *surf = set->getFrame(i);
+		const Surface *surf = set->getFrame(i);
 		//enforce compatibility with basic version
 		if (surf == nullptr)
 		{
@@ -686,7 +686,7 @@ Surface *BattleItem::getBigSprite(SurfaceSet *set, int animFrame) const
 		i = ModScript::scriptFunc2<ModScript::SelectItemSprite>(
 			_rules,
 			i, 0,
-			this, BODYPART_ITEM_INVENTORY, animFrame, 0
+			this, save, BODYPART_ITEM_INVENTORY, animFrame, 0
 		);
 
 		auto newSurf = set->getFrame(i);
@@ -1527,7 +1527,11 @@ void commonImpl(BindBase& b, Mod* mod)
 /**
  * Constructor of recolor script parser.
  */
-ModScript::RecolorItemParser::RecolorItemParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name, "new_pixel", "old_pixel", "item", "blit_part", "anim_frame", "shade" }
+ModScript::RecolorItemParser::RecolorItemParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name,
+	"new_pixel",
+	"old_pixel",
+
+	"item", "battle_game", "blit_part", "anim_frame", "shade" }
 {
 	BindBase b { this };
 
@@ -1539,7 +1543,11 @@ ModScript::RecolorItemParser::RecolorItemParser(ScriptGlobal* shared, const std:
 /**
  * Constructor of select sprite script parser.
  */
-ModScript::SelectItemParser::SelectItemParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name, "sprite_index", "sprite_offset", "item", "blit_part", "anim_frame", "shade" }
+ModScript::SelectItemParser::SelectItemParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name,
+	"sprite_index",
+	"sprite_offset",
+
+	"item", "battle_game", "blit_part", "anim_frame", "shade" }
 {
 	BindBase b { this };
 
@@ -1619,7 +1627,7 @@ ModScript::TryMeleeAttackItemParser::TryMeleeAttackItemParser(ScriptGlobal* shar
 /**
  * Init all required data in script using object data.
  */
-void BattleItem::ScriptFill(ScriptWorkerBlit* w, BattleItem* item, int part, int anim_frame, int shade)
+void BattleItem::ScriptFill(ScriptWorkerBlit* w, const BattleItem* item, const SavedBattleGame* save, int part, int anim_frame, int shade)
 {
 	w->clear();
 	if(item)
@@ -1627,11 +1635,11 @@ void BattleItem::ScriptFill(ScriptWorkerBlit* w, BattleItem* item, int part, int
 		const auto &scr = item->getRules()->getScript<ModScript::RecolorItemSprite>();
 		if (scr)
 		{
-			w->update(scr, item, part, anim_frame, shade);
+			w->update(scr, item, save, part, anim_frame, shade);
 		}
 		else
 		{
-			BattleUnit::ScriptFill(w, item->getUnit(), part, anim_frame, shade, 0);
+			BattleUnit::ScriptFill(w, item->getUnit(), save, part, anim_frame, shade, 0);
 		}
 	}
 }

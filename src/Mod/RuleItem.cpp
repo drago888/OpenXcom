@@ -150,6 +150,7 @@ RuleItem::RuleItem(const std::string &type) :
 	_meleeAnimation(0), _meleeAnimFrames(-1), _meleeMissAnimation(-1), _meleeMissAnimFrames(-1),
 	_psiAnimation(-1), _psiAnimFrames(-1), _psiMissAnimation(-1), _psiMissAnimFrames(-1),
 	_power(0), _hidePower(false), _powerRangeReduction(0), _powerRangeThreshold(0),
+	_damageTypeSet(false), _meleeTypeSet(false),
 	_accuracyUse(0), _accuracyMind(0), _accuracyPanic(20), _accuracyThrow(100), _accuracyCloseQuarters(-1),
 	_noLOSAccuracyPenalty(-1),
 	_costUse(25), _costMind(-1, -1), _costPanic(-1, -1), _costThrow(25), _costPrime(50), _costUnprime(25),
@@ -466,14 +467,17 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 		{
 			//compatibility hack for corpse explosion, that didn't have defined damage type
 			_damageType = *mod->getDamageType(DT_HE);
+			_damageTypeSet = true;
 		}
 		_meleeType = *mod->getDamageType(DT_MELEE);
+		_meleeTypeSet = true;
 	}
 
 	if (const YAML::Node &type = node["damageType"])
 	{
 		//load predefined damage type
 		_damageType = *mod->getDamageType((ItemDamageType)type.as<int>());
+		_damageTypeSet = true;
 	}
 	_damageType.FixRadius = node["blastRadius"].as<int>(_damageType.FixRadius);
 	if (const YAML::Node &alter = node["damageAlter"])
@@ -485,6 +489,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, int listOrder, const ModSc
 	{
 		//load predefined damage type
 		_meleeType = *mod->getDamageType((ItemDamageType)type.as<int>());
+		_meleeTypeSet = true;
 	}
 	if (const YAML::Node &alter = node["meleeAlter"])
 	{
@@ -1675,16 +1680,17 @@ int RuleItem::getSpecialChance() const
  * @param texture Pointer to the surface set to get the sprite from.
  * @param surface Pointer to the surface to draw to.
  */
-void RuleItem::drawHandSprite(SurfaceSet *texture, Surface *surface, BattleItem *item, int animFrame, int bpp) const
+void RuleItem::drawHandSprite(const SurfaceSet *texture, Surface *surface, const BattleItem *item, const SavedBattleGame *save, int animFrame, int bpp) const
 {
-	Surface *frame = nullptr;
+	//TODO: spit this function to one using only `this` and another using only `item`
+	const Surface *frame = nullptr;
 	if (item)
 	{
-		frame = item->getBigSprite(texture, animFrame);
+		frame = item->getBigSprite(texture, save, animFrame);
 		if (frame && bpp == 8)
 		{
 			ScriptWorkerBlit scr;
-			BattleItem::ScriptFill(&scr, item, BODYPART_ITEM_INVENTORY, animFrame, 0);
+			BattleItem::ScriptFill(&scr, item, save, BODYPART_ITEM_INVENTORY, animFrame, 0);
 			scr.executeBlit(frame, surface, this->getHandSpriteOffX(), this->getHandSpriteOffY(), 0);
 		}
 	}

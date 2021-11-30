@@ -141,9 +141,9 @@ private:
 	UnitStats _stats;
 	int _standHeight, _kneelHeight, _floatHeight;
 	int _lastReloadSound;
-	std::vector<int> _deathSound;
+	std::vector<int> _deathSound, _aggroSound;
 	std::vector<int> _selectUnitSound, _startMovingSound, _selectWeaponSound, _annoyedSound;
-	int _value, _aggroSound, _moveSound;
+	int _value, _moveSound;
 	int _intelligence, _aggression;
 	int _maxViewDistanceAtDark, _maxViewDistanceAtDay;
 	int _maxViewDistanceAtDarkSquared;
@@ -200,7 +200,7 @@ public:
 	/// Register all useful function used by script.
 	static void ScriptRegister(ScriptParserBase* parser);
 	/// Init all required data in script using object data.
-	static void ScriptFill(ScriptWorkerBlit* w, BattleUnit* unit, int body_part, int anim_frame, int shade, int burn);
+	static void ScriptFill(ScriptWorkerBlit* w, const BattleUnit* item, const SavedBattleGame* save, int body_part, int anim_frame, int shade, int burn);
 
 	/// Creates a BattleUnit from solder.
 	BattleUnit(const Mod *mod, Soldier *soldier, int depth);
@@ -432,7 +432,7 @@ public:
 	/// Set the left hand as main active hand.
 	void setActiveLeftHand();
 	/// Choose what weapon was last use by unit.
-	BattleItem *getActiveHand(BattleItem *left, BattleItem *right) const;
+	const BattleItem *getActiveHand(const BattleItem *left, const BattleItem *right) const;
 	/// Reloads a weapon if needed.
 	bool reloadAmmo();
 
@@ -592,8 +592,10 @@ public:
 	/// Set health to 0 and set status dead
 	void instaKill();
 
-	/// Gets the unit's aggro sound.
-	int getAggroSound() const;
+	/// Gets whether the unit has any aggro sounds.
+	bool hasAggroSound() const;
+	/// Gets a unit's random aggro sound.
+	int getRandomAggroSound() const;
 	/// Sets the unit's time units.
 	void setTimeUnits(int tu);
 	/// Get the faction that killed this unit.

@@ -20,6 +20,7 @@
 #include "BattleItem.h"
 #include <sstream>
 #include <algorithm>
+#include "../Engine/Collections.h"
 #include "../Engine/Surface.h"
 #include "../Engine/Script.h"
 #include "../Engine/ScriptBind.h"
@@ -163,6 +164,21 @@ BattleUnit::BattleUnit(const Mod *mod, Soldier *soldier, int depth) :
 	_maxArmor[SIDE_RIGHT] = _armor->getRightSideArmor();
 	_maxArmor[SIDE_REAR] = _armor->getRearArmor();
 	_maxArmor[SIDE_UNDER] = _armor->getUnderArmor();
+	{
+		for (auto bonusRule : *soldier->getBonuses(nullptr))
+		{
+			_maxArmor[SIDE_FRONT] += bonusRule->getFrontArmor();
+			_maxArmor[SIDE_LEFT]  += bonusRule->getLeftSideArmor();
+			_maxArmor[SIDE_RIGHT] += bonusRule->getRightSideArmor();
+			_maxArmor[SIDE_REAR]  += bonusRule->getRearArmor();
+			_maxArmor[SIDE_UNDER] += bonusRule->getUnderArmor();
+		}
+		_maxArmor[SIDE_FRONT] = std::max(0, _maxArmor[SIDE_FRONT]);
+		_maxArmor[SIDE_LEFT]  = std::max(0, _maxArmor[SIDE_LEFT]);
+		_maxArmor[SIDE_RIGHT] = std::max(0, _maxArmor[SIDE_RIGHT]);
+		_maxArmor[SIDE_REAR]  = std::max(0, _maxArmor[SIDE_REAR]);
+		_maxArmor[SIDE_UNDER] = std::max(0, _maxArmor[SIDE_UNDER]);
+	}
 	_currentArmor[SIDE_FRONT] = _maxArmor[SIDE_FRONT];
 	_currentArmor[SIDE_LEFT] = _maxArmor[SIDE_LEFT];
 	_currentArmor[SIDE_RIGHT] = _maxArmor[SIDE_RIGHT];
@@ -237,6 +253,21 @@ void BattleUnit::updateArmorFromSoldier(const Mod *mod, Soldier *soldier, Armor 
 	_maxArmor[SIDE_RIGHT] = _armor->getRightSideArmor();
 	_maxArmor[SIDE_REAR] = _armor->getRearArmor();
 	_maxArmor[SIDE_UNDER] = _armor->getUnderArmor();
+	{
+		for (auto bonusRule : *soldier->getBonuses(nullptr))
+		{
+			_maxArmor[SIDE_FRONT] += bonusRule->getFrontArmor();
+			_maxArmor[SIDE_LEFT]  += bonusRule->getLeftSideArmor();
+			_maxArmor[SIDE_RIGHT] += bonusRule->getRightSideArmor();
+			_maxArmor[SIDE_REAR]  += bonusRule->getRearArmor();
+			_maxArmor[SIDE_UNDER] += bonusRule->getUnderArmor();
+		}
+		_maxArmor[SIDE_FRONT] = std::max(0, _maxArmor[SIDE_FRONT]);
+		_maxArmor[SIDE_LEFT]  = std::max(0, _maxArmor[SIDE_LEFT]);
+		_maxArmor[SIDE_RIGHT] = std::max(0, _maxArmor[SIDE_RIGHT]);
+		_maxArmor[SIDE_REAR]  = std::max(0, _maxArmor[SIDE_REAR]);
+		_maxArmor[SIDE_UNDER] = std::max(0, _maxArmor[SIDE_UNDER]);
+	}
 	_currentArmor[SIDE_FRONT] = _maxArmor[SIDE_FRONT];
 	_currentArmor[SIDE_LEFT] = _maxArmor[SIDE_LEFT];
 	_currentArmor[SIDE_RIGHT] = _maxArmor[SIDE_RIGHT];
@@ -259,12 +290,12 @@ void BattleUnit::prepareUnitSounds()
 
 	if (_geoscapeSoldier)
 	{
-		_aggroSound = Mod::NO_SOUND;
+		Collections::removeAll(_aggroSound);
 		_moveSound = _armor->getMoveSound() != Mod::NO_SOUND ? _armor->getMoveSound() : Mod::NO_SOUND; // there's no soldier move sound, thus hardcoded -1
 	}
 	else if (_unitRules)
 	{
-		_aggroSound = _unitRules->getAggroSound();
+		_aggroSound = _unitRules->getAggroSounds();
 		_moveSound = _armor->getMoveSound() != Mod::NO_SOUND ? _armor->getMoveSound() : _unitRules->getMoveSound();
 	}
 
@@ -3133,7 +3164,7 @@ BattleItem *BattleUnit::getMainHandWeapon(bool quickest) const
 	// otherwise pick the one with the least snapshot TUs
 	int tuRightHand = getActionTUs(BA_SNAPSHOT, weaponRightHand).Time;
 	int tuLeftHand = getActionTUs(BA_SNAPSHOT, weaponLeftHand).Time;
-	BattleItem *weaponCurrentHand = getActiveHand(weaponLeftHand, weaponRightHand);
+	BattleItem *weaponCurrentHand = const_cast<BattleItem*>(getActiveHand(weaponLeftHand, weaponRightHand));
 	//prioritize blaster
 	if (!quickest && _faction != FACTION_PLAYER)
 	{
@@ -3256,7 +3287,7 @@ void BattleUnit::setActiveLeftHand()
 /**
  * Choose what weapon was last use by unit.
  */
-BattleItem *BattleUnit::getActiveHand(BattleItem *left, BattleItem *right) const
+const BattleItem *BattleUnit::getActiveHand(const BattleItem *left, const BattleItem *right) const
 {
 	if (_activeHand == "STR_RIGHT_HAND" && right) return right;
 	if (_activeHand == "STR_LEFT_HAND" && left) return left;
@@ -4169,12 +4200,25 @@ void BattleUnit::instaKill()
 }
 
 /**
- * Get sound to play when unit aggros.
- * @return sound
+ * Gets whether the unit has any aggro sounds.
+ * @return True, if the unit has any aggro sounds.
  */
-int BattleUnit::getAggroSound() const
+bool BattleUnit::hasAggroSound() const
 {
-	return _aggroSound;
+	return !_aggroSound.empty();
+}
+
+/**
+ * Gets a unit's random aggro sound.
+ * @return The sound id.
+ */
+int BattleUnit::getRandomAggroSound() const
+{
+	if (hasAggroSound())
+	{
+		return _aggroSound[RNG::generate(0, _aggroSound.size() - 1)];
+	}
+	return -1;
 }
 
 /**
@@ -5545,6 +5589,16 @@ void getFactionScript(const BattleUnit *bu, int &faction)
 	faction = 0;
 }
 
+void getOriginalFactionScript(const BattleUnit *bu, int &faction)
+{
+	if (bu)
+	{
+		faction = (int)bu->getOriginalFaction();
+		return;
+	}
+	faction = 0;
+}
+
 
 void setSpawnUnitScript(BattleUnit *bu, const Unit* unitType)
 {
@@ -5778,8 +5832,8 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 	bu.add<&getSpawnUnitScript>("getSpawnUnit", "get type of zombie will be spawn from curret unit");
 	bu.add<&setSpawnUnitInstantRespawnScript>("setSpawnUnitInstantRespawn", "set 1 to make unit instalty change to spawn zombie unit, other wise it will transform on death");
 	bu.add<&getSpawnUnitInstantRespawnScript>("getSpawnUnitInstantRespawn", "get state of instant respawn");
-	bu.add<&setSpawnUnitFactionScript>("setSpawnUnitFaction", "set faction of unit that will span");
-	bu.add<&getSpawnUnitFactionScript>("getSpawnUnitFaction", "get faction of unit that will span");
+	bu.add<&setSpawnUnitFactionScript>("setSpawnUnitFaction", "set faction of unit that will spawn");
+	bu.add<&getSpawnUnitFactionScript>("getSpawnUnitFaction", "get faction of unit that will spawn");
 
 
 	bu.addField<&BattleUnit::_tu>("getTimeUnits");
@@ -5834,7 +5888,8 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 	UnitStats::addGetStatsScript<&BattleUnit::_exp>(bu, "Exp.", true);
 
 	bu.add<&getVisibleUnitsCountScript>("getVisibleUnitsCount");
-	bu.add<&getFactionScript>("getFaction");
+	bu.add<&getFactionScript>("getFaction", "get current faction of unit");
+	bu.add<&getOriginalFactionScript>("getOriginalFaction", "get original faction of unit");
 
 	bu.add<&BattleUnit::getOverKillDamage>("getOverKillDamage");
 	bu.addRules<Armor, &BattleUnit::getArmor>("getRuleArmor");
@@ -5995,7 +6050,11 @@ void commonBattleUnitAnimations(ScriptParserBase* parser)
 /**
  * Constructor of recolor script parser.
  */
-ModScript::RecolorUnitParser::RecolorUnitParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name, "new_pixel", "old_pixel", "unit", "blit_part", "anim_frame", "shade", "burn" }
+ModScript::RecolorUnitParser::RecolorUnitParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name,
+	"new_pixel",
+	"old_pixel",
+
+	"unit", "battle_game", "blit_part", "anim_frame", "shade", "burn" }
 {
 	BindBase b { this };
 
@@ -6015,7 +6074,11 @@ ModScript::RecolorUnitParser::RecolorUnitParser(ScriptGlobal* shared, const std:
 /**
  * Constructor of select sprite script parser.
  */
-ModScript::SelectUnitParser::SelectUnitParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name, "sprite_index", "sprite_offset", "unit", "blit_part", "anim_frame", "shade" }
+ModScript::SelectUnitParser::SelectUnitParser(ScriptGlobal* shared, const std::string& name, Mod* mod) : ScriptParserEvents{ shared, name,
+	"sprite_index",
+	"sprite_offset",
+
+	"unit", "battle_game", "blit_part", "anim_frame", "shade" }
 {
 	BindBase b { this };
 
@@ -6076,12 +6139,12 @@ ModScript::VisibilityUnitParser::VisibilityUnitParser(ScriptGlobal* shared, cons
 /**
  * Init all required data in script using object data.
  */
-void BattleUnit::ScriptFill(ScriptWorkerBlit* w, BattleUnit* unit, int body_part, int anim_frame, int shade, int burn)
+void BattleUnit::ScriptFill(ScriptWorkerBlit* w, const BattleUnit* unit, const SavedBattleGame* save, int body_part, int anim_frame, int shade, int burn)
 {
 	w->clear();
 	if(unit)
 	{
-		w->update(unit->getArmor()->getScript<ModScript::RecolorUnitSprite>(), unit, body_part, anim_frame, shade, burn);
+		w->update(unit->getArmor()->getScript<ModScript::RecolorUnitSprite>(), unit, save, body_part, anim_frame, shade, burn);
 	}
 }
 

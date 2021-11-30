@@ -1995,7 +1995,10 @@ void DebriefingState::prepareDebriefing()
 	}
 	else
 	{
-		hideSellTransferButtons();
+		if (target != "STR_BASE" || _destroyBase)
+		{
+			hideSellTransferButtons();
+		}
 	}
 
 	if (target == "STR_BASE")

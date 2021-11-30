@@ -1828,12 +1828,12 @@ void BattlescapeState::btnNightVisionClick(Action *action)
 
 /**
  * Determines whether a playable unit is selected. Normally only player side units can be selected, but in debug mode one can play with aliens too :)
- * Is used to see if stats can be displayed and action buttons will work.
+ * Is used to see if action buttons will work.
  * @return Whether a playable unit is selected.
  */
 bool BattlescapeState::playableUnitSelected()
 {
-	return _save->getSelectedUnit() != 0 && (_save->getSide() == FACTION_PLAYER || _save->getDebugMode());
+	return _save->getSelectedUnit() != 0 && allowButtons();
 }
 
 /**
@@ -1854,7 +1854,7 @@ void BattlescapeState::drawItem(BattleItem* item, Surface* hand, std::vector<Num
 	if (item)
 	{
 		const RuleItem *rule = item->getRules();
-		rule->drawHandSprite(_game->getMod()->getSurfaceSet("BIGOBS.PCK"), hand, item, _save->getAnimFrame());
+		rule->drawHandSprite(_game->getMod()->getSurfaceSet("BIGOBS.PCK"), hand, item, _save, _save->getAnimFrame());
 		for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
 		{
 			if (item->isAmmoVisibleForSlot(slot))
@@ -1923,7 +1923,7 @@ void BattlescapeState::drawItem(BattleItem* item, Surface* hand, std::vector<Num
  */
 void BattlescapeState::drawHandsItems()
 {
-	BattleUnit *battleUnit = playableUnitSelected() ? _save->getSelectedUnit() : nullptr;
+	BattleUnit *battleUnit = _battleGame->playableUnitSelected() ? _save->getSelectedUnit() : nullptr;
 	bool left = battleUnit ? battleUnit->isLeftHandPreferredForReactions() : false;
 	bool right = battleUnit ? battleUnit->isRightHandPreferredForReactions() : false;
 	drawItem(battleUnit ? battleUnit->getLeftHandWeapon() : nullptr, _btnLeftHandItem, _numAmmoLeft, _numMedikitLeft, _numTwoHandedIndicatorLeft, left);
@@ -1944,7 +1944,7 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
 		_visibleUnit[i] = 0;
 	}
 
-	bool playableUnit = playableUnitSelected();
+	bool playableUnit = _battleGame->playableUnitSelected();
 	_rank->setVisible(playableUnit);
 	_rankTiny->setVisible(playableUnit);
 	_numTimeUnits->setVisible(playableUnit);
@@ -2208,11 +2208,14 @@ void BattlescapeState::updateSoldierInfo(bool checkFOV)
 
 void BattlescapeState::updateUiButton(const BattleUnit *battleUnit)
 {
-	bool hasPsiWeapon = battleUnit->getSpecialWeapon(BT_PSIAMP) != 0;
+	BattleItem *psiWeapon = battleUnit->getSpecialWeapon(BT_PSIAMP);
 
 	BattleType type = BT_NONE;
 	BattleItem *specialWeapon = battleUnit->getSpecialIconWeapon(type); // updates type!
 	bool hasSpecialWeapon = specialWeapon && type != BT_NONE && type != BT_AMMO && type != BT_GRENADE && type != BT_PROXIMITYGRENADE && type != BT_FLARE && type != BT_CORPSE;
+
+	// if we have psi amp with icon then it will show one button only, but if we have two psi amps and one with icon is second (this is important) then we will show both buttons.
+	bool hasPsiWeapon = psiWeapon != 0 && psiWeapon != specialWeapon;
 
 	bool hasSkills = false;
 	auto soldier = battleUnit->getGeoscapeSoldier();

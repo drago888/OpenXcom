@@ -232,7 +232,7 @@ namespace OpenXcom
 		else
 		{
 			Surface surf;
-			item->drawHandSprite(_game->getMod()->getSurfaceSet32(getTypeId("BIGOBS.PCK", bpp)), _image, 0, 0, bpp);
+			item->drawHandSprite(_game->getMod()->getSurfaceSet32(getTypeId("BIGOBS.PCK", bpp)), _image, 0, 0, 0, bpp);
 		}
 
 		add(_image);
@@ -468,7 +468,7 @@ namespace OpenXcom
 							}
 							else
 							{
-								type->drawHandSprite(_game->getMod()->getSurfaceSet(getTypeId("BIGOBS.PCK", bpp)), _imageAmmo[currShow], 0, 0, bpp);
+								type->drawHandSprite(_game->getMod()->getSurfaceSet(getTypeId("BIGOBS.PCK", bpp)), _imageAmmo[currShow], 0, 0, 0, bpp);
 							}
 
 

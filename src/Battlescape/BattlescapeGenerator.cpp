@@ -536,18 +536,23 @@ void BattlescapeGenerator::nextStage()
 		}
 	}
 
-	const std::vector<MapScript*> *script = _game->getMod()->getMapScript(_terrain->getScript());
-	if (_game->getMod()->getMapScript(ruleDeploy->getScript()))
+	auto& terrainMapScript = _terrain->getRandomMapScript();
+	const std::vector<MapScript*> *script = _game->getMod()->getMapScript(terrainMapScript);
+	_save->setLastUsedMapScript(terrainMapScript);
+
+	auto& deployMapScript = ruleDeploy->getRandomMapScript();
+	if (_game->getMod()->getMapScript(deployMapScript))
 	{
-		script = _game->getMod()->getMapScript(ruleDeploy->getScript());
+		script = _game->getMod()->getMapScript(deployMapScript);
+		_save->setLastUsedMapScript(deployMapScript);
 	}
-	else if (!ruleDeploy->getScript().empty())
+	else if (!deployMapScript.empty())
 	{
-		throw Exception("Map generator encountered an error: " + ruleDeploy->getScript() + " script not found.");
+		throw Exception("Map generator encountered an error: " + deployMapScript + " script not found.");
 	}
 	if (script == 0)
 	{
-		throw Exception("Map generator encountered an error: " + _terrain->getScript() + " script not found.");
+		throw Exception("Map generator encountered an error: " + terrainMapScript + " script not found.");
 	}
 
 	// cleanup before map old map is destroyed
@@ -725,6 +730,7 @@ void BattlescapeGenerator::run()
 			}
 			else // trouble: no texture and no deployment terrain, most likely scenario is a UFO landing on water: use the first available terrain
 			{
+				Log(LOG_WARNING) << "Trouble: no texture and no deployment terrain, most likely scenario is a UFO landing on water: using the first available terrain...";
 				_terrain = _game->getMod()->getTerrain(_game->getMod()->getTerrainList().front(), true);
 			}
 		}
@@ -756,18 +762,23 @@ void BattlescapeGenerator::run()
 		_worldShade = ruleDeploy->getMaxShade();
 	}
 
-	const std::vector<MapScript*> *script = _game->getMod()->getMapScript(_terrain->getScript());
-	if (_game->getMod()->getMapScript(ruleDeploy->getScript()))
+	auto& terrainMapScript = _terrain->getRandomMapScript();
+	const std::vector<MapScript*> *script = _game->getMod()->getMapScript(terrainMapScript);
+	_save->setLastUsedMapScript(terrainMapScript);
+
+	auto& deployMapScript = ruleDeploy->getRandomMapScript();
+	if (_game->getMod()->getMapScript(deployMapScript))
 	{
-		script = _game->getMod()->getMapScript(ruleDeploy->getScript());
+		script = _game->getMod()->getMapScript(deployMapScript);
+		_save->setLastUsedMapScript(deployMapScript);
 	}
-	else if (!ruleDeploy->getScript().empty())
+	else if (!deployMapScript.empty())
 	{
-		throw Exception("Map generator encountered an error: " + ruleDeploy->getScript() + " script not found.");
+		throw Exception("Map generator encountered an error: " + deployMapScript + " script not found.");
 	}
 	if (script == 0)
 	{
-		throw Exception("Map generator encountered an error: " + _terrain->getScript() + " script not found.");
+		throw Exception("Map generator encountered an error: " + terrainMapScript + " script not found.");
 	}
 
 	generateMap(script, ruleDeploy->getCustomUfoName());
@@ -1413,13 +1424,26 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
 	{
 		int quantity;
 
-		if (_game->getSavedGame()->getDifficulty() < DIFF_VETERAN)
-			quantity = (*d).lowQty + RNG::generate(0, (*d).dQty); // beginner/experienced
-		else if (_game->getSavedGame()->getDifficulty() < DIFF_SUPERHUMAN)
-			quantity = (*d).lowQty+(((*d).highQty-(*d).lowQty)/2) + RNG::generate(0, (*d).dQty); // veteran/genius
-		else
-			quantity = (*d).highQty + RNG::generate(0, (*d).dQty); // super (and beyond?)
+		switch (_game->getSavedGame()->getDifficulty())
+		{
+		case DIFF_BEGINNER:
+			quantity = (*d).lowQty;
+			break;
+		case DIFF_EXPERIENCED:
+			quantity = (*d).medQty > 0 ? (*d).lowQty + (((*d).medQty - (*d).lowQty) / 2) : (*d).lowQty;
+			break;
+		case DIFF_VETERAN:
+			quantity = (*d).medQty > 0 ? (*d).medQty : (*d).lowQty + (((*d).highQty - (*d).lowQty) / 2);
+			break;
+		case DIFF_GENIUS:
+			quantity = (*d).medQty > 0 ? (*d).medQty + (((*d).highQty - (*d).medQty) / 2) : (*d).lowQty + (((*d).highQty - (*d).lowQty) / 2);
+			break;
+		case DIFF_SUPERHUMAN:
+		default:
+			quantity = (*d).highQty;
+		}
 
+		quantity += RNG::generate(0, (*d).dQty);
 		quantity += RNG::generate(0, (*d).extraQty);
 
 		for (int i = 0; i < quantity; ++i)
@@ -2699,7 +2723,7 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
 								{
 									for (std::vector<int>::const_iterator z = command->getGroups()->begin(); z != command->getGroups()->end() && !success; ++z)
 									{
-										success = _blocks[x][y]->isInGroup((*z));
+										success = _blocks[x][y] && _blocks[x][y]->isInGroup((*z));
 									}
 								}
 								else if (!command->getBlocks()->empty())

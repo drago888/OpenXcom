@@ -18,6 +18,7 @@
  */
 #include "RuleCraftWeapon.h"
 #include "Mod.h"
+#include "../Engine/Logger.h"
 
 namespace OpenXcom
 {
@@ -98,6 +99,21 @@ void RuleCraftWeapon::afterLoad(const Mod* mod)
 	mod->linkRule(_clip, _clipName);
 
 
+	if (_projectileType < CWPT_LASER_BEAM && _damage > 0)
+	{
+		if (_projectileSpeed <= 0)
+		{
+			throw Exception("Missile-like craft weapons (with 'damage' > 0) must have a positive 'projectileSpeed'.");
+		}
+		else if (_projectileSpeed <= 4 && _range > 10)
+		{
+			Log(LOG_WARNING) << "Missile speed for " << _type << " is very low! Depending on craft approach speed, the missile may seem not moving, or even moving backwards. Speed: " << _projectileSpeed << "; range: " << _range;
+		}
+		else if (_projectileSpeed <= 6 && _range > 20)
+		{
+			Log(LOG_INFO) << "Missile speed for " << _type << " is quite low. Depending on craft approach speed, the missile may seem moving very slowly. Speed: " << _projectileSpeed << "; range: " << _range;
+		}
+	}
 	if (_launcher == nullptr)
 	{
 		throw Exception("Launcher item is required for a craft weapon");

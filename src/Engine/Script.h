@@ -1450,6 +1450,7 @@ class ScriptParserEventsBase : public ScriptParserBase
 	struct EventData
 	{
 		int offset;
+		std::string name;
 		ScriptContainerBase script;
 	};
 

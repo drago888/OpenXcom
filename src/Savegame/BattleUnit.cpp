@@ -82,7 +82,7 @@ BattleUnit::BattleUnit(const Mod *mod, Soldier *soldier, int depth) :
 	_floatHeight = _armor->getFloatHeight() == -1 ? soldier->getRules()->getFloatHeight() : _armor->getFloatHeight();
 	_intelligence = 2;
 	_aggression = 1;
-	_specab = SPECAB_NONE;
+	_specab = (SpecialAbility)_armor->getSpecialAbility();
 	_movementType = _armor->getMovementType();
 	if (_movementType == MT_FLOAT)
 	{
@@ -220,6 +220,7 @@ void BattleUnit::updateArmorFromSoldier(const Mod *mod, Soldier *soldier, Armor 
 	_kneelHeight = _armor->getKneelHeight() == -1 ? soldier->getRules()->getKneelHeight() : _armor->getKneelHeight();
 	_floatHeight = _armor->getFloatHeight() == -1 ? soldier->getRules()->getFloatHeight() : _armor->getFloatHeight();
 
+	_specab = (SpecialAbility)_armor->getSpecialAbility();
 	_movementType = _armor->getMovementType();
 	if (_movementType == MT_FLOAT) {
 		if (depth > 0) { _movementType = MT_FLY; } else { _movementType = MT_WALK; }
@@ -1573,7 +1574,7 @@ int BattleUnit::damage(Position relative, int damage, const RuleDamageType *type
 	}
 
 	const int orgDamage = damage;
-	const int overKillMinimum = type->IgnoreOverKill ? 0 : -4 * _stats.health;
+	const int overKillMinimum = type->IgnoreOverKill ? 0 : -UnitStats::OverkillMultipler * _stats.health;
 
 	{
 		ModScript::HitUnit::Output args { damage, bodypart, side, };
@@ -1667,7 +1668,7 @@ int BattleUnit::damage(Position relative, int damage, const RuleDamageType *type
 
 		if (!_armor->getPainImmune() || type->IgnorePainImmunity)
 		{
-			setValueMax(_stunlevel, std::get<toStun>(args.data), 0, 4 * _stats.health);
+			setValueMax(_stunlevel, std::get<toStun>(args.data), 0, UnitStats::StunMultipler * _stats.health);
 		}
 
 		moraleChange(- reduceByBravery(std::get<toMorale>(args.data)));
@@ -1757,7 +1758,7 @@ void BattleUnit::knockOut(BattlescapeGame *battle)
 		{
 			if (newUnit->getSpawnUnit())
 			{
-				//scripts or rulesets could make new chryssalid from chryssalid, this meam we could have infinite loop there
+				//scripts or rulesets could make new chryssalid from chryssalid, this means we could have infinite loop there
 				//setting null will break it
 				newUnit->clearSpawnUnit();
 			}
@@ -2407,7 +2408,7 @@ void BattleUnit::prepareHealth(int health)
 		_fire--;
 	}
 
-	setValueMax(_health, health, -4 * _stats.health, _stats.health);
+	setValueMax(_health, health, -UnitStats::OverkillMultipler * _stats.health, _stats.health);
 
 	// if unit is dead, AI state should be gone
 	if (_health <= 0 && _currentAIState)
@@ -5105,7 +5106,7 @@ void addArmorValueScript(BattleUnit *bu, int side, int value)
 	if (bu && 0 <= side && side < SIDE_MAX)
 	{
 		//limit range to prevent overflow
-		value = Clamp(value, -1000, 1000);
+		value = Clamp(value, -UnitStats::BaseStatLimit, UnitStats::BaseStatLimit);
 		bu->setArmor(value + bu->getArmor((UnitSide)side), (UnitSide)side);
 	}
 }
@@ -5140,7 +5141,7 @@ void addFatalWoundScript(BattleUnit *bu, int part, int val)
 	if (bu && 0 <= part && part < BODYPART_MAX)
 	{
 		//limit range to prevent overflow
-		val = Clamp(val, -1000, 1000);
+		val = Clamp(val, -UnitStats::BaseStatLimit, UnitStats::BaseStatLimit);
 		bu->setFatalWound(val + bu->getFatalWound((UnitBodyPart)part), (UnitBodyPart)part);
 	}
 }
@@ -5298,7 +5299,7 @@ void getStunMaxScript(const BattleUnit *bu, int &maxStun)
 {
 	if (bu)
 	{
-		maxStun = bu->getBaseStats()->health * 4;
+		maxStun = bu->getBaseStats()->health * UnitStats::StunMultipler;
 		return;
 	}
 	maxStun = 0;
@@ -5473,7 +5474,7 @@ void addBaseStatScript(BattleUnit *bu, int val)
 	if (bu)
 	{
 		//limit range to prevent overflow
-		val = Clamp(val, -1000, 1000);
+		val = Clamp(val, -UnitStats::BaseStatLimit, UnitStats::BaseStatLimit);
 		setBaseStatScript<StatCurr, StatMax>(bu, val + (bu->*StatCurr));
 	}
 }
@@ -5483,7 +5484,7 @@ void setStunScript(BattleUnit *bu, int val)
 {
 	if (bu)
 	{
-		(bu->*StatCurr) = Clamp(val, 0, (bu->getBaseStats()->health) * 4);
+		(bu->*StatCurr) = Clamp(val, 0, (bu->getBaseStats()->health) * UnitStats::StunMultipler);
 	}
 }
 
@@ -5493,7 +5494,7 @@ void addStunScript(BattleUnit *bu, int val)
 	if (bu)
 	{
 		//limit range to prevent overflow, 4 time bigger than normal as stun can be 4 time bigger than health
-		val = Clamp(val, -4000, 4000);
+		val = Clamp(val, -UnitStats::StunStatLimit, UnitStats::StunStatLimit);
 		setStunScript<StatCurr>(bu, val + (bu->*StatCurr));
 	}
 }
@@ -5513,7 +5514,7 @@ void addBaseStatRangeScript(BattleUnit *bu, int val)
 	if (bu)
 	{
 		//limit range to prevent overflow
-		val = Clamp(val, -1000, 1000);
+		val = Clamp(val, -UnitStats::BaseStatLimit, UnitStats::BaseStatLimit);
 		setBaseStatRangeScript<StatCurr, Min, Max>(bu, val + (bu->*StatCurr));
 	}
 }
@@ -5522,7 +5523,7 @@ void setFireScript(BattleUnit *bu, int val)
 {
 	if (bu)
 	{
-		val = Clamp(val, 0, 1000);
+		val = Clamp(val, 0, UnitStats::BaseStatLimit);
 		bu->setFire(val);
 	}
 }
@@ -5731,7 +5732,7 @@ void getListSizeHackScript(BattleUnit* bu, int& i)
 	if (bu)
 	{
 		auto& ptr = (bu->*Member);
-		//count number of elemets unitl null, and inteprted this as size of array
+		//count number of elements until null, and interpret this as size of array
 		i = std::distance(
 			std::begin(ptr),
 			std::find(std::begin(ptr), std::end(ptr), nullptr)
@@ -5828,9 +5829,9 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 	bu.add<&makeVisibleScript>("makeVisible");
 
 
-	bu.add<&setSpawnUnitScript>("setSpawnUnit", "set type of zombie will be spawn from curret unit, it will reset every thing to default (hostile & instant)");
-	bu.add<&getSpawnUnitScript>("getSpawnUnit", "get type of zombie will be spawn from curret unit");
-	bu.add<&setSpawnUnitInstantRespawnScript>("setSpawnUnitInstantRespawn", "set 1 to make unit instalty change to spawn zombie unit, other wise it will transform on death");
+	bu.add<&setSpawnUnitScript>("setSpawnUnit", "set type of zombie will be spawn from current unit, it will reset everything to default (hostile & instant)");
+	bu.add<&getSpawnUnitScript>("getSpawnUnit", "get type of zombie will be spawn from current unit");
+	bu.add<&setSpawnUnitInstantRespawnScript>("setSpawnUnitInstantRespawn", "set 1 to make unit instantly change to spawn zombie unit, other wise it will transform on death");
 	bu.add<&getSpawnUnitInstantRespawnScript>("getSpawnUnitInstantRespawn", "get state of instant respawn");
 	bu.add<&setSpawnUnitFactionScript>("setSpawnUnitFaction", "set faction of unit that will spawn");
 	bu.add<&getSpawnUnitFactionScript>("getSpawnUnitFaction", "get faction of unit that will spawn");
@@ -5843,7 +5844,7 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 
 	bu.addField<&BattleUnit::_health>("getHealth");
 	bu.add<UnitStats::getMaxStatScript<BattleUnit, &BattleUnit::_stats, &UnitStats::health>>("getHealthMax");
-	bu.add<&setBaseStatScript<&BattleUnit::_health, &UnitStats::health>>("setHealth");
+	bu.add<&setBaseStatScript<&BattleUnit::_health, &UnitStats::health>>("setHealth"); //TODO: allow overkill? now minim is 0.
 	bu.add<&addBaseStatScript<&BattleUnit::_health, &UnitStats::health>>("addHealth");
 
 	bu.addField<&BattleUnit::_mana>("getMana");
@@ -6039,9 +6040,9 @@ void commonBattleUnitAnimations(ScriptParserBase* parser)
 {
 	Bind<BattleUnit> bu = { parser, BindBase::ExtensionBinding{} };
 
-	bu.add<&BattleUnit::getFloorAbove>("isFloorAbove", "check if floor is show above unit");
-	bu.add<&BattleUnit::getBreathExhaleFrame>("getBreathExhaleFrame", "return aninmation frame of breath bubbles, -1 mean no animation");
-	bu.add<&BattleUnit::getBreathInhaleFrame>("getBreathInhaleFrame", "return number of frames to next breath animation start, 0 mean animation started, -1 no animation");
+	bu.add<&BattleUnit::getFloorAbove>("isFloorAbove", "check if floor is shown above unit");
+	bu.add<&BattleUnit::getBreathExhaleFrame>("getBreathExhaleFrame", "return animation frame of breath bubbles, -1 means no animation");
+	bu.add<&BattleUnit::getBreathInhaleFrame>("getBreathInhaleFrame", "return number of frames to next breath animation start, 0 means animation started, -1 no animation");
 }
 
 

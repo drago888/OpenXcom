@@ -158,13 +158,14 @@ int Mod::EXTENDED_UNDERWATER_THROW_FACTOR;
 constexpr size_t MaxDifficultyLevels = 5;
 
 
-/// Special value for defualt string diffrent to empty one.
+/// Special value for default string different to empty one.
 const std::string Mod::STR_NULL = { '\0' };
 /// Predefined name for first loaded mod that have all original data
 const std::string ModNameMaster = "master";
 /// Predefined name for current mod that is loading rulesets.
 const std::string ModNameCurrent = "current";
-/// Reduction of size allocated for transparcey LUTs.
+
+/// Reduction of size allocated for transparency LUTs.
 const size_t ModTransparceySizeReduction = 100;
 
 /**
@@ -947,6 +948,14 @@ void Mod::playMusic(const std::string &name, int id)
 		if (music != _muteMusic)
 		{
 			_playingMusic = name;
+			for (auto& item : _musics)
+			{
+				if (item.second == music)
+				{
+					setCurrentMusicTrack(item.first);
+					break;
+				}
+			}
 		}
 		Log(LOG_VERBOSE)<<"Mod::playMusic('" << name << "'): playing " << _playingMusic;
 	}
@@ -968,7 +977,7 @@ SoundSet *Mod::getSoundSet(const std::string &name, bool error) const
  * @param sound ID of the sound.
  * @return Pointer to the sound.
  */
-Sound *Mod::getSound(const std::string &set, int sound, bool error) const
+Sound *Mod::getSound(const std::string &set, int sound) const
 {
 	if (Options::mute)
 	{
@@ -982,14 +991,14 @@ Sound *Mod::getSound(const std::string &set, int sound, bool error) const
 			Sound *s = ss->getSound(sound);
 			if (s == 0)
 			{
-				Log(LOG_VERBOSE) << "Sound " << sound << " in " << set << " not found";
+				Log(LOG_ERROR) << "Sound " << sound << " in " << set << " not found";
 				return _muteSound;
 			}
 			return s;
 		}
 		else
 		{
-			Log(LOG_VERBOSE) << "SoundSet " << set << " not found";
+			Log(LOG_ERROR) << "SoundSet " << set << " not found";
 			return _muteSound;
 		}
 	}
@@ -1020,12 +1029,12 @@ const std::vector<Uint16> *Mod::getVoxelData() const
  * @param sound ID of the sound.
  * @return Pointer to the sound.
  */
-Sound *Mod::getSoundByDepth(unsigned int depth, unsigned int sound, bool error) const
+Sound *Mod::getSoundByDepth(unsigned int depth, unsigned int sound) const
 {
 	if (depth == 0 || _disableUnderwaterSounds)
-		return getSound("BATTLE.CAT", sound, error);
+		return getSound("BATTLE.CAT", sound);
 	else
-		return getSound("BATTLE2.CAT", sound, error);
+		return getSound("BATTLE2.CAT", sound);
 }
 
 /**
@@ -1037,6 +1046,64 @@ const std::vector<std::vector<Uint8> > *Mod::getLUTs() const
 	return &_transparencyLUTs;
 }
 
+
+/**
+ * Verify if value have defined surface in given set.
+ */
+void Mod::verifySpriteOffset(const std::string &parent, const int& sprite, const std::string &set) const
+{
+	if (Options::lazyLoadResources)
+	{
+		// we can't check if index is correct when set is loaded
+		return;
+	}
+
+	auto* s = getRule(set, "Sprite Set", _sets, true);
+
+	checkForSoftError(sprite != Mod::NO_SURFACE && s->getFrame(sprite) == nullptr, parent, "Wrong index " + std::to_string(sprite) + " for surface set " + set, LOG_ERROR);
+}
+
+/**
+ * Verify if value have defined surface in given set.
+ */
+void Mod::verifySpriteOffset(const std::string &parent, const std::vector<int>& sprites, const std::string &set) const
+{
+	if (Options::lazyLoadResources)
+	{
+		// we can't check if index is correct when set is loaded
+		return;
+	}
+
+	auto* s = getRule(set, "Sprite Set", _sets, true);
+
+	for (auto sprite : sprites)
+	{
+		checkForSoftError(sprite != Mod::NO_SURFACE && s->getFrame(sprite) == nullptr, parent, "Wrong index " + std::to_string(sprite) + " for surface set " + set, LOG_ERROR);
+	}
+}
+
+/**
+ * Verify if value have defined sound in given set.
+ */
+void Mod::verifySoundOffset(const std::string &parent, const int& sound, const std::string &set) const
+{
+	auto* s = getSoundSet(set);
+
+	checkForSoftError(sound != Mod::NO_SOUND && s->getSound(sound) == nullptr, parent, "Wrong index " + std::to_string(sound) + " for sound set " + set, LOG_ERROR);
+}
+
+/**
+ * Verify if value have defined sound in given set.
+ */
+void Mod::verifySoundOffset(const std::string &parent, const std::vector<int>& sounds, const std::string &set) const
+{
+	auto* s = getSoundSet(set);
+
+	for (auto sound : sounds)
+	{
+		checkForSoftError(sound != Mod::NO_SOUND && s->getSound(sound) == nullptr, parent, "Wrong index " + std::to_string(sound) + " for sound set " + set, LOG_ERROR);
+	}
+}
 
 
 /**
@@ -1412,7 +1479,7 @@ void loadHelper(const std::string &parent, std::vector<std::pair<K, V>>& v, cons
  * @param node Node with data
  * @param shared Max offset limit that is shared for every mod
  * @param multiplier Value used by `projectile` surface set to convert projectile offset to index offset in surface.
- * @param sizeScale Value used by transparency colors, reduce total number of avaialbe space for offset.
+ * @param sizeScale Value used by transparency colors, reduce total number of available space for offset.
  */
 void Mod::loadOffsetNode(const std::string &parent, int& offset, const YAML::Node &node, int shared, const std::string &set, size_t multiplier, size_t sizeScale) const
 {
@@ -1463,6 +1530,9 @@ void Mod::loadOffsetNode(const std::string &parent, int& offset, const YAML::Nod
 	{
 		throw LoadRuleException(parent, node, "unsupported yaml node");
 	}
+
+	static_assert(Mod::NO_SOUND == -1, "NO_SOUND need to equal -1");
+	static_assert(Mod::NO_SURFACE == -1, "NO_SURFACE need to equal -1");
 
 	if (offset < -1)
 	{
@@ -1524,9 +1594,9 @@ void Mod::loadSpriteOffset(const std::string &parent, std::vector<int>& sprites,
 		{
 			for (YAML::const_iterator i = node.begin(); i != node.end(); ++i)
 			{
-				sprites.push_back(-1);
+				sprites.push_back(Mod::NO_SURFACE);
 				loadOffsetNode(parent, sprites.back(), *i, maxShared, set, 1);
-				if (checkForSoftError(sprites.back() == -1, parent, *i, "incorrect value in sprite list"))
+				if (checkForSoftError(sprites.back() == Mod::NO_SURFACE, parent, *i, "incorrect value in sprite list"))
 				{
 					sprites.pop_back();
 				}
@@ -1534,7 +1604,7 @@ void Mod::loadSpriteOffset(const std::string &parent, std::vector<int>& sprites,
 		}
 		else
 		{
-			sprites.push_back(-1);
+			sprites.push_back(Mod::NO_SURFACE);
 			loadOffsetNode(parent, sprites.back(), node, maxShared, set, 1);
 		}
 	}
@@ -2043,6 +2113,11 @@ void Mod::loadAll()
 		}
 	}
 
+
+	loadExtraResources();
+
+
+	Log(LOG_INFO) << "After load.";
 	// cross link rule objects
 
 	afterLoadHelper("research", this, _research, &RuleResearch::afterLoad);
@@ -2178,7 +2253,6 @@ void Mod::loadAll()
 	Log(LOG_INFO) << "Loading ended.";
 
 	sortLists();
-	loadExtraResources();
 	modResources();
 
 	// if any images in 32_BIGOBS.PCK is 8 bits, change it to 32bits
@@ -2215,6 +2289,10 @@ void Mod::loadMod(const std::vector<FileMap::FileRecord> &rulesetFiles, ModScrip
 		try
 		{
 			loadFile(*i, parsers);
+		}
+		catch (Exception &e)
+		{
+			throw Exception(i->fullpath + ": " + std::string(e.what()));
 		}
 		catch (YAML::Exception &e)
 		{
@@ -2320,7 +2398,7 @@ void Mod::loadResourceConfigFile(const FileMap::FileRecord &filerec)
 					color.g = (*j)[1].as<int>(0);
 					color.b = (*j)[2].as<int>(0);
 					color.unused = (*j)[3].as<int>(2);
-					// technically its breaking change as it always overwritte from offset `start + 0` but no two mods could work correctly before this change.
+					// technically it's a breaking change as it always overwrites from offset `start + 0` but no two mods could work correctly before this change.
 					_transparencies[start + curr++] = color;
 				}
 			}
@@ -2866,6 +2944,8 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		if ((*i)["annoyedSound"])
 			loadSoundOffset(type, _annoyedSound[type], (*i)["annoyedSound"], "BATTLE.CAT");
 	}
+	loadSoundOffset("global", _selectBaseSound, doc["selectBaseSound"], "BATTLE.CAT");
+	loadSoundOffset("global", _startDogfightSound, doc["startDogfightSound"], "BATTLE.CAT");
 	_flagByKills = doc["flagByKills"].as<std::vector<int> >(_flagByKills);
 
 	_defeatScore = doc["defeatScore"].as<int>(_defeatScore);
@@ -3345,9 +3425,16 @@ SavedGame *Mod::newSave(GameDifficulty diff) const
 		else if (node.IsScalar())
 		{
 			int randomSoldiers = node.as<int>(0);
-			for (int s = 0; s < randomSoldiers; ++s)
+			if (randomSoldiers > 0 && soldierTypes.empty())
 			{
-				randomTypes.push_back(soldierTypes[RNG::generate(0, soldierTypes.size() - 1)]);
+				Log(LOG_ERROR) << "Cannot generate soldiers for the starting base. There are no available soldier types. Maybe all of them are locked by research?";
+			}
+			else
+			{
+				for (int s = 0; s < randomSoldiers; ++s)
+				{
+					randomTypes.push_back(soldierTypes[RNG::generate(0, soldierTypes.size() - 1)]);
+				}
 			}
 		}
 		// Generate soldiers
@@ -3378,7 +3465,7 @@ SavedGame *Mod::newSave(GameDifficulty diff) const
 				Craft *found = 0;
 				for (auto& craft : *base->getCrafts())
 				{
-					if (!found && craft->getRules()->getAllowLanding() && craft->getSpaceUsed() < craft->getRules()->getSoldiers())
+					if (!found && craft->getRules()->getAllowLanding() && craft->getSpaceUsed() < craft->getRules()->getMaxUnits())
 					{
 						// Remember transporter as fall-back, but search further for interceptors
 						found = craft;
@@ -3396,7 +3483,7 @@ SavedGame *Mod::newSave(GameDifficulty diff) const
 				Craft *found = 0;
 				for (auto& craft : *base->getCrafts())
 				{
-					if (craft->getRules()->getAllowLanding() && craft->getSpaceUsed() < craft->getRules()->getSoldiers())
+					if (craft->getRules()->getAllowLanding() && craft->getSpaceUsed() < craft->getRules()->getMaxUnits())
 					{
 						// First available transporter will do
 						found = craft;

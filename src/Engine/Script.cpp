@@ -928,7 +928,7 @@ bool parseFullConditionImpl(ParserWriter& ph, ScriptRefData falsePos, const Scri
 		return false;
 	}
 
-	// each operation can fail, we can't revent
+	// each operation can fail, we can't prevent
 	auto correct = true;
 
 	const auto truePos = ph.addLabel();
@@ -1012,7 +1012,7 @@ bool parseElse(const ScriptProcData& spd, ParserWriter& ph, const ScriptRefData*
 		return false;
 	}
 
-	// each operation can fail, we can't revent
+	// each operation can fail, we can't prevent
 	auto correct = true;
 
 	auto& block = ph.clearScopeBlock();
@@ -1076,7 +1076,7 @@ bool parseLoop(const ScriptProcData& spd, ParserWriter& ph, const ScriptRefData*
 		return false;
 	}
 
-	// each operation can fail, we can't revent
+	// each operation can fail, we can't prevent
 	auto correct = true;
 
 	auto& loop = ph.pushScopeBlock(BlockLoop);
@@ -1161,7 +1161,7 @@ bool parseBreak(const ScriptProcData& spd, ParserWriter& ph, const ScriptRefData
 		return false;
 	}
 
-	// each operation can fail, we can't revent
+	// each operation can fail, we can't prevent
 	auto correct = true;
 
 	ph.pushProc(Proc_goto);
@@ -1199,7 +1199,7 @@ bool parseContinue(const ScriptProcData& spd, ParserWriter& ph, const ScriptRefD
 		return false;
 	}
 
-	// each operation can fail, we can't revent
+	// each operation can fail, we can't prevent
 	auto correct = true;
 
 	ph.pushProc(Proc_goto);
@@ -1235,7 +1235,7 @@ bool parseEnd(const ScriptProcData& spd, ParserWriter& ph, const ScriptRefData* 
 		return false;
 	}
 
-	// each operation can fail, we can't revent
+	// each operation can fail, we can't prevent
 	auto correct = true;
 
 	auto block = ph.popScopeBlock();
@@ -1332,7 +1332,7 @@ bool parseVar(const ScriptProcData& spd, ParserWriter& ph, const ScriptRefData* 
 		return false;
 	}
 
-	// each operation can fail, we can't revent
+	// each operation can fail, we can't prevent
 	auto correct = true;
 
 	if (size == 2)
@@ -2844,7 +2844,7 @@ bool ScriptParserBase::parseBase(ScriptContainerBase& destScript, const std::str
 			auto ref = help.getReferece(temp);
 			if (!ref)
 			{
-				Log(LOG_ERROR) << "Unknow variable name '" << temp.toString() << "'";
+				Log(LOG_ERROR) << "Unknown variable name '" << temp.toString() << "'";
 				Log(LOG_ERROR) << err << "invalid operation '" << op.toString() << "'";
 				return false;
 			}
@@ -2861,7 +2861,7 @@ bool ScriptParserBase::parseBase(ScriptContainerBase& destScript, const std::str
 			op_curr = getProc(name, name_end);
 			if (!op_curr)
 			{
-				Log(LOG_ERROR) << "Unknow operation name '" << name.toString() << name_end.toString() << "' for variable '" << ref.name.toString() << "'";
+				Log(LOG_ERROR) << "Unknown operation name '" << name.toString() << name_end.toString() << "' for variable '" << ref.name.toString() << "'";
 				Log(LOG_ERROR) << err << "invalid operation '" << op.toString() << "'";
 				return false;
 			}
@@ -3163,25 +3163,155 @@ void ScriptParserEventsBase::parseCode(ScriptContainerEventsBase& container, con
 /**
  * Load global data from YAML.
  */
-void ScriptParserEventsBase::load(const YAML::Node& node)
+void ScriptParserEventsBase::load(const YAML::Node& scripts)
 {
-	ScriptParserBase::load(node);
-	if(const YAML::Node& scripts = node["scripts"])
+	ScriptParserBase::load(scripts);
+
+	// helper functions to get position in data vector
+	auto findPos = [&](const std::string& n)
 	{
-		if (const YAML::Node& curr = scripts[getName()])
+		return std::find_if(std::begin(_eventsData), std::end(_eventsData), [&](const EventData& p) { return p.name == n; });
+	};
+	auto havePos = [&](std::vector<EventData>::iterator it)
+	{
+		return it != std::end(_eventsData);
+	};
+	auto removePos = [&](std::vector<EventData>::iterator it)
+	{
+		_eventsData.erase(it);
+	};
+
+	auto getNode = [&](const YAML::Node& i, const std::string& nodeName)
+	{
+		const auto& n = i[nodeName];
+		return std::make_tuple(nodeName, n, !!n);
+	};
+	auto haveNode = [&](const std::tuple<std::string, YAML::Node, bool>& nn)
+	{
+		return std::get<bool>(nn);
+	};
+	auto getDescriptionNode = [&](const std::tuple<std::string, YAML::Node, bool>& nn)
+	{
+		return std::string("'") + std::get<std::string>(nn) + "' at line " + std::to_string(std::get<YAML::Node>(nn).Mark().line);
+	};
+	auto getNameFromNode = [&](const std::tuple<std::string, YAML::Node, bool>& nn)
+	{
+		auto name = std::get<YAML::Node>(nn).as<std::string>();
+		if (name.empty())
 		{
-			for (const YAML::Node& i : curr)
+			throw Exception("Invalid name for " + getDescriptionNode(nn));
+		}
+		return name;
+	};
+
+	if (const YAML::Node& curr = scripts[getName()])
+	{
+		for (const YAML::Node& i : curr)
+		{
+			const auto deleteNode = getNode(i, "delete");
+			const auto newNode = getNode(i, "new");
+			const auto overrideNode = getNode(i, "override");
+			const auto updateNode = getNode(i, "update");
+
 			{
-				EventData data = EventData{};
-				data.offset = i["offset"].as<double>(0) * OffsetScale;
-				if (data.offset == 0 || data.offset >= (int)OffsetMax || data.offset <= -(int)OffsetMax)
+				// check for duplicates
+				const std::tuple<std::string, YAML::Node, bool>* last = nullptr;
+				for (auto* p : { &deleteNode, &newNode, &updateNode, &overrideNode })
 				{
+					if (haveNode(*p))
+					{
+						if (last)
+						{
+							throw Exception("Conflict of " + getDescriptionNode(*last) + " and " + getDescriptionNode(*p));
+						}
+						else
+						{
+							last = p;
+						}
+					}
+				}
+			}
+
+			if (haveNode(deleteNode))
+			{
+				auto name = getNameFromNode(deleteNode);
+
+				auto it = findPos(name);
+				if (havePos(it))
+				{
+					removePos(it);
+				}
+				else
+				{
+					Log(LOG_WARNING) << "Unknown script name '" + name  + "' for " + getDescriptionNode(deleteNode);
+				}
+			}
+			else
+			{
+				int offset = 0;
+				ScriptContainerBase scp;
+
+
+				offset = i["offset"].as<double>(0) * OffsetScale;
+				if (offset == 0 || offset >= (int)OffsetMax || offset <= -(int)OffsetMax)
+				{
+					//TODO make it a exception
 					Log(LOG_ERROR) << "Invalid offset for '" << getName() << "' equal: '" << i["offset"].as<std::string>() << "'";
 					continue;
 				}
-				ScriptContainerBase scp;
-				if (parseBase(scp, "Global Event Script", i["code"].as<std::string>("")))
+
+				if (false == parseBase(scp, "Global Event Script", i["code"].as<std::string>("")))
 				{
+					continue;
+				}
+
+
+				if (haveNode(updateNode))
+				{
+					auto name = getNameFromNode(updateNode);
+
+					auto it = findPos(name);
+					if (havePos(it))
+					{
+						it->offset = offset;
+						it->script = std::move(scp);
+					}
+					else
+					{
+						Log(LOG_WARNING) << "Unknown script name '" + name  + "' for " + getDescriptionNode(updateNode);
+					}
+				}
+				else if (haveNode(overrideNode))
+				{
+					auto name = getNameFromNode(overrideNode);
+
+					auto it = findPos(name);
+					if (havePos(it))
+					{
+						it->offset = offset;
+						it->script = std::move(scp);
+					}
+					else
+					{
+						throw Exception("Unknown script name '" + name  + "' for " + getDescriptionNode(overrideNode));
+					}
+				}
+				else
+				{
+					std::string name;
+					if (haveNode(newNode))
+					{
+						name = getNameFromNode(newNode);
+
+						auto it = findPos(name);
+						if (havePos(it))
+						{
+							throw Exception("Script script name '" + name  + "' already used for " + getDescriptionNode(newNode));
+						}
+					}
+					EventData data = EventData{};
+					data.name = name;
+					data.offset = offset;
 					data.script = std::move(scp);
 					_eventsData.push_back(std::move(data));
 				}
@@ -3576,9 +3706,12 @@ void ScriptGlobal::load(const YAML::Node& node)
 			}
 		}
 	}
-	for (auto& p : _parserNames)
+	if (const YAML::Node& s = node["scripts"])
 	{
-		p.second->load(node);
+		for (auto& p : _parserNames)
+		{
+			p.second->load(s);
+		}
 	}
 }
 

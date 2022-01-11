@@ -795,7 +795,7 @@ void InventoryState::saveGlobalLayout(int index, bool includingArmor)
 	_createInventoryTemplate(*tmpl);
 
 	// optionally save armor info too
-	if (includingArmor)
+	if (includingArmor && _battleGame->getSelectedUnit()->getGeoscapeSoldier())
 	{
 		_game->getSavedGame()->setGlobalEquipmentLayoutArmor(index, _battleGame->getSelectedUnit()->getArmor()->getType());
 	}
@@ -870,9 +870,9 @@ bool InventoryState::tryArmorChange(const std::string& armorName)
 	if (armorAvailable)
 	{
 		Craft* craft = soldier->getCraft();
-		if (craft != 0 && next->getSize() > prev->getSize())
+		if (craft)
 		{
-			if (craft->getNumVehicles() >= craft->getRules()->getVehicles() || craft->getSpaceAvailable() < 3)
+			if (!craft->validateArmorChange(prev->getSize(), next->getSize()))
 			{
 				// STR_NOT_ENOUGH_CRAFT_SPACE
 				return false;

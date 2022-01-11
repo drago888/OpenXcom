@@ -260,7 +260,7 @@ void BattleItem::setFuseEnabled(bool enable)
 /**
  * Called at end of turn.
  */
-void BattleItem::fuseTimerEvent()
+void BattleItem::fuseEndTurnUpdate()
 {
 	auto event = _rules->getFuseTriggerEvent();
 	if (_fuseEnabled && getFuseTimer() > 0)
@@ -279,7 +279,7 @@ void BattleItem::fuseTimerEvent()
  * Get if item can trigger end of turn effect.
  * @return True if grenade should explode or other item removed
  */
-bool BattleItem::fuseEndTurnEffect()
+bool BattleItem::fuseTimeEvent()
 {
 	auto event = _rules->getFuseTriggerEvent();
 	auto check = [&]
@@ -1507,6 +1507,8 @@ void BattleItem::ScriptRegister(ScriptParserBase* parser)
 	bi.addCustomConst("BA_PRIME", BA_PRIME);
 	bi.addCustomConst("BA_UNPRIME", BA_UNPRIME);
 	bi.addCustomConst("BA_NONE", BA_NONE);
+	bi.addCustomConst("BA_TRIGGER_TIMED_GRENADE", BA_TRIGGER_TIMED_GRENADE);
+	bi.addCustomConst("BA_TRIGGER_PROXY_GRENADE", BA_TRIGGER_PROXY_GRENADE);
 }
 
 namespace

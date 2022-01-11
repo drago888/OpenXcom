@@ -733,13 +733,24 @@ void DogfightState::think()
 			}
 		}
 		_delayedRecolorDone = true;
+
+		// Note: init() is never called for DogfightState, so we'll do it here instead
+		{
+			auto& sounds = _game->getMod()->getStartDogfightSounds();
+			int soundId = sounds.empty() ? Mod::NO_SOUND : sounds[RNG::generate(0, sounds.size() - 1)];
+			if (soundId != Mod::NO_SOUND)
+			{
+				auto* customSound = _game->getMod()->getSound("GEO.CAT", soundId);
+				customSound->play();
+			}
+		}
 	}
 	if (!_endDogfight)
 	{
 		update();
 		_craftDamageAnimTimer->think(this, 0);
 	}
-	if (!_ufoIsAttacking)
+	if (!_ufoIsAttacking || _ufo->getStatus() == Ufo::LANDED)
 	{
 		if (!_craft->isInDogfight() || _craft->getDestination() != _ufo || _ufo->getStatus() == Ufo::LANDED)
 		{
@@ -941,9 +952,13 @@ void DogfightState::update()
 			int escapeCounter = _ufo->getEscapeCountdown();
 			if (_ufoIsAttacking)
 			{
-				// TODO: rethink: unhardcode run away thresholds?
-				if (_ufo->getDamage() > _ufo->getCraftStats().damageMax / 3 && _ufo->getHuntBehavior() != 1)
+				if (_disableDisengage && _ufo->getSoftlockShotCounter() >= _ufo->getRules()->getSoftlockThreshold())
 				{
+					escapeCounter = 1; // game is in softlock, stop being a hunter-killer and disengage!
+				}
+				else if (_ufo->getDamage() > _ufo->getCraftStats().damageMax / 3 && _ufo->getHuntBehavior() != 1)
+				{
+					// TODO: rethink: unhardcode run away thresholds?
 					if (_craft->getDamage() > _craft->getDamageMax() / 2)
 					{
 						escapeCounter = 999; // it's gonna be tight, continue shooting...
@@ -1404,7 +1419,7 @@ void DogfightState::update()
 			std::vector<Craft*> followers = _ufo->getCraftFollowers();
 			for (std::vector<Craft*>::iterator i = followers.begin(); i != followers.end(); ++i)
 			{
-				if (((*i)->getNumSoldiers() == 0 && (*i)->getNumVehicles() == 0) || !(*i)->getRules()->getAllowLanding())
+				if ((*i)->getNumTotalUnits() == 0 || !(*i)->getRules()->getAllowLanding())
 				{
 					(*i)->returnToBase();
 				}
@@ -1721,6 +1736,10 @@ void DogfightState::ufoFireWeapon()
 	p->setHorizontalPosition(HP_CENTER);
 	p->setPosition(_currentDist - (_ufo->getRules()->getRadius() / 2));
 	_projectiles.push_back(p);
+	if (_ufoIsAttacking && _disableDisengage)
+	{
+		_ufo->increaseSoftlockShotCounter();
+	}
 
 	if (_ufo->getRules()->getFireSound() == -1)
 	{

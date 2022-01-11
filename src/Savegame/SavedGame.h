@@ -236,6 +236,10 @@ public:
 	void setTime(const GameTime& time);
 	/// Gets the current ID for an object.
 	int getId(const std::string &name);
+	/// Gets the last ID for an object.
+	int getLastId(const std::string& name);
+	/// Increase a custom counter.
+	void increaseCustomCounter(const std::string& name);
 	/// Resets the list of object IDs.
 	const std::map<std::string, int> &getAllIds() const;
 	/// Resets the list of object IDs.
@@ -439,7 +443,7 @@ public:
 	/// Checks if a UFO is on the ignore list.
 	bool isUfoOnIgnoreList(int ufoId);
 	/// Handles a soldier's death.
-	std::vector<Soldier*>::iterator killSoldier(Soldier *soldier, BattleUnitKills *cause = 0);
+	std::vector<Soldier*>::iterator killSoldier(const Mod* mod, Soldier *soldier, BattleUnitKills *cause = 0);
 	/// enables/disables autosell for an item type
 	void setAutosell(const RuleItem *itype, const bool enabled);
 	/// get autosell state for an item type
@@ -464,6 +468,16 @@ public:
 	int getCurrentScore(int monthsPassed) const;
 	/// Clear links for the given alien base. Use this before deleting the alien base.
 	void clearLinksForAlienBase(AlienBase* alienBase, const Mod* mod);
+	/// Delete the given retaliation mission.
+	void deleteRetaliationMission(AlienMission* am, Base* base);
+	/// Spawn a Geoscape event from the event rules.
+	bool spawnEvent(const RuleEvent* eventRules);
+	/// Checks if an instant Geoscape event can be spawned.
+	bool canSpawnInstantEvent(const RuleEvent* eventRules);
+	/// Handles research unlocked by successful/failed missions and despawned mission sites.
+	bool handleResearchUnlockedByMissions(const RuleResearch* research, const Mod* mod);
+	/// Handles research side effects for primary research sources.
+	void handlePrimaryResearchSideEffects(const std::vector<const RuleResearch*> &topicsToCheck, const Mod* mod, Base* base);
 	/// Gets the list of user notes.
 	std::vector<std::string>& getUserNotes() { return _userNotes; }
 };

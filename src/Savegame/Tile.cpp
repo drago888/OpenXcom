@@ -811,7 +811,7 @@ int Tile::getAnimationOffset() const
  * @param item
  * @param ground
  */
-void Tile::addItem(BattleItem *item, RuleInventory *ground)
+void Tile::addItem(BattleItem *item, const RuleInventory *ground)
 {
 	item->setSlot(ground);
 	_inventory.push_back(item);
@@ -1007,6 +1007,25 @@ int Tile::getTUMarker() const
 {
 	return _TUMarker;
 }
+
+/**
+ * set the number to be displayed for pathfinding preview.
+ * @param energy
+ */
+void Tile::setEnergyMarker(int energy)
+{
+       _EnergyMarker = energy;
+}
+
+/**
+ * get the number to be displayed for pathfinding preview.
+ * @return marker
+ */
+int Tile::getEnergyMarker() const
+{
+       return _EnergyMarker;
+}
+
 
 /**
  * get the overlap value of this tile.

@@ -166,7 +166,7 @@ const std::string ModNameMaster = "master";
 const std::string ModNameCurrent = "current";
 
 /// Reduction of size allocated for transparency LUTs.
-const size_t ModTransparceySizeReduction = 100;
+const size_t ModTransparencySizeReduction = 100;
 
 /**
 * Check that the file is in the list of subfolders provided
@@ -1060,6 +1060,15 @@ void Mod::verifySpriteOffset(const std::string &parent, const int& sprite, const
 
 	auto* s = getRule(set, "Sprite Set", _sets, true);
 
+	if (s->getTotalFrames() == 0)
+	{
+		// HACK: some sprites should be shared between different sets (for example 'Projectiles' and 'UnderwaterProjectiles'),
+		// but in some cases one set is not used (for example if the weapon is 'underwaterOnly: true').
+		// If there are no surfaces at all, this means this index is not used.
+		// In some corner cases it will not work correcty, for example if someone does not add any surface to the set at all.
+		return;
+	}
+
 	checkForSoftError(sprite != Mod::NO_SURFACE && s->getFrame(sprite) == nullptr, parent, "Wrong index " + std::to_string(sprite) + " for surface set " + set, LOG_ERROR);
 }
 
@@ -1075,6 +1084,15 @@ void Mod::verifySpriteOffset(const std::string &parent, const std::vector<int>& 
 	}
 
 	auto* s = getRule(set, "Sprite Set", _sets, true);
+
+	if (s->getTotalFrames() == 0)
+	{
+		// HACK: some sprites should be shared between different sets (for example 'Projectiles' and 'UnderwaterProjectiles'),
+		// but in some cases one set is not used (for example if the weapon is 'underwaterOnly: true').
+		// If there are no surfaces at all, this means this index is not used.
+		// In some corner cases it will not work correcty, for example if someone does not add any surface to the set at all.
+		return;
+	}
 
 	for (auto sprite : sprites)
 	{
@@ -1669,7 +1687,7 @@ void Mod::loadTransparencyOffset(const std::string &parent, int& index, const YA
 {
 	if (node)
 	{
-		loadOffsetNode(parent, index, node, 0, "TransparencyLUTs", 1, ModTransparceySizeReduction);
+		loadOffsetNode(parent, index, node, 0, "TransparencyLUTs", 1, ModTransparencySizeReduction);
 	}
 }
 
@@ -2377,8 +2395,8 @@ void Mod::loadResourceConfigFile(const FileMap::FileRecord &filerec)
 
 	if (const YAML::Node& luts = doc["transparencyLUTs"])
 	{
-		const size_t start = _modCurrent->offset / ModTransparceySizeReduction;
-		const size_t limit =  _modCurrent->size / ModTransparceySizeReduction;
+		const size_t start = _modCurrent->offset / ModTransparencySizeReduction;
+		const size_t limit =  _modCurrent->size / ModTransparencySizeReduction;
 		size_t curr = 0;
 
 		_transparencies.resize(start + limit);
@@ -2951,6 +2969,16 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 	_defeatScore = doc["defeatScore"].as<int>(_defeatScore);
 	_defeatFunds = doc["defeatFunds"].as<int>(_defeatFunds);
 	_difficultyDemigod = doc["difficultyDemigod"].as<bool>(_difficultyDemigod);
+
+	if (const YAML::Node& difficultyCoefficientOverrides = doc["difficultyCoefficientOverrides"])
+	{
+		_monthlyRatingThresholds = difficultyCoefficientOverrides["monthlyRatingThresholds"].as< std::vector<int> >(_monthlyRatingThresholds);
+		_ufoFiringRateCoefficients = difficultyCoefficientOverrides["ufoFiringRateCoefficients"].as< std::vector<int> >(_ufoFiringRateCoefficients);
+		_ufoEscapeCountdownCoefficients = difficultyCoefficientOverrides["ufoEscapeCountdownCoefficients"].as< std::vector<int> >(_ufoEscapeCountdownCoefficients);
+		_retaliationTriggerOdds = difficultyCoefficientOverrides["retaliationTriggerOdds"].as< std::vector<int> >(_retaliationTriggerOdds);
+		_retaliationBaseRegionOdds = difficultyCoefficientOverrides["retaliationBaseRegionOdds"].as< std::vector<int> >(_retaliationBaseRegionOdds);
+		_aliensFacingCraftOdds = difficultyCoefficientOverrides["aliensFacingCraftOdds"].as< std::vector<int> >(_aliensFacingCraftOdds);
+	}
 
 	if (doc["difficultyCoefficient"])
 	{
@@ -4546,7 +4574,7 @@ Soldier *Mod::genSoldier(SavedGame *save, std::string type) const
 	for (int tries = 0; tries < 10 && duplicate; ++tries)
 	{
 		delete soldier;
-		soldier = new Soldier(getSoldier(type, true), getArmor(getSoldier(type, true)->getArmor(), true), newId);
+		soldier = new Soldier(getSoldier(type, true), getSoldier(type, true)->getDefaultArmor(), newId);
 		duplicate = false;
 		for (std::vector<Base*>::iterator i = save->getBases()->begin(); i != save->getBases()->end() && !duplicate; ++i)
 		{
@@ -6133,7 +6161,7 @@ void getSoldierScript(const Mod* mod, const RuleSoldier* &soldier, const std::st
 		soldier = nullptr;
 	}
 }
-void getInvenotryScript(const Mod* mod, const RuleInventory* &inv, const std::string &name)
+void getInventoryScript(const Mod* mod, const RuleInventory* &inv, const std::string &name)
 {
 	if (mod)
 	{
@@ -6181,7 +6209,7 @@ void Mod::ScriptRegister(ScriptParserBase *parser)
 	mod.add<&getSkillScript>("getRuleSkill");
 	mod.add<&getRuleResearch>("getRuleResearch");
 	mod.add<&getSoldierScript>("getRuleSoldier");
-	mod.add<&getInvenotryScript>("getRuleInventory");
+	mod.add<&getInventoryScript>("getRuleInventory");
 	mod.add<&Mod::getInventoryRightHand>("getRuleInventoryRightHand");
 	mod.add<&Mod::getInventoryLeftHand>("getRuleInventoryLeftHand");
 	mod.add<&Mod::getInventoryBackpack>("getRuleInventoryBackpack");

@@ -125,6 +125,7 @@
 #include "../Mod/RuleGlobe.h"
 #include "../Engine/Exception.h"
 #include "../Mod/AlienDeployment.h"
+#include "../Mod/AlienRace.h"
 #include "../Mod/RuleInterface.h"
 #include "../Mod/RuleVideo.h"
 #include "../fmath.h"
@@ -199,9 +200,11 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
 	_dogfightStartTimer = new Timer(Options::dogfightSpeed);
 	_dogfightTimer = new Timer(Options::dogfightSpeed);
 
-	_txtDebug = new Text(200, 32, 0, 0);
+	_txtDebug = new Text(254, 32, 0, 0);
 	_cbxRegion = new ComboBox(this, 150, 16, 0, 36);
-	_cbxZone = new ComboBox(this, 100, 16, 154, 36);
+	_cbxZone = new ComboBox(this, 48, 16, 154, 36);
+	_cbxArea = new ComboBox(this, 48, 16, 206, 36);
+	_cbxCountry = new ComboBox(this, 150, 16, 0, 36);
 
 	// Set palette
 	setInterface("geoscape");
@@ -250,6 +253,8 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
 	add(_txtDebug, "text", "geoscape");
 	add(_cbxRegion, "button", "geoscape");
 	add(_cbxZone, "button", "geoscape");
+	add(_cbxArea, "button", "geoscape");
+	add(_cbxCountry, "button", "geoscape");
 
 	// Set up objects
 	Surface *geobord = _game->getMod()->getSurface("GEOBORD.SCR");
@@ -442,6 +447,26 @@ GeoscapeState::GeoscapeState() : _pause(false), _zoomInEffectDone(false), _zoomO
 		_cbxZone->setOptions(zoneList, false);
 		_cbxZone->setVisible(false);
 		_cbxZone->onChange((ActionHandler)&GeoscapeState::cbxZoneChange);
+
+		std::vector<std::string> areaList;
+		areaList.push_back("All areas");
+		for (int z = 0; z < 100; ++z)
+		{
+			areaList.push_back(std::to_string(z));
+		}
+		_cbxArea->setOptions(areaList, false);
+		_cbxArea->setVisible(false);
+		_cbxArea->onChange((ActionHandler)&GeoscapeState::cbxAreaChange);
+
+		std::vector<std::string> countryList;
+		countryList.push_back("All countries");
+		for (auto c : *_game->getSavedGame()->getCountries())
+		{
+			countryList.push_back(tr(c->getRules()->getType()));
+		}
+		_cbxCountry->setOptions(countryList, false);
+		_cbxCountry->setVisible(false);
+		_cbxCountry->onChange((ActionHandler)&GeoscapeState::cbxCountryChange);
 	}
 
 	timeDisplay();
@@ -508,8 +533,10 @@ void GeoscapeState::handle(Action *action)
 			{
 				_txtDebug->setText("");
 			}
-			_cbxRegion->setVisible(_game->getSavedGame()->getDebugMode());
-			_cbxZone->setVisible(_game->getSavedGame()->getDebugMode());
+			_cbxRegion->setVisible(_game->getSavedGame()->getDebugMode() && _game->getSavedGame()->debugType >= 1);
+			_cbxZone->setVisible(_game->getSavedGame()->getDebugMode() && _game->getSavedGame()->debugType == 2);
+			_cbxArea->setVisible(_game->getSavedGame()->getDebugMode() && _game->getSavedGame()->debugType == 2);
+			_cbxCountry->setVisible(_game->getSavedGame()->getDebugMode() && _game->getSavedGame()->debugType == 0);
 		}
 		if (Options::debug && _game->getSavedGame()->getDebugMode() && _game->isCtrlPressed())
 		{
@@ -1111,7 +1138,7 @@ void GeoscapeState::time5Seconds()
 					{
 						if ((*k)->getCraft() == (*j))
 						{
-							k = _game->getSavedGame()->killSoldier(_game->getMod(), *k);
+							k = _game->getSavedGame()->killSoldier(true, *k);
 						}
 						else
 						{
@@ -1676,7 +1703,14 @@ void GeoscapeState::baseHunting()
 								AlienMission *mission = new AlienMission(rule);
 								mission->setRegion(_game->getSavedGame()->locateRegion(*(*ab))->getRules()->getType(), *_game->getMod());
 								mission->setId(_game->getSavedGame()->getId("ALIEN_MISSIONS"));
-								mission->setRace((*ab)->getAlienRace());
+								if (!(*ab)->getDeployment()->isHuntMissionRaceFromAlienBase() && rule.hasRaceWeights())
+								{
+									mission->setRace(rule.generateRace(_game->getSavedGame()->getMonthsPassed()));
+								}
+								else
+								{
+									mission->setRace((*ab)->getAlienRace());
+								}
 								mission->setAlienBase((*ab));
 								int targetZone = -1;
 								if (mission->getRules().getObjective() == OBJECTIVE_SITE)
@@ -1756,6 +1790,10 @@ bool GeoscapeState::processMissionSite(MissionSite *site)
 		_game->getSavedGame()->increaseCustomCounter(site->getDeployment()->getCounterDespawn());
 		_game->getSavedGame()->increaseCustomCounter(site->getDeployment()->getCounterFailure()); // despawn is also a type of failure
 		_game->getSavedGame()->increaseCustomCounter(site->getDeployment()->getCounterAll());
+		// Decrease counters
+		_game->getSavedGame()->decreaseCustomCounter(site->getDeployment()->getDecreaseCounterDespawn());
+		_game->getSavedGame()->decreaseCustomCounter(site->getDeployment()->getDecreaseCounterFailure()); // despawn is also a type of failure
+		_game->getSavedGame()->decreaseCustomCounter(site->getDeployment()->getDecreaseCounterAll());
 
 		// Generate a despawn event
 		auto eventRules = _game->getMod()->getEvent(site->getDeployment()->chooseDespawnEvent());
@@ -2150,6 +2188,10 @@ void GeoscapeState::time1Hour()
 		{
 			postpone = true;
 			(*i)->setDetected(true);
+			if ((*i)->getSecondsRemaining() < 3600)
+			{
+				(*i)->setSecondsRemaining(3600); // minimum 1 hour since detection
+			}
 			popup(new MissionDetectedState(*i, this));
 			break; // only one popup per hour!
 		}
@@ -2228,7 +2270,14 @@ void GenerateSupplyMission::operator()(AlienBase *base) const
 			}
 			mission->setRegion(targetRegion, _mod);
 			mission->setId(_save.getId("ALIEN_MISSIONS"));
-			mission->setRace(base->getAlienRace());
+			if (!base->getDeployment()->isGenMissionRaceFromAlienBase() && rule.hasRaceWeights())
+			{
+				mission->setRace(rule.generateRace(_save.getMonthsPassed()));
+			}
+			else
+			{
+				mission->setRace(base->getAlienRace());
+			}
 			mission->setAlienBase(base);
 			int targetZone = -1;
 			if (mission->getRules().getObjective() == OBJECTIVE_SITE)
@@ -2308,6 +2357,7 @@ void GeoscapeState::time1Day()
 			saveGame->getAvailableResearchProjects(before, mod, base);
 		}
 		// 3. add finished research, including lookups and getonefrees (up to 4x)
+		std::vector<const RuleResearch*> topicsToCheck;
 		for (ResearchProject *project : finished)
 		{
 			const RuleResearch *bonus = 0;
@@ -2452,12 +2502,16 @@ void GeoscapeState::time1Day()
 				popup(new NewPossibleFacilityState(base, _globe, newPossibleFacilities));
 			}
 
-			std::vector<const RuleResearch*> topicsToCheck;
 			topicsToCheck.push_back(research);
 			if (bonus)
 			{
 				topicsToCheck.push_back(bonus);
 			}
+		}
+		if (!topicsToCheck.empty())
+		{
+			Collections::sortVector(topicsToCheck);
+			Collections::sortVectorMakeUnique(topicsToCheck);
 			// Side effects:
 			// 1. remove obsolete research projects from all bases
 			// 2. handle items spawned by research
@@ -3870,6 +3924,11 @@ void GeoscapeState::determineAlienMissions()
 					alienBase->setStartMonth(month);
 				}
 				alienBase->setDeployment(upgrade);
+				auto* upgradeRace = mod->getAlienRace(upgrade->getUpgradeRace(), false);
+				if (upgradeRace)
+				{
+					alienBase->setAlienRace(upgradeRace->getId());
+				}
 			}
 		}
 	}
@@ -4391,11 +4450,94 @@ void GeoscapeState::cbxRegionChange(Action *)
 	{
 		_game->getSavedGame()->debugRegion = (*_game->getSavedGame()->getRegions())[index-1];
 	}
+	updateZoneInfo();
 }
 
 void GeoscapeState::cbxZoneChange(Action *)
 {
 	_game->getSavedGame()->debugZone = _cbxZone->getSelected();
+	updateZoneInfo();
+}
+
+void GeoscapeState::cbxAreaChange(Action *)
+{
+	_game->getSavedGame()->debugArea = _cbxArea->getSelected();
+	updateZoneInfo();
+}
+
+void GeoscapeState::updateZoneInfo()
+{
+	std::ostringstream ss;
+	auto* save = _game->getSavedGame();
+	if (save->debugRegion)
+	{
+		auto* regionRule = save->debugRegion->getRules();
+		if (save->debugType >= 1)
+		{
+			ss << "region: " << tr(regionRule->getType()) << " [" << regionRule->getType() << "]" << std::endl;
+		}
+		if (save->debugType == 2)
+		{
+			if (save->debugZone > 0 && save->debugZone <= regionRule->getMissionZones().size())
+			{
+				auto& selectedZone = regionRule->getMissionZones().at(save->debugZone - 1);
+				ss << "zone: " << save->debugZone - 1 << std::endl;
+				if (save->debugArea > 0 && save->debugArea <= selectedZone.areas.size())
+				{
+					auto& selectedArea = selectedZone.areas.at(save->debugArea - 1);
+					ss << "area: " << save->debugArea - 1;
+					ss << ", texture: " << selectedArea.texture;
+					ss << ", name: " << tr(selectedArea.name) << " [" << selectedArea.name << "]" << std::endl;
+					if (selectedArea.isPoint())
+					{
+						ss << "point = [" << selectedArea.lonMin / M_PI * 180 << ", " << selectedArea.latMin / M_PI * 180 << "]";
+						int texture, shade;
+						_globe->getPolygonTextureAndShade(selectedArea.lonMin, selectedArea.latMin, &texture, &shade);
+						ss << ", globe texture: " << texture;
+					}
+					else
+					{
+						ss << "rect = [" << selectedArea.lonMin / M_PI * 180 << ", " << selectedArea.lonMax / M_PI * 180;
+						ss << ", " << selectedArea.latMin / M_PI * 180 << ", " << selectedArea.latMax / M_PI * 180 << "]";
+					}
+				}
+				else
+				{
+					ss << "total areas: " << selectedZone.areas.size() << std::endl;
+				}
+			}
+			else
+			{
+				ss << "total zones: " << regionRule->getMissionZones().size() << std::endl;
+			}
+		}
+	}
+	_txtDebug->setText(ss.str());
+}
+
+void GeoscapeState::cbxCountryChange(Action *)
+{
+	int index = _cbxCountry->getSelected();
+	if (index < 1)
+	{
+		_game->getSavedGame()->debugCountry = nullptr;
+	}
+	else
+	{
+		_game->getSavedGame()->debugCountry = (*_game->getSavedGame()->getCountries())[index - 1];
+	}
+
+	std::ostringstream ss;
+	auto* save = _game->getSavedGame();
+	if (save->debugCountry)
+	{
+		auto* countryRule = save->debugCountry->getRules();
+		if (save->debugType == 0)
+		{
+			ss << "country: " << tr(countryRule->getType()) << " [" << countryRule->getType() << "]" << std::endl;
+		}
+	}
+	_txtDebug->setText(ss.str());
 }
 
 }

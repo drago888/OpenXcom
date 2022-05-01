@@ -80,6 +80,8 @@ enum BattleActionType : Uint8
 
 	BA_TRIGGER_TIMED_GRENADE = 17,
 	BA_TRIGGER_PROXY_GRENADE = 18,
+
+	BA_SELF_DESTRUCT = 19,
 };
 
 enum class BattleActionOrigin { CENTRE = 0, LEFT, RIGHT }; // Used for off-centre shooting.
@@ -229,6 +231,7 @@ struct RuleItemAction
 	RuleItemUseCost flat;
 	bool arcing = false; // Only overrides arcing: false on a weapon for a specific action
 	std::string name;
+	std::string shortName;
 };
 
 /**
@@ -364,20 +367,24 @@ private:
 	RuleItemFuseTrigger _fuseTriggerEvents;
 	bool _hiddenOnMinimap;
 	std::string _medikitActionName, _psiAttackName, _primeActionName, _unprimeActionName, _primeActionMessage, _unprimeActionMessage;
+
 	bool _twoHanded, _blockBothHands, _fixedWeapon, _fixedWeaponShow, _isConsumable, _isFireExtinguisher;
 	bool _isExplodingInHands, _specialUseEmptyHand, _specialUseEmptyHandShow;
+	int _inventoryMoveCostPercent = 100;
 	std::string _defaultInventorySlotName;
 	const RuleInventory* _defaultInventorySlot;
 	int _defaultInvSlotX, _defaultInvSlotY;
 	std::vector<std::string> _supportedInventorySectionsNames;
 	std::vector<const RuleInventory*> _supportedInventorySections;
 	int _waypoints, _invWidth, _invHeight;
+
 	int _painKiller, _heal, _stimulant;
 	BattleMediKitType _medikitType;
 	bool _medikitTargetSelf, _medikitTargetImmune;
 	int _medikitTargetMatrix;
 	std::string _medikitBackground;
 	int _woundRecovery, _healthRecovery, _stunRecovery, _energyRecovery, _manaRecovery, _moraleRecovery, _painKillerRecovery;
+
 	int _recoveryPoints;
 	int _armor;
 	int _turretType;
@@ -488,6 +495,9 @@ public:
 	int getHandSprite() const;
 	/// Gets the item's reference in SPICONS.DAT for special weapon button.
 	int getSpecialIconSprite() const;
+
+	/// Gets cost of moving item araund inventory.
+	int getInventoryMoveCostPercent() const { return _inventoryMoveCostPercent; }
 	/// Gets if the item is two-handed.
 	bool isTwoHanded() const;
 	/// Gets if the item can only be used by both hands.
@@ -496,7 +506,6 @@ public:
 	bool isFixed() const;
 	/// Do show fixed weapon on unit.
 	bool getFixedShow() const;
-
 	/// Get name of the default inventory slot.
 	const RuleInventory* getDefaultInventorySlot() const { return _defaultInventorySlot; }
 	/// Get inventory slot default X position.

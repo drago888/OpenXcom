@@ -132,7 +132,7 @@ namespace OpenXcom
 			}
 
 		}
-		else if (!armor->getLayersDefaultPrefix().empty())
+		else if (armor->hasLayersDefinition())
 		{
 			// dummy default soldier (M0)f
 			Soldier *s = new Soldier(_game->getMod()->getSoldier(_game->getMod()->getSoldiersList().front(), true), armor, 0);
@@ -140,8 +140,7 @@ namespace OpenXcom
 			s->setLook(LOOK_BLONDE);
 			s->setLookVariant(0);
 
-			auto layers = s->getArmorLayers();
-			for (auto layer : layers)
+			for (const auto& layer : s->getArmorLayers())
 			{
 				auto surf = _game->getMod()->getSurface(layer, true);
 

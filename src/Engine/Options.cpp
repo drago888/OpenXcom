@@ -224,6 +224,7 @@ void create()
 	_info.push_back(OptionInfo("oxceAutoSell", &oxceAutoSell, false, "STR_AUTO_SELL", "STR_OXCE"));
 	_info.push_back(OptionInfo("oxceRememberDisabledCraftWeapons", &oxceRememberDisabledCraftWeapons, false, "STR_REMEMBER_DISABLED_CRAFT_WEAPONS", "STR_OXCE"));
 	_info.push_back(OptionInfo("oxceEnableOffCentreShooting", &oxceEnableOffCentreShooting, false, "STR_OFF_CENTRE_SHOOTING", "STR_OXCE"));
+	_info.push_back(OptionInfo("oxceShowEnergyInPathReview", &oxceShowEnergyInPathReview, false, "STR_SHOW_ENERGY_PATH_REVIEW", "STR_OXCE"));
 
 	// OXCE hidden
 #ifdef __MOBILE__
@@ -231,6 +232,7 @@ void create()
 #else
 	_info.push_back(OptionInfo("oxceFatFingerLinks", &oxceFatFingerLinks, false));
 #endif
+	_info.push_back(OptionInfo("oxceThrottleMouseMoveEvent", &oxceThrottleMouseMoveEvent, 0));
 	_info.push_back(OptionInfo("oxceHighlightNewTopicsHidden", &oxceHighlightNewTopicsHidden, true));
 	_info.push_back(OptionInfo("oxceInterceptGuiMaintenanceTimeHidden", &oxceInterceptGuiMaintenanceTimeHidden, 2));
 	_info.push_back(OptionInfo("oxceEnableUnitResponseSounds", &oxceEnableUnitResponseSounds, true));
@@ -385,6 +387,7 @@ void create()
 	_info.push_back(OptionInfo("keyInvLoadPersonalEquipment", &keyInvLoadPersonalEquipment, SDLK_l, "STR_LOAD_PERSONAL_EQUIPMENT", "STR_OXCE"));
 	_info.push_back(OptionInfo("keyInvShowPersonalEquipment", &keyInvShowPersonalEquipment, SDLK_p, "STR_PERSONAL_EQUIPMENT", "STR_OXCE"));
 
+	_info.push_back(OptionInfo("keyBattleShowLayers", &keyBattleShowLayers, SDLK_UNKNOWN, "STR_MULTI_LEVEL_VIEW", "STR_OXCE"));
 	_info.push_back(OptionInfo("keyBattleUseSpecial", &keyBattleUseSpecial, SDLK_w, "STR_USE_SPECIAL_ITEM", "STR_OXCE"));
 	_info.push_back(OptionInfo("keyBattleActionItem1", &keyBattleActionItem1, SDLK_1, "STR_ACTION_ITEM_1", "STR_OXCE"));
 	_info.push_back(OptionInfo("keyBattleActionItem2", &keyBattleActionItem2, SDLK_2, "STR_ACTION_ITEM_2", "STR_OXCE"));
@@ -837,19 +840,39 @@ void updateMods()
 	FileMap::clear(false, Options::oxceEmbeddedOnly);
 
 	refreshMods();
-	FileMap::setup(getActiveMods(), Options::oxceEmbeddedOnly);
+
+	// check active mods that don't meet the enforced OXCE requirements
+	auto activeModsList = getActiveMods();
+	bool forceQuit = false;
+	for (auto modInf : activeModsList)
+	{
+		if (!modInf->isEngineOk())
+		{
+			forceQuit = true;
+			Log(LOG_ERROR) << "- " << modInf->getId() << " v" << modInf->getVersion();
+			if (modInf->getRequiredExtendedEngine() != OPENXCOM_VERSION_ENGINE)
+			{
+				Log(LOG_ERROR) << "Mod '" << modInf->getName() << "' require OXC " << modInf->getRequiredExtendedEngine() << " engine to run";
+			}
+			else
+			{
+				Log(LOG_ERROR) << "Mod '" << modInf->getName() << "' enforces at least OXC " << OPENXCOM_VERSION_ENGINE << " v" << modInf->getRequiredExtendedVersion();
+			}
+		}
+	}
+	if (forceQuit)
+	{
+		throw Exception("Incompatible mods are active. Please upgrade OpenXcom.");
+	}
+
+	FileMap::setup(activeModsList, Options::oxceEmbeddedOnly);
 	userSplitMasters();
 
-	// report active mods that don't meet the minimum OXCE requirements
 	Log(LOG_INFO) << "Active mods:";
 	auto activeMods = getActiveMods();
 	for (auto modInf : activeMods)
 	{
 		Log(LOG_INFO) << "- " << modInf->getId() << " v" << modInf->getVersion();
-		if (!modInf->isVersionOk())
-		{
-			Log(LOG_ERROR) << "Mod '" << modInf->getName() << "' requires at least OXCE v" << modInf->getRequiredExtendedVersion();
-		}
 	}
 }
 

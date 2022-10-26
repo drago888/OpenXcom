@@ -42,6 +42,7 @@
 #include "../Mod/RuleSkill.h"
 #include "../Mod/RuleSoldier.h"
 #include "../Mod/RuleSoldierBonus.h"
+#include "../Mod/RuleStartingCondition.h"
 #include "Soldier.h"
 #include "Tile.h"
 #include "SavedGame.h"
@@ -61,7 +62,7 @@ namespace OpenXcom
  * @param soldier Pointer to the Soldier.
  * @param depth the depth of the battlefield (used to determine movement type in case of MT_FLOAT).
  */
-BattleUnit::BattleUnit(const Mod *mod, Soldier *soldier, int depth) :
+BattleUnit::BattleUnit(const Mod *mod, Soldier *soldier, int depth, const RuleStartingCondition* sc) :
 	_faction(FACTION_PLAYER), _originalFaction(FACTION_PLAYER), _killedBy(FACTION_PLAYER), _id(0), _tile(0),
 	_lastPos(Position()), _direction(0), _toDirection(0), _directionTurret(0), _toDirectionTurret(0),
 	_verticalDirection(0), _status(STATUS_STANDING), _wantsToSurrender(false), _isSurrendering(false), _walkPhase(0), _fallPhase(0), _kneeled(false), _floating(false),
@@ -70,7 +71,8 @@ BattleUnit::BattleUnit(const Mod *mod, Soldier *soldier, int depth) :
 	_motionPoints(0), _scannedTurn(-1), _kills(0), _hitByFire(false), _hitByAnything(false), _alreadyExploded(false), _fireMaxHit(0), _smokeMaxHit(0), _moraleRestored(0), _charging(0), _turnsSinceSpotted(255), _turnsLeftSpottedForSnipers(0),
 	_statistics(), _murdererId(0), _mindControllerID(0), _fatalShotSide(SIDE_FRONT), _fatalShotBodyPart(BODYPART_HEAD), _armor(0),
 	_geoscapeSoldier(soldier), _unitRules(0), _rankInt(0), _turretType(-1), _hidingForTurn(false), _floorAbove(false), _respawn(false), _alreadyRespawned(false),
-	_isLeeroyJenkins(false), _summonedPlayerUnit(false), _resummonedFakeCivilian(false), _pickUpWeaponsMoreActively(false), _disableIndicators(false), _capturable(true), _vip(false)
+	_isLeeroyJenkins(false), _summonedPlayerUnit(false), _resummonedFakeCivilian(false), _pickUpWeaponsMoreActively(false), _disableIndicators(false),
+	_capturable(true), _vip(false), _bannedInNextStage(false)
 {
 	_name = soldier->getName(true);
 	_id = soldier->getId();
@@ -187,6 +189,7 @@ BattleUnit::BattleUnit(const Mod *mod, Soldier *soldier, int depth) :
 
 	prepareUnitSounds();
 	prepareUnitResponseSounds(mod);
+	prepareBannedFlag(sc);
 }
 
 /**
@@ -195,7 +198,7 @@ BattleUnit::BattleUnit(const Mod *mod, Soldier *soldier, int depth) :
  * @param ruleArmor Pointer to the new Armor ruleset.
  * @param depth The depth of the battlefield.
  */
-void BattleUnit::updateArmorFromSoldier(const Mod *mod, Soldier *soldier, Armor *ruleArmor, int depth, bool inBattlescape)
+void BattleUnit::updateArmorFromSoldier(const Mod *mod, Soldier *soldier, Armor *ruleArmor, int depth, bool inBattlescape, const RuleStartingCondition* sc)
 {
 	_stats = *soldier->getCurrentStats();
 	_armor = ruleArmor;
@@ -270,6 +273,7 @@ void BattleUnit::updateArmorFromSoldier(const Mod *mod, Soldier *soldier, Armor 
 
 	prepareUnitSounds();
 	prepareUnitResponseSounds(mod);
+	prepareBannedFlag(sc);
 }
 
 /**
@@ -404,6 +408,22 @@ void BattleUnit::prepareUnitResponseSounds(const Mod *mod)
 }
 
 /**
+ * Helper function preparing the banned flag.
+ */
+void BattleUnit::prepareBannedFlag(const RuleStartingCondition* sc)
+{
+	_bannedInNextStage = false;
+	if (sc && !sc->getForbiddenArmorsInNextStage().empty())
+	{
+		const auto& bannedList = sc->getForbiddenArmorsInNextStage();
+		if (std::find(bannedList.begin(), bannedList.end(), _armor) != bannedList.end())
+		{
+			_bannedInNextStage = true;
+		}
+	}
+}
+
+/**
  * Initializes a BattleUnit from a Unit (non-player) object.
  * @param unit Pointer to Unit object.
  * @param faction Which faction the units belongs to.
@@ -413,7 +433,7 @@ void BattleUnit::prepareUnitResponseSounds(const Mod *mod)
  * @param diff difficulty level (for stat adjustment).
  * @param depth the depth of the battlefield (used to determine movement type in case of MT_FLOAT).
  */
-BattleUnit::BattleUnit(const Mod *mod, Unit *unit, UnitFaction faction, int id, const RuleEnviroEffects* enviro, Armor *armor, StatAdjustment *adjustment, int depth) :
+BattleUnit::BattleUnit(const Mod *mod, Unit *unit, UnitFaction faction, int id, const RuleEnviroEffects* enviro, Armor *armor, StatAdjustment *adjustment, int depth, const RuleStartingCondition* sc) :
 	_faction(faction), _originalFaction(faction), _killedBy(faction), _id(id),
 	_tile(0), _lastPos(Position()), _direction(0), _toDirection(0), _directionTurret(0),
 	_toDirectionTurret(0), _verticalDirection(0), _status(STATUS_STANDING), _wantsToSurrender(false), _isSurrendering(false), _walkPhase(0),
@@ -424,7 +444,8 @@ BattleUnit::BattleUnit(const Mod *mod, Unit *unit, UnitFaction faction, int id, 
 	_statistics(), _murdererId(0), _mindControllerID(0), _fatalShotSide(SIDE_FRONT),
 	_fatalShotBodyPart(BODYPART_HEAD), _armor(armor), _geoscapeSoldier(0),  _unitRules(unit),
 	_rankInt(0), _turretType(-1), _hidingForTurn(false), _respawn(false), _alreadyRespawned(false),
-	_isLeeroyJenkins(false), _summonedPlayerUnit(false), _resummonedFakeCivilian(false), _pickUpWeaponsMoreActively(false), _disableIndicators(false), _vip(false)
+	_isLeeroyJenkins(false), _summonedPlayerUnit(false), _resummonedFakeCivilian(false), _pickUpWeaponsMoreActively(false), _disableIndicators(false),
+	_vip(false), _bannedInNextStage(false)
 {
 	if (enviro)
 	{
@@ -552,12 +573,13 @@ BattleUnit::BattleUnit(const Mod *mod, Unit *unit, UnitFaction faction, int id, 
 
 	prepareUnitSounds();
 	prepareUnitResponseSounds(mod);
+	prepareBannedFlag(sc);
 }
 
 /**
  * Updates BattleUnit's armor and related attributes (after a change/transformation of armor).
  */
-void BattleUnit::updateArmorFromNonSoldier(const Mod* mod, Armor* newArmor, int depth)
+void BattleUnit::updateArmorFromNonSoldier(const Mod* mod, Armor* newArmor, int depth, const RuleStartingCondition* sc)
 {
 	if (_originalFaction != FACTION_PLAYER)
 	{
@@ -607,6 +629,7 @@ void BattleUnit::updateArmorFromNonSoldier(const Mod* mod, Armor* newArmor, int 
 
 	prepareUnitSounds();
 	prepareUnitResponseSounds(mod);
+	prepareBannedFlag(sc);
 }
 
 
@@ -716,6 +739,7 @@ void BattleUnit::load(const YAML::Node &node, const Mod *mod, const ScriptGlobal
 		_moveCostBaseNormal.load(p["baseNormalPercent"]);
 	}
 	_vip = node["vip"].as<bool>(_vip);
+	_bannedInNextStage = node["bannedInNextStage"].as<bool>(_bannedInNextStage);
 	_meleeAttackedBy = node["meleeAttackedBy"].as<std::vector<int> >(_meleeAttackedBy);
 
 	_scriptValues.load(node, shared);
@@ -734,8 +758,10 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 	node["genUnitArmor"] = _armor->getType();
 	node["faction"] = (int)_faction;
 	node["status"] = (int)_status;
-	node["wantsToSurrender"] = _wantsToSurrender;
-	node["isSurrendering"] = _isSurrendering;
+	if (_wantsToSurrender)
+		node["wantsToSurrender"] = _wantsToSurrender;
+	if (_isSurrendering)
+		node["isSurrendering"] = _isSurrendering;
 	node["position"] = _pos;
 	node["direction"] = _direction;
 	node["directionTurret"] = _directionTurret;
@@ -745,8 +771,10 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 	node["stunlevel"] = _stunlevel;
 	node["energy"] = _energy;
 	node["morale"] = _morale;
-	node["kneeled"] = _kneeled;
-	node["floating"] = _floating;
+	if (_kneeled)
+		node["kneeled"] = _kneeled;
+	if (_floating)
+		node["floating"] = _floating;
 	node["armor"].SetStyle(YAML::EmitterStyle::Flow); for (int i=0; i < SIDE_MAX; i++) node["armor"].push_back(_currentArmor[i]);
 	node["fatalWounds"].SetStyle(YAML::EmitterStyle::Flow); for (int i=0; i < BODYPART_MAX; i++) node["fatalWounds"].push_back(_fatalWounds[i]);
 	node["fire"] = _fire;
@@ -759,8 +787,10 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 	node["expMana"] = _exp.mana;
 	node["expMelee"] = _exp.melee;
 	node["currStats"] = _stats;
-	node["turretType"] = _turretType;
-	node["visible"] = _visible;
+	if (_turretType > -1)
+		node["turretType"] = _turretType;
+	if (_visible)
+		node["visible"] = _visible;
 	node["turnsSinceSpotted"] = _turnsSinceSpotted;
 	node["turnsLeftSpottedForSnipers"] = _turnsLeftSpottedForSnipers;
 	node["turnsSinceStunned"] = _turnsSinceStunned;
@@ -770,7 +800,7 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 	{
 		node["AI"] = getAIModule()->save();
 	}
-	node["killedBy"] = (int)_killedBy;
+	node["killedBy"] = (int)_killedBy; // does not have a default value, must always be saved
 	if (_originalFaction != _faction)
 		node["originalFaction"] = (int)_originalFaction;
 	if (_kills)
@@ -786,16 +816,22 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 	}
 
 	node["motionPoints"] = _motionPoints;
-	node["alreadyRespawned"] = _alreadyRespawned;
+	if (_alreadyRespawned)
+		node["alreadyRespawned"] = _alreadyRespawned;
 	node["activeHand"] = _activeHand;
 	if (!_preferredHandForReactions.empty())
 		node["preferredHandForReactions"] = _preferredHandForReactions;
 	node["tempUnitStatistics"] = _statistics->save();
-	node["murdererId"] = _murdererId;
-	node["fatalShotSide"] = (int)_fatalShotSide;
-	node["fatalShotBodyPart"] = (int)_fatalShotBodyPart;
-	node["murdererWeapon"] = _murdererWeapon;
-	node["murdererWeaponAmmo"] = _murdererWeaponAmmo;
+	if (_murdererId)
+		node["murdererId"] = _murdererId;
+	if (_fatalShotSide)
+		node["fatalShotSide"] = (int)_fatalShotSide;
+	if (_fatalShotBodyPart)
+		node["fatalShotBodyPart"] = (int)_fatalShotBodyPart;
+	if (!_murdererWeapon.empty())
+		node["murdererWeapon"] = _murdererWeapon;
+	if (!_murdererWeaponAmmo.empty())
+		node["murdererWeaponAmmo"] = _murdererWeaponAmmo;
 
 	for (size_t i = 0; i < _recolor.size(); ++i)
 	{
@@ -805,8 +841,10 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 		p.push_back((int)_recolor[i].second);
 		node["recolor"].push_back(p);
 	}
-	node["mindControllerID"] = _mindControllerID;
-	node["summonedPlayerUnit"] = _summonedPlayerUnit;
+	if (_mindControllerID)
+		node["mindControllerID"] = _mindControllerID;
+	if (_summonedPlayerUnit)
+		node["summonedPlayerUnit"] = _summonedPlayerUnit;
 	if (_resummonedFakeCivilian)
 		node["resummonedFakeCivilian"] = _resummonedFakeCivilian;
 	if (_pickUpWeaponsMoreActively)
@@ -839,6 +877,8 @@ YAML::Node BattleUnit::save(const ScriptGlobal *shared) const
 	}
 	if (_vip)
 		node["vip"] = _vip;
+	if (_bannedInNextStage)
+		node["bannedInNextStage"] = _bannedInNextStage;
 	if (!_meleeAttackedBy.empty())
 	{
 		node["meleeAttackedBy"] = _meleeAttackedBy;
@@ -895,7 +935,7 @@ int BattleUnit::distance3dToPositionSq(const Position& pos) const
 	int x = _pos.x - pos.x;
 	int y = _pos.y - pos.y;
 	int z = _pos.z - pos.z;
-	if (_armor->getSize() > 1)
+	if (isBigUnit())
 	{
 		if (_pos.x < pos.x)
 			x++;
@@ -1135,7 +1175,7 @@ void BattleUnit::keepWalking(SavedBattleGame *savedBattleGame, bool fullWalkCycl
 		// diagonal walking takes double the steps
 		middle = 4 + 4 * (_direction % 2);
 		end = 8 + 8 * (_direction % 2);
-		if (_armor->getSize() > 1)
+		if (isBigUnit())
 		{
 			if (_direction < 1 || _direction > 5)
 				middle = end;
@@ -1185,7 +1225,7 @@ void BattleUnit::keepWalking(SavedBattleGame *savedBattleGame, bool fullWalkCycl
 		}
 
 		// motion points calculation for the motion scanner blips
-		if (_armor->getSize() > 1)
+		if (isBigUnit())
 		{
 			_motionPoints += 30;
 		}
@@ -1644,6 +1684,11 @@ int BattleUnit::damage(Position relative, int damage, const RuleDamageType *type
 		ModScript::HitUnit::Output args { damage, bodypart, side, };
 		ModScript::HitUnit::Worker work { this, attack.damage_item, attack.weapon_item, attack.attacker, save, attack.skill_rules, orgDamage, type->ResistType, attack.type };
 
+		if (attack.damage_item)
+		{
+			work.execute(attack.damage_item->getRules()->getScript<ModScript::HitUnitAmmo>(), args);
+		}
+
 		work.execute(this->getArmor()->getScript<ModScript::HitUnit>(), args);
 
 		damage = args.getFirst();
@@ -1737,6 +1782,11 @@ int BattleUnit::damage(Position relative, int damage, const RuleDamageType *type
 
 		ModScript::DamageUnit::Worker work { this, attack.damage_item, attack.weapon_item, attack.attacker, save, attack.skill_rules, damage, orgDamage, bodypart, side, type->ResistType, attack.type, };
 
+		if (attack.damage_item)
+		{
+			work.execute(attack.damage_item->getRules()->getScript<ModScript::DamageUnitAmmo>(), args);
+		}
+
 		work.execute(this->getArmor()->getScript<ModScript::DamageUnit>(), args);
 
 		if (!_armor->getPainImmune() || type->IgnorePainImmunity)
@@ -1748,7 +1798,7 @@ int BattleUnit::damage(Position relative, int damage, const RuleDamageType *type
 
 		setValueMax(_tu, - std::get<toTime>(args.data), 0, _stats.tu);
 
-		setValueMax(_health, - std::get<toHealth>(args.data), overKillMinimum, _stats.health);
+		setValueMax(_health, - std::get<toHealth>(args.data), std::min(overKillMinimum, _health), _stats.health); // `std::min` required because of script that could set `_health = -100`, if we do not have "overkill" `-100` become min value allowed by this line, if "overkill" then this line can go lower than this.
 
 		setValueMax(_mana, - std::get<toMana>(args.data), 0, _stats.mana);
 
@@ -1930,7 +1980,7 @@ void BattleUnit::knockOut(BattlescapeGame *battle)
 	}
 	else
 	{
-		_stunlevel = _health;
+		_stunlevel = std::max(_health, 1);
 	}
 }
 
@@ -2414,7 +2464,7 @@ int BattleUnit::getFiringAccuracy(BattleActionAttack::ReadOnly attack, Mod *mod)
 		result = result * item->getRules()->getKneelBonus(mod) / 100;
 	}
 
-	if (item->getRules()->isTwoHanded())
+	if (item->getRules()->isTwoHanded() && actionType != BA_THROW)
 	{
 		// two handed weapon, means one hand should be empty
 		if (attack.attacker->getRightHandWeapon() != 0 && attack.attacker->getLeftHandWeapon() != 0)
@@ -2607,7 +2657,7 @@ void BattleUnit::prepareMana(int mana)
  */
 void BattleUnit::prepareStun(int stun)
 {
-	if (_armor->getSize() == 1 || !isOut())
+	if (isSmallUnit() || !isOut())
 	{
 		healStun(stun);
 	}
@@ -3846,7 +3896,7 @@ bool BattleUnit::postMissionProcedures(const Mod *mod, SavedGame *geoscape, Save
 	if (s->isWounded())
 	{
 		// remove from craft
-		s->setCraft(nullptr);
+		//s->setCraft(nullptr); // Note to self: we need to do this much later (as late as possible), so that we can correctly remove the items too (without side effects)
 
 		// remove from training, but remember to return to training when healed
 		{
@@ -3895,17 +3945,17 @@ int BattleUnit::getMiniMapSpriteIndex() const
 	switch (getFaction())
 	{
 	case FACTION_HOSTILE:
-		if (_armor->getSize() == 1)
+		if (isSmallUnit())
 			return 3;
 		else
 			return 24;
 	case FACTION_NEUTRAL:
-		if (_armor->getSize() == 1)
+		if (isSmallUnit())
 			return 6;
 		else
 			return 12;
 	default:
-		if (_armor->getSize() == 1)
+		if (isSmallUnit())
 			return 0;
 		else
 			return 12;
@@ -3967,7 +4017,7 @@ void BattleUnit::heal(UnitBodyPart part, int woundAmount, int healthAmount)
 	}
 
 	setValueMax(_fatalWounds[part], -woundAmount, 0, 100);
-	setValueMax(_health, healthAmount, 1, getBaseStats()->health); //Hippocratic Oath: First do no harm
+	setValueMax(_health, healthAmount, std::min(_health, 1), getBaseStats()->health); //Hippocratic Oath: First do no harm
 
 }
 
@@ -4164,6 +4214,35 @@ bool BattleUnit::isWoundable() const
 bool BattleUnit::isFearable() const
 {
 	return !_armor->getFearImmune();
+}
+
+/**
+ * Is this unit capable of shooting beyond max. visual range?
+ * @return True, if unit is capable of shooting beyond max. visual range.
+ */
+bool BattleUnit::isSniper() const
+{
+	if (_unitRules && _unitRules->getSniperPercentage() > 0)
+	{
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Gets true when unit is 1x1 sized unit.
+ */
+bool BattleUnit::isSmallUnit() const
+{
+	return _armor->getSize() == 1;
+}
+
+/**
+ * Gets true when unit is 2x2 sized unit.
+ */
+bool BattleUnit::isBigUnit() const
+{
+	return _armor->getSize() > 1;
 }
 
 /**
@@ -4570,8 +4649,8 @@ bool BattleUnit::checkViewSector (Position pos, bool useTurretDirection /* = fal
 	{
 		for (int y = 0; y < unitSize; ++y)
 		{
-			int deltaX = pos.x + x - _pos.x;
-			int deltaY = _pos.y - pos.y - y;
+			int deltaX = pos.x - (_pos.x + x);
+			int deltaY = (_pos.y + y) - pos.y;
 			switch (useTurretDirection ? _directionTurret : _direction)
 			{
 			case 0:
@@ -4622,12 +4701,12 @@ void BattleUnit::adjustStats(const StatAdjustment &adjustment)
 {
 	_stats += UnitStats::percent(_stats, adjustment.statGrowth, adjustment.growthMultiplier);
 
-	_stats.firing *= adjustment.aimAndArmorMultiplier;
-	_maxArmor[0] *= adjustment.aimAndArmorMultiplier;
-	_maxArmor[1] *= adjustment.aimAndArmorMultiplier;
-	_maxArmor[2] *= adjustment.aimAndArmorMultiplier;
-	_maxArmor[3] *= adjustment.aimAndArmorMultiplier;
-	_maxArmor[4] *= adjustment.aimAndArmorMultiplier;
+	_stats.firing *= adjustment.aimMultiplier;
+	_maxArmor[0] *= adjustment.armorMultiplier;
+	_maxArmor[1] *= adjustment.armorMultiplier;
+	_maxArmor[2] *= adjustment.armorMultiplier;
+	_maxArmor[3] *= adjustment.armorMultiplier;
+	_maxArmor[4] *= adjustment.armorMultiplier;
 }
 
 /**
@@ -4867,7 +4946,7 @@ void BattleUnit::goToTimeOut()
 	// so that they don't count as survivors when all player units in the later stage are killed.
 	if (_originalFaction == FACTION_PLAYER)
 	{
-		_stunlevel = _health;
+		_stunlevel = std::max(_health, 1);
 	}
 }
 
@@ -5150,19 +5229,6 @@ int BattleUnit::getSpotterDuration() const
 		return _unitRules->getSpotterDuration();
 	}
 	return 0;
-}
-
-/**
- * Is this unit capable of shooting beyond max. visual range?
- * @return True, if unit is capable of shooting beyond max. visual range.
- */
-bool BattleUnit::isSniper() const
-{
-	if (_unitRules && _unitRules->getSniperPercentage() > 0)
-	{
-		return true;
-	}
-	return false;
 }
 
 /**
@@ -5679,22 +5745,22 @@ struct burnShadeScript
 	}
 };
 
-template<int BattleUnit::*StatCurr, UnitStats::Ptr StatMax>
+template<int BattleUnit::*StatCurr, UnitStats::Ptr StatMax, int NegativeLimitMult = 0>
 void setBaseStatScript(BattleUnit *bu, int val)
 {
 	if (bu)
 	{
-		(bu->*StatCurr) = Clamp(val, 0, +(bu->getBaseStats()->*StatMax));
+		(bu->*StatCurr) = Clamp(val, - NegativeLimitMult * (bu->getBaseStats()->*StatMax), +(bu->getBaseStats()->*StatMax));
 	}
 }
-template<int BattleUnit::*StatCurr, UnitStats::Ptr StatMax>
+template<int BattleUnit::*StatCurr, UnitStats::Ptr StatMax, int NegativeLimitMult = 0>
 void addBaseStatScript(BattleUnit *bu, int val)
 {
 	if (bu)
 	{
 		//limit range to prevent overflow
 		val = Clamp(val, -UnitStats::BaseStatLimit, UnitStats::BaseStatLimit);
-		setBaseStatScript<StatCurr, StatMax>(bu, val + (bu->*StatCurr));
+		setBaseStatScript<StatCurr, StatMax, NegativeLimitMult>(bu, val + (bu->*StatCurr));
 	}
 }
 
@@ -6063,8 +6129,10 @@ void BattleUnit::ScriptRegister(ScriptParserBase* parser)
 
 	bu.addField<&BattleUnit::_health>("getHealth");
 	bu.add<UnitStats::getMaxStatScript<BattleUnit, &BattleUnit::_stats, &UnitStats::health>>("getHealthMax");
-	bu.add<&setBaseStatScript<&BattleUnit::_health, &UnitStats::health>>("setHealth"); //TODO: allow overkill? now minim is 0.
+	bu.add<&setBaseStatScript<&BattleUnit::_health, &UnitStats::health>>("setHealth");
 	bu.add<&addBaseStatScript<&BattleUnit::_health, &UnitStats::health>>("addHealth");
+	bu.add<&setBaseStatScript<&BattleUnit::_health, &UnitStats::health, UnitStats::OverkillMultipler>>("setHealthWithOverkill", "same as setHealth but allow negative health values like with Overkill");
+	bu.add<&addBaseStatScript<&BattleUnit::_health, &UnitStats::health, UnitStats::OverkillMultipler>>("addHealthWithOverkill", "same as addHealth but allow negative health values like with Overkill");
 
 	bu.addField<&BattleUnit::_mana>("getMana");
 	bu.add<&UnitStats::getMaxStatScript<BattleUnit, &BattleUnit::_stats, &UnitStats::mana>>("getManaMax");

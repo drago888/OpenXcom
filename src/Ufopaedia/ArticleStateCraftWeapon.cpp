@@ -42,6 +42,7 @@ namespace OpenXcom
 		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
 		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+		Uint8 _textTitleColor;
 		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
 
 		CraftWeaponCategory category = CWC_WEAPON;
@@ -71,7 +72,7 @@ namespace OpenXcom
 		}
 		else
 		{
-			genPediaPal();
+			setStatePalette(_game->getMod()->getPalettes().find("PAL_UFOPAEDIA")->second->getColors()); 
 			_cursorColor = Mod::UFOPAEDIA_CURSOR;
 		}
 
@@ -90,6 +91,7 @@ namespace OpenXcom
 			_textColor2 = Palette::blockOffset(15) + 4;
 			_listColor1 = Palette::blockOffset(14) + 15;
 			_listColor2 = Palette::blockOffset(15) + 4;
+			_textTitleColor = Palette::blockOffset(14) + 12;
 		}
 
 		// set buttons palette before adding to state
@@ -118,13 +120,21 @@ namespace OpenXcom
 		_btnPrev->setColor(_buttonColor);
 		_btnNext->setColor(_buttonColor);
 		_btnInfo->setColor(_buttonColor);
-		_btnInfo->setVisible(true);
+		_btnInfo->setVisible(_game->getMod()->getShowPediaInfoButton());
 
 		// add screen elements
 		_txtTitle = new Text(200 * scaleX, 32 * scaleY, 5 * scaleX, 24 * scaleY, bpp);
 		_txtTitle->setScale(scaleX, scaleY);
 		add(_txtTitle);
-		_txtTitle->setColor(_textColor);
+		if (bpp == 8)
+		{
+			_txtTitle->setColor(_textColor);
+		}
+		else
+		{
+			_txtTitle->setColor(_textTitleColor);
+		}
+
 		_txtTitle->setBig();
 		_txtTitle->setWordWrap(true);
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));

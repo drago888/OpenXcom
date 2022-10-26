@@ -29,6 +29,7 @@
 #include "SavedGame.h"
 #include "ItemContainer.h"
 #include "Soldier.h"
+#include "EquipmentLayoutItem.h"
 #include "Transfer.h"
 #include "../Mod/RuleSoldier.h"
 #include "../Mod/RuleSoldierBonus.h"
@@ -94,6 +95,7 @@ Craft::Craft(const RuleCraft *rules, Base *base, int id) : MovingTarget(),
 {
 	_stats = rules->getStats();
 	_items = new ItemContainer();
+	_tempSoldierItems = new ItemContainer();
 	if (id != 0)
 	{
 		_id = id;
@@ -127,6 +129,7 @@ Craft::~Craft()
 		delete *i;
 	}
 	delete _items;
+	delete _tempSoldierItems;
 	for (std::vector<Vehicle*>::iterator i = _vehicles.begin(); i != _vehicles.end(); ++i)
 	{
 		delete *i;
@@ -637,6 +640,15 @@ ItemContainer *Craft::getItems()
 }
 
 /**
+ * Returns the list of items in the craft equipped by the soldiers.
+ * @return Pointer to the item list.
+ */
+ItemContainer* Craft::getSoldierItems()
+{
+	return _tempSoldierItems;
+}
+
+/**
  * Returns the list of vehicles currently equipped
  * in the craft.
  * @return Pointer to vehicle list.
@@ -644,6 +656,38 @@ ItemContainer *Craft::getItems()
 std::vector<Vehicle*> *Craft::getVehicles()
 {
 	return &_vehicles;
+}
+
+/**
+ * Calculates (and stores) the sum of all equipment of all soldiers on the craft.
+ */
+void Craft::calculateTotalSoldierEquipment()
+{
+	_tempSoldierItems->getContents()->clear();
+
+	for (auto* soldier : *_base->getSoldiers())
+	{
+		if (soldier->getCraft() == this)
+		{
+			for (auto* invItem : *soldier->getEquipmentLayout())
+			{
+				// ignore fixed weapons...
+				if (!invItem->isFixed())
+				{
+					_tempSoldierItems->addItem(invItem->getItemType());
+				}
+				// ...but not their ammo
+				for (int slot = 0; slot < RuleItem::AmmoSlotMax; ++slot)
+				{
+					const std::string& invItemAmmo = invItem->getAmmoItemForSlot(slot);
+					if (invItemAmmo != "NONE")
+					{
+						_tempSoldierItems->addItem(invItemAmmo);
+					}
+				}
+			}
+		}
+	}
 }
 
 /**
@@ -869,6 +913,16 @@ void Craft::setShield(int shield)
 int Craft::getShieldPercentage() const
 {
 	return _stats.shieldCapacity != 0 ? _shield * 100 / _stats.shieldCapacity : 0;
+}
+
+/**
+ * Returns whether the craft is ignored by hunter-killers.
+ * (is returning from a mission or is low on fuel).
+ * @return True if it's ignored, false otherwise.
+ */
+bool Craft::isIgnoredByHK() const
+{
+	return getMissionComplete() || getLowFuel();
 }
 
 /**
@@ -1377,6 +1431,22 @@ int Craft::getSpaceUsed() const
 		}
 	}
 	return vehicleSpaceUsed;
+}
+
+/**
+ * Checks if the commander is onboard.
+ * @return True if the commander is onboard.
+ */
+bool Craft::isCommanderOnboard()
+{
+	for (Soldier* s : *_base->getSoldiers())
+	{
+		if (s->getCraft() == this && s->getRank() == RANK_COMMANDER)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 /**

@@ -393,7 +393,7 @@ struct BattleUnitStatistics
 	YAML::Node save() const
 	{
 		YAML::Node node;
-		node["wasUnconcious"] = wasUnconcious;
+		if (wasUnconcious) node["wasUnconcious"] = wasUnconcious;
 		if (!kills.empty())
 		{
 			for (std::vector<BattleUnitKills*>::const_iterator i = kills.begin(); i != kills.end(); ++i)

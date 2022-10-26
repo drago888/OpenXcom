@@ -37,7 +37,7 @@ SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std
 		: _slideshowHeader(slideshowHeader), _slideshowSlides(slideshowSlides), _curScreen(-1)
 {
 	resetScreen = true; // resetDisplay at firstBlit
-	genCutPal(); // generate cutscene palette
+	setStatePalette(_game->getMod()->getPalettes().find("PAL_UFOPAEDIA")->second->getColors()); // generate cutscene palette
 	_wasLetterboxed = CutsceneState::initDisplay();
 	_resX = Options::cutsceneResolutionX, _resY = Options::cutsceneResolutionY;
 	_bpp = Options::cutsceneResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;

@@ -338,7 +338,7 @@ void TextButton::mousePress(Action *action, State *state)
 
 		if (_comboBox)
 		{
-			_comboBox->toggle();
+			_comboBox->toggle(false, false);
 		}
 
 		draw();

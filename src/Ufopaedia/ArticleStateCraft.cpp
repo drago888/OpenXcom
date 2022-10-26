@@ -55,7 +55,7 @@ namespace OpenXcom
 		}
 		else
 		{
-			genPediaPal();
+			setStatePalette(_game->getMod()->getPalettes().find("PAL_UFOPAEDIA")->second->getColors()); 
 			_cursorColor = Mod::UFOPAEDIA_CURSOR;
 		}
 
@@ -81,6 +81,7 @@ namespace OpenXcom
 			Surface surf;
 			get32Surf("32_" +defs-> image_id, defs->image_id, &surf, "PAL_UFOPAEDIA", true)->blitNShade32(_bg, 0, 0);
 		}
+
 		_btnOk->setColor(Palette::blockOffset(15)-1);
 		_btnPrev->setColor(Palette::blockOffset(15)-1);
 		_btnNext->setColor(Palette::blockOffset(15)-1);
@@ -91,7 +92,14 @@ namespace OpenXcom
 		_txtTitle = new Text(210 * scaleX, 32 * scaleY, 5 * scaleX, 24 * scaleY, bpp);
 		_txtTitle->setScale(scaleX, scaleY);
 		add(_txtTitle);
-		_txtTitle->setColor(Palette::blockOffset(14)+15);
+		if (bpp == 8)
+		{
+			_txtTitle->setColor(Palette::blockOffset(14) + 15);
+		}
+		else
+		{
+			_txtTitle->setColor(Palette::blockOffset(14) + 12);
+		}
 		_txtTitle->setBig();
 		_txtTitle->setWordWrap(true);
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));

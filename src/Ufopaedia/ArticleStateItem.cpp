@@ -46,6 +46,7 @@ namespace OpenXcom
 		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
 		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+		Uint8 _textTitleColor;
 		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
 
 		int bottomOffset = 20;
@@ -69,7 +70,7 @@ namespace OpenXcom
 			bottomOffset = 9;
 		}
 
-		if (!_game->getMod()->getExtraNerdyPediaInfo())
+		if (_game->getMod()->getExtraNerdyPediaInfoType() == 0)
 		{
 			// feature turned off
 			bottomOffset = 0;
@@ -145,7 +146,7 @@ namespace OpenXcom
 		}
 		else
 		{
-			genPediaPal();
+			setStatePalette(_game->getMod()->getPalettes().find("PAL_UFOPAEDIA")->second->getColors()); 
 			_cursorColor = Mod::UFOPAEDIA_CURSOR;
 		}
 
@@ -175,6 +176,7 @@ namespace OpenXcom
 			_textColor2 = Palette::blockOffset(15) + 4;
 			_listColor1 = Palette::blockOffset(14) + 15;
 			_listColor2 = Palette::blockOffset(15) + 4;
+			_textTitleColor = Palette::blockOffset(14) + 12;
 			_ammoColor = _game->getMod()->getInterface("articleItem")->getElement("ammoColor")->color;
 		}
 
@@ -188,11 +190,23 @@ namespace OpenXcom
 		_btnInfo->statePalette = _palette;
 		_btnInfo->setTextPalette(buttonTextPalette);
 		ArticleState::initLayout();
-		_btnOk->setColor(_buttonColor);
-		_btnPrev->setColor(_buttonColor);
-		_btnNext->setColor(_buttonColor);
-		_btnInfo->setColor(_buttonColor);
-		_btnInfo->setVisible(_game->getMod()->getShowPediaInfoButton());
+
+		if (bpp == 8)
+		{
+			_btnOk->setColor(_buttonColor);
+			_btnPrev->setColor(_buttonColor);
+			_btnNext->setColor(_buttonColor);
+			_btnInfo->setColor(_buttonColor);
+			_btnInfo->setVisible(_game->getMod()->getShowPediaInfoButton());
+		}
+		else
+		{
+			_btnOk->setColor(Palette::blockOffset(15) - 1);
+			_btnPrev->setColor(Palette::blockOffset(15) - 1);
+			_btnNext->setColor(Palette::blockOffset(15) - 1);
+			_btnInfo->setColor(Palette::blockOffset(15) - 1);
+			_btnInfo->setVisible(_game->getMod()->getShowPediaInfoButton());
+		}
 
 		// add screen elements
 
@@ -210,7 +224,14 @@ namespace OpenXcom
 		_txtTitle = new Text(148 * scaleX, 32 * scaleY, 5 * scaleX, 24 * scaleY, bpp);
 		_txtTitle->setScale(scaleX, scaleY);
 		add(_txtTitle);
-		_txtTitle->setColor(_textColor);
+		if (bpp == 8)
+		{
+			_txtTitle->setColor(_textColor);
+		}
+		else
+		{
+			_txtTitle->setColor(_textTitleColor);
+		}
 		_txtTitle->setBig();
 		_txtTitle->setWordWrap(true);
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
@@ -290,7 +311,7 @@ namespace OpenXcom
 			_lstInfo->setBig();
 		}
 
-		auto addAttack = [&](int& row, const std::string& name, const RuleItemUseCost& cost, const RuleItemUseCost& flat, const RuleItemAction *config)
+		auto addAttack = [&](int& row, const std::string& name, const RuleItemUseCost& cost, const RuleItemUseCost& flat, const RuleItemAction *config, const RuleItem *weapon)
 		{
 			if (row < 3 && cost.Time > 0 && config->ammoSlot == ammoSlot)
 			{
@@ -299,7 +320,8 @@ namespace OpenXcom
 				{
 					tu.erase(tu.end() - 1);
 				}
-				std::string label = config->shortName.empty() ? tr(name).arg(config->shots) : tr(config->shortName).arg(config->shots);
+				int range = std::min(config->range, weapon->getMaxRange());
+				std::string label = config->shortName.empty() ? tr(name).arg(config->shots).arg(range) : tr(config->shortName).arg(config->shots).arg(range);
 				_lstInfo->addRow(3,
 					label.c_str(),
 					Unicode::formatPercentage(config->accuracy).c_str(),
@@ -313,14 +335,14 @@ namespace OpenXcom
 		{
 			int current_row = 0;
 
-			addAttack(current_row, "STR_SHOT_TYPE_AUTO", item->getCostAuto(), item->getFlatAuto(), item->getConfigAuto());
+			addAttack(current_row, "STR_SHOT_TYPE_AUTO", item->getCostAuto(), item->getFlatAuto(), item->getConfigAuto(), item);
 
-			addAttack(current_row, "STR_SHOT_TYPE_SNAP", item->getCostSnap(), item->getFlatSnap(), item->getConfigSnap());
+			addAttack(current_row, "STR_SHOT_TYPE_SNAP", item->getCostSnap(), item->getFlatSnap(), item->getConfigSnap(), item);
 
-			addAttack(current_row, "STR_SHOT_TYPE_AIMED", item->getCostAimed(), item->getFlatAimed(), item->getConfigAimed());
+			addAttack(current_row, "STR_SHOT_TYPE_AIMED", item->getCostAimed(), item->getFlatAimed(), item->getConfigAimed(), item);
 
 			//optional melee
-			addAttack(current_row, "STR_SHOT_TYPE_MELEE", item->getCostMelee(), item->getFlatMelee(), item->getConfigMelee());
+			addAttack(current_row, "STR_SHOT_TYPE_MELEE", item->getCostMelee(), item->getFlatMelee(), item->getConfigMelee(), item);
 
 			// text_info is BELOW the info table (table can have 0-3 rows)
 			int shift = (3 - current_row) * 16;
@@ -336,7 +358,7 @@ namespace OpenXcom
 		{
 			int current_row = 0;
 
-			addAttack(current_row, "STR_SHOT_TYPE_MELEE", item->getCostMelee(), item->getFlatMelee(), item->getConfigMelee());
+			addAttack(current_row, "STR_SHOT_TYPE_MELEE", item->getCostMelee(), item->getFlatMelee(), item->getConfigMelee(), item);
 
 			// text_info is BELOW the info table (with 1 row only)
 			_txtInfo = new Text(300 * scaleX, (88 - bottomOffset) * scaleY, 8 * scaleX, 106 * scaleY, bpp);
@@ -364,24 +386,20 @@ namespace OpenXcom
 		_txtPowerBonus = new Text(300 * scaleX, 17 * scaleY, 8 * scaleX, 183 * scaleY, bpp);
 		_txtPowerBonus->setScale(scaleX, scaleY);
 
-		if (bottomOffset > 0)
-		{
-			if (bottomOffset >= 20)
-			{
-				add(_txtAccuracyModifier);
-			}
-			add(_txtPowerBonus);
-		}
+		add(_txtAccuracyModifier);
+		add(_txtPowerBonus);
 
 		_txtAccuracyModifier->setColor(_textColor);
 		_txtAccuracyModifier->setSecondaryColor(_listColor2);
 		_txtAccuracyModifier->setWordWrap(false);
 		_txtAccuracyModifier->setText(tr("STR_ACCURACY_MODIFIER").arg(accuracyModifier));
+		_txtAccuracyModifier->setVisible(bottomOffset >= 20);
 
 		_txtPowerBonus->setColor(_textColor);
 		_txtPowerBonus->setSecondaryColor(_listColor2);
 		_txtPowerBonus->setWordWrap(true);
 		_txtPowerBonus->setText(tr("STR_POWER_BONUS").arg(powerBonus));
+		_txtPowerBonus->setVisible(bottomOffset > 0);
 
 
 		// AMMO column
@@ -556,7 +574,14 @@ namespace OpenXcom
 							ss << numberAbs << "*";
 						}
 
-						ss << tr(StatsForNerdsState::translationMap.at(item.first));
+						if (_game->getMod()->getExtraNerdyPediaInfoType() > 1)
+						{
+							ss << tr(StatsForNerdsState::shortTranslationMap.at(item.first));
+						}
+						else
+						{
+							ss << tr(StatsForNerdsState::translationMap.at(item.first));
+						}
 						if (power > 1)
 						{
 							ss << "^" << power;

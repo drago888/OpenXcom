@@ -62,7 +62,7 @@ namespace OpenXcom
 		}
 		else
 		{
-			genPediaPal();
+			setStatePalette(_game->getMod()->getPalettes().find("PAL_UFOPAEDIA")->second->getColors()); 
 			_cursorColor = Mod::UFOPAEDIA_CURSOR;
 		}
 
@@ -134,7 +134,7 @@ namespace OpenXcom
 			_btnOk->setColor(Palette::blockOffset(15) - 1);
 			_btnPrev->setColor(Palette::blockOffset(15) - 1);
 			_btnNext->setColor(Palette::blockOffset(15) - 1);
-			_txtTitle->setColor(Palette::blockOffset(14) + 15);
+			_txtTitle->setColor(Palette::blockOffset(14) + 12);
 			_txtInfo->setColor(Palette::blockOffset(14) + 15);
 			_txtInfo->setSecondaryColor(Palette::blockOffset(15) + 4);
 			_lstStats->setColor(Palette::blockOffset(14) + 15);

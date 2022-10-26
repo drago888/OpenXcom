@@ -72,44 +72,6 @@ State::~State()
 }
 
 
-/**
-* Generate the default palette
-* Red will have 7 choice (each increment is 1B) - 0x2B, 0x46, 0x61, 0x7C, 0x97, 0xB2, 0xCD
-* Green and blue will have 6 choices (each increment is 1B) - 0x3B, 0x56, 0x71, 0x8C, 0xA7, 0xC2
-*/
-void State::genDefPal()
-{
-	_palette[0].r = 0, _palette[0].g = 0, _palette[0].b = 0, _palette[0].unused = SDL_ALPHA_OPAQUE;
-	_palette[1].r = 0x10, _palette[1].g = 0x20, _palette[1].b = 0x20, _palette[1].unused = SDL_ALPHA_OPAQUE;
-	Uint8 r, g, b, i = 2;
-
-
-	for (r = 0x2B; r < 0xEF; r+=0x1B)
-	for (g = 0x3B; g < 0xDF; g+=0x1B)
-	for (b = 0x3B; b < 0xDF; b+=0x1B)
-			_palette[i].r = r, _palette[i].g = g, _palette[i].b = b, _palette[i++].unused = SDL_ALPHA_OPAQUE;
-
-
-
-	_palette[254].r = 0xef, _palette[254].g = 0xdf, _palette[254].b = 0xdf, _palette[254].unused = SDL_ALPHA_OPAQUE;
-	_palette[255].r = 0xff, _palette[255].g = 0xff, _palette[255].b = 0xff, _palette[255].unused = SDL_ALPHA_OPAQUE;
-}
-
-/**
-* Generate the cutscene palette
-*/
-void State::genCutPal()
-{
-	setStatePalette(_game->getMod()->getPalettes().find("PAL_UFOPAEDIA")->second->getColors());
-}
-
-/**
-* Generate the ufopedia articles palette
-*/
-void State::genPediaPal()
-{
-	setStatePalette(_game->getMod()->getPalettes().find("PAL_UFOPAEDIA")->second->getColors());
-}
 
 /*
 * Get the 32 bit surface.

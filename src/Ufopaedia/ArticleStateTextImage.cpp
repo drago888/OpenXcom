@@ -26,6 +26,7 @@
 #include "../Mod/Mod.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextButton.h"
+#include "../Mod/RuleInterface.h"
 
 namespace OpenXcom
 {
@@ -36,6 +37,10 @@ namespace OpenXcom
 		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
 		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
+
+		// add screen elements
+		_txtTitle = new Text(defs->text_width * scaleX, 48 * scaleY, 5 * scaleX, 22 * scaleY, bpp);
+		_txtTitle->setScale(scaleX, scaleY);
 
 		// Set palette
 		if (defs->customPalette && bpp == 8)
@@ -48,41 +53,40 @@ namespace OpenXcom
 		}
 		else
 		{
-			genPediaPal();
+			setStatePalette(_game->getMod()->getPalettes().find("PAL_UFOPAEDIA")->second->getColors()); 
 			_cursorColor = Mod::UFOPAEDIA_CURSOR;
 		}
 
-		// set buttons palette before adding to state
-		_btnOk->statePalette = _palette;
-		_btnOk->setTextPalette(buttonTextPalette);
-		_btnPrev->statePalette = _palette;
-		_btnPrev->setTextPalette(buttonTextPalette);
-		_btnNext->statePalette = _palette;
-		_btnNext->setTextPalette(buttonTextPalette);
-		_btnInfo->statePalette = _palette;
-		_btnInfo->setTextPalette(buttonTextPalette);
-		ArticleState::initLayout();
 		if (bpp == 8)
 		{
-			_btnOk->setColor(Palette::blockOffset(5) + 3);
-			_btnPrev->setColor(Palette::blockOffset(5) + 3);
-			_btnNext->setColor(Palette::blockOffset(5) + 3);
+			_buttonColor = _game->getMod()->getInterface("articleTextImage")->getElement("button")->color;
+			_titleColor = _game->getMod()->getInterface("articleTextImage")->getElement("title")->color;
+			_textColor1 = _game->getMod()->getInterface("articleTextImage")->getElement("text")->color;
+			_textColor2 = _game->getMod()->getInterface("articleTextImage")->getElement("text")->color2;
 		}
 		else
 		{
-			_btnOk->setColor(Palette::blockOffset(15) - 1);
-			_btnPrev->setColor(Palette::blockOffset(15) - 1);
-			_btnNext->setColor(Palette::blockOffset(15) - 1);
+			_buttonColor = Palette::blockOffset(15) - 1;
+			_textColor1 = Palette::blockOffset(14) + 15;
+			_textColor2 = Palette::blockOffset(15) + 4;
+			_titleColor = Palette::blockOffset(14) + 12;
+
+			// set buttons palette before adding to state
+			_btnOk->statePalette = _palette;
+			_btnOk->setTextPalette(buttonTextPalette);
+			_btnPrev->statePalette = _palette;
+			_btnPrev->setTextPalette(buttonTextPalette);
+			_btnNext->statePalette = _palette;
+			_btnNext->setTextPalette(buttonTextPalette);
+			_btnInfo->statePalette = _palette;
+			_btnInfo->setTextPalette(buttonTextPalette);
 		}
 
-		// add screen elements
-		_txtTitle = new Text(defs->text_width * scaleX, 48 * scaleY, 5 * scaleX, 22 * scaleY, bpp);
-		_txtTitle->setScale(scaleX, scaleY);
+
+		ArticleState::initLayout();
+
+		// add other elements
 		add(_txtTitle);
-		_txtTitle->setColor(Palette::blockOffset(15) + 4);
-		_txtTitle->setBig();
-		_txtTitle->setWordWrap(true);
-		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
 
 		// Set up objects
 		if (bpp == 8)
@@ -102,9 +106,24 @@ namespace OpenXcom
 			get32Surf("32_" + defs->image_id, defs->image_id, &surf, "PAL_UFOPAEDIA", use_pal)->blitNShade32(_bg, 0, 0);
 		}
 
+		if (bpp == 8)
+		{
+			_btnOk->setColor(_buttonColor);
+			_btnPrev->setColor(_buttonColor);
+			_btnNext->setColor(_buttonColor);
+		}
+		else
+		{
+			_btnOk->setColor(Palette::blockOffset(15) - 1);
+			_btnPrev->setColor(Palette::blockOffset(15) - 1);
+			_btnNext->setColor(Palette::blockOffset(15) - 1);
+		}
 
 
-
+		_txtTitle->setColor(_titleColor);
+		_txtTitle->setBig();
+		_txtTitle->setWordWrap(true);
+		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
 
 		int text_height = _txtTitle->getTextHeight();
 
@@ -120,8 +139,8 @@ namespace OpenXcom
 		_txtInfo->setScale(scaleX, scaleY);
 		add(_txtInfo);
 
-		_txtInfo->setColor(Palette::blockOffset(15)-1);
-		_txtInfo->setSecondaryColor(Palette::blockOffset(15) + 4);
+		_txtInfo->setColor(_textColor1);
+		_txtInfo->setSecondaryColor(_textColor2);
 		_txtInfo->setWordWrap(true);
 		_txtInfo->setScrollable(true);
 		if (defs->align_bottom)

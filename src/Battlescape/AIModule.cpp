@@ -121,6 +121,7 @@ YAML::Node AIModule::save() const
 		toNodeID = _toNode->getID();
 
 	YAML::Node node;
+	node.SetStyle(YAML::EmitterStyle::Flow);
 	node["fromNode"] = fromNodeID;
 	node["toNode"] = toNodeID;
 	node["AIMode"] = _AIMode;
@@ -588,7 +589,7 @@ void AIModule::setupPatrol()
 		}
 
 		// in base defense missions, the smaller aliens walk towards target nodes - or if there, shoot objects around them
-		else if (_unit->getArmor()->getSize() == 1)
+		else if (_unit->getArmor()->getSize() == 1 && _unit->getOriginalFaction() == FACTION_HOSTILE)
 		{
 			// can i shoot an object?
 			if (_fromNode->isTarget() &&
@@ -596,6 +597,7 @@ void AIModule::setupPatrol()
 				_attackAction.weapon->getRules()->getAccuracySnap() &&
 				_attackAction.weapon->getAmmoForAction(BA_SNAPSHOT) &&
 				_attackAction.weapon->getAmmoForAction(BA_SNAPSHOT)->getRules()->getDamageType()->isDirect() &&
+				_save->canUseWeapon(_attackAction.weapon, _unit, false, BA_SNAPSHOT) &&
 				_save->getModuleMap()[_fromNode->getPosition().x / 10][_fromNode->getPosition().y / 10].second > 0)
 			{
 				// scan this room for objects to destroy
@@ -920,7 +922,7 @@ void AIModule::setupEscape()
 	while (tries < 150 && !coverFound)
 	{
 		_escapeAction.target = _unit->getPosition(); // start looking in a direction away from the enemy
-		_escapeAction.run = _unit->getArmor()->allowsRunning(false) && (tries & 1); //half trys
+		_escapeAction.run = _unit->getArmor()->allowsRunning(false) && (tries & 1); // every odd try, i.e. roughly 50%
 
 		if (!_save->getTile(_escapeAction.target))
 		{

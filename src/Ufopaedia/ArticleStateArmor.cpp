@@ -46,6 +46,7 @@ namespace OpenXcom
 		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
 		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
+		Uint8 _textTitleColor;
 		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
 
 		// Set palette
@@ -70,7 +71,7 @@ namespace OpenXcom
 		}
 		else
 		{
-			genPediaPal();
+			setStatePalette(_game->getMod()->getPalettes().find("PAL_UFOPAEDIA")->second->getColors()); 
 			_cursorColor = Mod::UFOPAEDIA_CURSOR;
 		}
 
@@ -89,6 +90,7 @@ namespace OpenXcom
 			_textColor2 = Palette::blockOffset(15) + 4;
 			_listColor1 = Palette::blockOffset(14) + 15;
 			_listColor2 = Palette::blockOffset(15) + 4;
+			_textTitleColor = Palette::blockOffset(14) + 12;
 		}
 
 		// set buttons palette before adding to state
@@ -112,12 +114,17 @@ namespace OpenXcom
 		_txtTitle = new Text(300 * scaleX, 17 * scaleY, 5 * scaleX, 24 * scaleY, bpp);
 		_txtTitle->setScale(scaleX, scaleY);
 		add(_txtTitle);
-		_txtTitle->setColor(_textColor);
+		if (bpp == 8)
+		{
+			_txtTitle->setColor(_textColor);
+		}
+		else
+		{
+			_txtTitle->setColor(_textTitleColor);
+		}
+
 		_txtTitle->setBig();
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
-
-		_image = new Surface(320 * scaleX, 200 * scaleY, 0 * scaleX, 0 * scaleY, bpp);
-		add(_image);
 
 		if (customArmorSprite)
 		{
@@ -146,12 +153,12 @@ namespace OpenXcom
 
 				if (bpp == 8)
 				{
-					surf->blitNShade(_image, 0, 0);
+					surf->blitNShade(_bg, 0, 0);
 				}
 				else
 				{
 					Surface surf2;
-					get32Surf("32_"+layer, layer, &surf2, "PAL_BATTLESCAPE", true)->blitNShade32(_image, 0, 0);
+					get32Surf("32_"+layer, layer, &surf2, "PAL_BATTLESCAPE", true)->blitNShade32(_bg, 0, 0);
 				}
 			}
 		}
@@ -167,16 +174,16 @@ namespace OpenXcom
 			{
 				look = armor->getSpriteInventory();
 			}
+
 			if (bpp == 8)
 			{
-				_game->getMod()->getSurface(look, true)->blitNShade(_image, 0, 0);
+				_game->getMod()->getSurface(look, true)->blitNShade(_bg, 0, 0);
 			}
 			else
 			{
 				Surface surf;
-				get32Surf("32_" + look, look, &surf, "PAL_BATTLESCAPE")->blitNShade32(_image, 0, 0);
+				get32Surf("32_" + look, look, &surf, "PAL_BATTLESCAPE")->blitNShade32(_bg, 0, 0);
 			}
-
 		}
 
 

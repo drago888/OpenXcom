@@ -78,6 +78,7 @@ private:
 	int _fuel, _damage, _shield, _interceptionOrder, _takeoff;
 	std::vector<CraftWeapon*> _weapons;
 	ItemContainer *_items;
+	ItemContainer *_tempSoldierItems;
 	std::vector<Vehicle*> _vehicles;
 	std::string _status;
 	bool _lowFuel, _mission, _inBattlescape, _inDogfight;
@@ -153,8 +154,12 @@ public:
 	std::vector<CraftWeapon*> *getWeapons();
 	/// Gets the craft's items.
 	ItemContainer *getItems();
+	/// Gets the craft's items equipped by the soldiers.
+	ItemContainer* getSoldierItems();
 	/// Gets the craft's vehicles.
 	std::vector<Vehicle*> *getVehicles();
+	/// Calculates (and stores) the sum of all equipment of all soldiers on the craft.
+	void calculateTotalSoldierEquipment();
 
 	/// Gets the total storage size of all items in the craft. Including vehicles+ammo and craft weapons+ammo.
 	double getTotalItemStorageSize(const Mod* mod) const;
@@ -189,6 +194,8 @@ public:
 	void setShield(int shield);
 	/// Gets the percent shield remaining
 	int getShieldPercentage() const;
+	/// Gets whether the craft is ignored by hunter-killers.
+	bool isIgnoredByHK() const;
 	/// Gets whether the craft is running out of fuel.
 	bool getLowFuel() const;
 	/// Sets whether the craft is running out of fuel.
@@ -243,6 +250,8 @@ public:
 	int getSpaceAvailable() const;
 	/// Gets the amount of space used inside a craft.
 	int getSpaceUsed() const;
+	/// Checks if the commander is onboard.
+	bool isCommanderOnboard();
 	/// Checks if there are only permitted soldier types onboard.
 	bool areOnlyPermittedSoldierTypesOnboard(const RuleStartingCondition* sc);
 	/// Checks if there are enough required items onboard.

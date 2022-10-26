@@ -889,6 +889,14 @@ void DebriefingState::btnOkClick(Action *)
 			{
 				_game->pushState(new CannotReequipState(_missingItems, _base));
 			}
+			// remove the wounded soldiers (and their items too if needed); this was moved here from BattleUnit::postMissionProcedures()
+			for (auto* soldier : *_base->getSoldiers())
+			{
+				if (soldier->getCraft() != nullptr && soldier->isWounded())
+				{
+					soldier->setCraftAndMoveEquipment(nullptr, _base, _game->getSavedGame()->getMonthsPassed() == -1);
+				}
+			}
 
 			// refresh! (we may have sold some prisoners in the meantime; directly from Debriefing)
 			for (std::map<int, int>::iterator i = _containmentStateInfo.begin(); i != _containmentStateInfo.end(); ++i)
@@ -2508,11 +2516,15 @@ void DebriefingState::recoverCivilian(BattleUnit *from, Base *base)
 		{
 			Transfer *t = new Transfer(24);
 			Soldier *s = _game->getMod()->genSoldier(_game->getSavedGame(), ruleSoldier->getType());
+			s->load(from->getUnitRules()->getSpawnedSoldierTemplate(), _game->getMod(), _game->getSavedGame(), _game->getMod()->getScriptGlobal(), true); // load from soldier template
 			if (!from->getUnitRules()->getSpawnedPersonName().empty())
 			{
 				s->setName(tr(from->getUnitRules()->getSpawnedPersonName()));
 			}
-			s->load(from->getUnitRules()->getSpawnedSoldierTemplate(), _game->getMod(), _game->getSavedGame(), _game->getMod()->getScriptGlobal(), true); // load from soldier template
+			else
+			{
+				s->genName();
+			}
 			t->setSoldier(s);
 			base->getTransfers()->push_back(t);
 		}

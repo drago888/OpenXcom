@@ -97,7 +97,7 @@ namespace OpenXcom
 		}
 		else
 		{
-			genPediaPal();
+			setStatePalette(_game->getMod()->getPalettes().find("PAL_UFOPAEDIA")->second->getColors()); 
 			_cursorColor = Mod::UFOPAEDIA_CURSOR;
 		}
 
@@ -201,24 +201,26 @@ namespace OpenXcom
 			}
 		}
 
-		_txtInfo = new Text(defs->text_width * scaleX, 150 * scaleY, (320 - defs->text_width) * scaleX, 34 * scaleY, bpp);
+		_txtInfo = new Text(defs->text_width * scaleX, 136 * scaleY, (320 - defs->text_width) * scaleX, 34 * scaleY, bpp);
 		_txtInfo->setScale(scaleX, scaleY);
-		add(_txtInfo);
-		_txtInfo->setColor(_textColor);
-		_txtInfo->setSecondaryColor(_textColor2);
-		_txtInfo->setWordWrap(true);
-		_txtInfo->setScrollable(true); 
-		_txtInfo->setText(tr(defs->getTextForPage(_state->current_page)));
 
 		_txtTitle = new Text(284 * scaleX, 16 * scaleY, 36 * scaleX, 14 * scaleX, bpp);
 		_txtTitle->setScale(scaleX, scaleY);
+
 		add(_txtTitle);
+		add(_txtInfo);
+
 		_txtTitle->setColor(_textColor);
 		_txtTitle->setBig();
 		_txtTitle->setWordWrap(true);
 		_txtTitle->setAlign(ALIGN_CENTER);
 		_txtTitle->setText(tr(defs->getTitleForPage(_state->current_page)));
 
+		_txtInfo->setColor(_textColor);
+		_txtInfo->setSecondaryColor(_textColor2);
+		_txtInfo->setWordWrap(true);
+		_txtInfo->setScrollable(true);
+		_txtInfo->setText(tr(defs->getTextForPage(_state->current_page)));
 
 		// all of the above are common to the TFTD articles.
 

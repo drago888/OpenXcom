@@ -57,9 +57,9 @@ Font::Font(Font& fnt)
  */
 Font::~Font()
 {
-	for (std::vector<FontImage>::iterator i = _images.begin(); i != _images.end(); ++i)
+	for (auto& fontImage : _images)
 	{
-		delete (*i).surface;
+		delete fontImage.surface;
 	}
 }
 

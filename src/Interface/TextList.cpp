@@ -64,20 +64,20 @@ TextList::TextList(int width, int height, int x, int y, int bpp) : InteractiveSu
  */
 TextList::~TextList()
 {
-	for (std::vector< std::vector<Text*> >::iterator u = _texts.begin(); u < _texts.end(); ++u)
+	for (auto& vec : _texts)
 	{
-		for (std::vector<Text*>::iterator v = (*u).begin(); v < (*u).end(); ++v)
+		for (auto* text : vec)
 		{
-			delete *v;
+			delete text;
 		}
 	}
-	for (std::vector<ArrowButton*>::iterator i = _arrowLeft.begin(); i < _arrowLeft.end(); ++i)
+	for (auto* ab : _arrowLeft)
 	{
-		delete *i;
+		delete ab;
 	}
-	for (std::vector<ArrowButton*>::iterator i = _arrowRight.begin(); i < _arrowRight.end(); ++i)
+	for (auto* ab : _arrowRight)
 	{
-		delete *i;
+		delete ab;
 	}
 	delete _selector;
 	delete _up;
@@ -138,13 +138,13 @@ int TextList::getArrowsRightEdge()
 void TextList::unpress(State *state)
 {
 	InteractiveSurface::unpress(state);
-	for (std::vector<ArrowButton*>::iterator i = _arrowLeft.begin(); i < _arrowLeft.end(); ++i)
+	for (auto* ab : _arrowLeft)
 	{
-		(*i)->unpress(state);
+		ab->unpress(state);
 	}
-	for (std::vector<ArrowButton*>::iterator i = _arrowRight.begin(); i < _arrowRight.end(); ++i)
+	for (auto* ab : _arrowRight)
 	{
-		(*i)->unpress(state);
+		ab->unpress(state);
 	}
 }
 
@@ -175,9 +175,9 @@ void TextList::setRowColor(size_t row, Uint8 color)
 	{
 		return;
 	}
-	for (std::vector<Text*>::iterator i = _texts[row].begin(); i < _texts[row].end(); ++i)
+	for (auto* text : _texts[row])
 	{
-		(*i)->setColor(color);
+		text->setColor(color);
 	}
 	_redraw = true;
 }
@@ -571,20 +571,20 @@ void TextList::setColumns(int cols, ...)
 void TextList::setPalette(const SDL_Color *colors, int firstcolor, int ncolors)
 {
 	Surface::setPalette(colors, firstcolor, ncolors);
-	for (std::vector< std::vector<Text*> >::iterator u = _texts.begin(); u < _texts.end(); ++u)
+	for (auto& vec : _texts)
 	{
-		for (std::vector<Text*>::iterator v = u->begin(); v < u->end(); ++v)
+		for (auto* text : vec)
 		{
-			(*v)->setPalette(colors, firstcolor, ncolors);
+			text->setPalette(colors, firstcolor, ncolors);
 		}
 	}
-	for (std::vector<ArrowButton*>::iterator i = _arrowLeft.begin(); i < _arrowLeft.end(); ++i)
+	for (auto* ab : _arrowLeft)
 	{
-		(*i)->setPalette(colors, firstcolor, ncolors);
+		ab->setPalette(colors, firstcolor, ncolors);
 	}
-	for (std::vector<ArrowButton*>::iterator i = _arrowRight.begin(); i < _arrowRight.end(); ++i)
+	for (auto* ab : _arrowRight)
 	{
-		(*i)->setPalette(colors, firstcolor, ncolors);
+		ab->setPalette(colors, firstcolor, ncolors);
 	}
 	if (_selector != 0)
 	{
@@ -641,11 +641,11 @@ void TextList::setColor(Uint8 color)
 	_up->setColor(color);
 	_down->setColor(color);
 	_scrollbar->setColor(color);
-	for (std::vector< std::vector<Text*> >::iterator u = _texts.begin(); u < _texts.end(); ++u)
+	for (auto& vec : _texts)
 	{
-		for (std::vector<Text*>::iterator v = u->begin(); v < u->end(); ++v)
+		for (auto* text : vec)
 		{
-			(*v)->setColor(color);
+			text->setColor(color);
 		}
 	}
 }
@@ -696,11 +696,11 @@ void TextList::setWordWrap(bool wrap)
 void TextList::setHighContrast(bool contrast)
 {
 	_contrast = contrast;
-	for (std::vector< std::vector<Text*> >::iterator u = _texts.begin(); u < _texts.end(); ++u)
+	for (auto& vec : _texts)
 	{
-		for (std::vector<Text*>::iterator v = u->begin(); v < u->end(); ++v)
+		for (auto* text : vec)
 		{
-			(*v)->setHighContrast(contrast);
+			text->setHighContrast(contrast);
 		}
 	}
 	_scrollbar->setHighContrast(contrast);
@@ -904,9 +904,9 @@ void TextList::setArrowColumn(int pos, ArrowOrientation type)
 void TextList::onLeftArrowClick(ActionHandler handler)
 {
 	_leftClick = handler;
-	for (std::vector<ArrowButton*>::iterator i = _arrowLeft.begin(); i < _arrowLeft.end(); ++i)
+	for (auto* ab : _arrowLeft)
 	{
-		(*i)->onMouseClick(handler, 0);
+		ab->onMouseClick(handler, 0);
 	}
 }
 
@@ -917,9 +917,9 @@ void TextList::onLeftArrowClick(ActionHandler handler)
 void TextList::onLeftArrowPress(ActionHandler handler)
 {
 	_leftPress = handler;
-	for (std::vector<ArrowButton*>::iterator i = _arrowLeft.begin(); i < _arrowLeft.end(); ++i)
+	for (auto* ab : _arrowLeft)
 	{
-		(*i)->onMousePress(handler);
+		ab->onMousePress(handler);
 	}
 }
 
@@ -930,9 +930,9 @@ void TextList::onLeftArrowPress(ActionHandler handler)
 void TextList::onLeftArrowRelease(ActionHandler handler)
 {
 	_leftRelease = handler;
-	for (std::vector<ArrowButton*>::iterator i = _arrowLeft.begin(); i < _arrowLeft.end(); ++i)
+	for (auto* ab : _arrowLeft)
 	{
-		(*i)->onMouseRelease(handler);
+		ab->onMouseRelease(handler);
 	}
 }
 
@@ -943,9 +943,9 @@ void TextList::onLeftArrowRelease(ActionHandler handler)
 void TextList::onRightArrowClick(ActionHandler handler)
 {
 	_rightClick = handler;
-	for (std::vector<ArrowButton*>::iterator i = _arrowRight.begin(); i < _arrowRight.end(); ++i)
+	for (auto* ab : _arrowRight)
 	{
-		(*i)->onMouseClick(handler, 0);
+		ab->onMouseClick(handler, 0);
 	}
 }
 
@@ -956,9 +956,9 @@ void TextList::onRightArrowClick(ActionHandler handler)
 void TextList::onRightArrowPress(ActionHandler handler)
 {
 	_rightPress = handler;
-	for (std::vector<ArrowButton*>::iterator i = _arrowRight.begin(); i < _arrowRight.end(); ++i)
+	for (auto* ab : _arrowRight)
 	{
-		(*i)->onMousePress(handler);
+		ab->onMousePress(handler);
 	}
 }
 
@@ -969,9 +969,9 @@ void TextList::onRightArrowPress(ActionHandler handler)
 void TextList::onRightArrowRelease(ActionHandler handler)
 {
 	_rightRelease = handler;
-	for (std::vector<ArrowButton*>::iterator i = _arrowRight.begin(); i < _arrowRight.end(); ++i)
+	for (auto* ab : _arrowRight)
 	{
-		(*i)->onMouseRelease(handler);
+		ab->onMouseRelease(handler);
 	}
 }
 
@@ -980,13 +980,13 @@ void TextList::onRightArrowRelease(ActionHandler handler)
  */
 void TextList::clearList()
 {
-	for (std::vector< std::vector<Text*> >::iterator u = _texts.begin(); u < _texts.end(); ++u)
+	for (auto& vec : _texts)
 	{
-		for (std::vector<Text*>::iterator v = u->begin(); v < u->end(); ++v)
+		for (auto* text : vec)
 		{
-			delete (*v);
+			delete text;
 		}
-		u->clear();
+		vec.clear();
 	}
 	scrollUp(true, false);
 	_texts.clear();
@@ -1131,23 +1131,24 @@ void TextList::blitText(SDL_Surface* surface, int xpos, int ypos)
 		for (size_t i = _rows[_scroll]; i < _texts.size() && i < _rows[_scroll] + _visibleRows; ++i)
 		{
 			int z = 0;
-			for (std::vector<Text*>::iterator j = _texts[i].begin(); j < _texts[i].end(); ++j)
+			//for (std::vector<Text*>::iterator j = _texts[i].begin(); j < _texts[i].end(); ++j)
+			for (auto *text : _texts[i])
 			{
 				if (z++ % 2 == 0 && _surface->format->BitsPerPixel != 8)
 				{
-					(*j)->setColor(textColor);
+					text->setColor(textColor);
 				}
 				else if (_surface->format->BitsPerPixel != 8)
 				{
-					(*j)->setColor(textColor2);
+					text->setColor(textColor2);
 				}
-				(*j)->statePalette = textPalette;
-				int origX = (*j)->getX(), origY = (*j)->getY();
-				(*j)->setY(y+ypos);
-				(*j)->setX((*j)->getX() + xpos);
-				(*j)->blit(surface);
-				(*j)->setX(origX);
-				(*j)->setY(origY);
+				text->statePalette = textPalette;
+				int origX = text->getX(), origY = text->getY();
+				text->setY(y + ypos);
+				text->setX(text->getX() + xpos);
+				text->blit(surface);
+				text->setX(origX);
+				text->setY(origY);
 			}
 			if (!_texts[i].empty())
 			{
@@ -1263,13 +1264,13 @@ void TextList::think()
 	_up->think();
 	_down->think();
 	_scrollbar->think();
-	for (std::vector<ArrowButton*>::iterator i = _arrowLeft.begin(); i < _arrowLeft.end(); ++i)
+	for (auto* ab : _arrowLeft)
 	{
-		(*i)->think();
+		ab->think();
 	}
-	for (std::vector<ArrowButton*>::iterator i = _arrowRight.begin(); i < _arrowRight.end(); ++i)
+	for (auto* ab : _arrowRight)
 	{
-		(*i)->think();
+		ab->think();
 	}
 }
 

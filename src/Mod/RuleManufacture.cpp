@@ -114,8 +114,8 @@ void RuleManufacture::afterLoad(const Mod* mod)
 	}
 	for (auto& i : _requiredItemsNames)
 	{
-		auto itemRule = mod->getItem(i.first, false);
-		auto craftRule = mod->getCraft(i.first, false);
+		auto* itemRule = mod->getItem(i.first, false);
+		auto* craftRule = mod->getCraft(i.first, false);
 		if (itemRule)
 		{
 			_requiredItems[itemRule] = i.second;
@@ -158,9 +158,9 @@ void RuleManufacture::breakDown(const Mod* mod, const RuleManufactureShortcut* r
 	// 1. init temp variables
 	std::map<const RuleItem*, int> tempRequiredItems = _requiredItems;
 	std::map<const RuleResearch*, bool> tempRequires;
-	for (auto& r : _requires)
+	for (auto* r : _requires)
 		tempRequires[r] = true;
-	auto tempRequiresBaseFunc = _requiresBaseFunc;
+	RuleBaseFacilityFunctions tempRequiresBaseFunc = _requiresBaseFunc;
 
 	// 2. break down iteratively
 	bool doneSomething = false;
@@ -183,7 +183,7 @@ void RuleManufacture::breakDown(const Mod* mod, const RuleManufactureShortcut* r
 
 				for (auto& ri : projectRule->getRequiredItems())
 					tempRequiredItems[ri.first] += count * ri.second;
-				for (auto& r : projectRule->getRequirements())
+				for (auto* r : projectRule->getRequirements())
 					tempRequires[r] = true;
 
 				tempRequiresBaseFunc |= projectRule->getRequireBaseFunc();

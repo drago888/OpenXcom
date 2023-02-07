@@ -29,7 +29,7 @@ namespace OpenXcom
 /**
  * Initializes a new pool with blank lists of names.
  */
-SoldierNamePool::SoldierNamePool() : _totalWeight(0), _femaleFrequency(-1)
+SoldierNamePool::SoldierNamePool() : _totalWeight(0), _femaleFrequency(-1), _globalWeight(100)
 {
 }
 
@@ -92,11 +92,20 @@ void SoldierNamePool::load(const std::string &filename)
 	}
 	_lookWeights = doc["lookWeights"].as< std::vector<int> >(_lookWeights);
 	_totalWeight = 0;
-	for (std::vector<int>::iterator i = _lookWeights.begin(); i != _lookWeights.end(); ++i)
+	for (int lw : _lookWeights)
 	{
-		_totalWeight += (*i);
+		_totalWeight += lw;
 	}
 	_femaleFrequency = doc["femaleFrequency"].as<int>(_femaleFrequency);
+
+	_globalWeight = doc["globalWeight"].as<int>(_globalWeight);
+	if (_globalWeight <= 0)
+	{
+		// can't let the modders break this completely
+		_globalWeight = 100;
+	}
+	_country = doc["country"].as<std::string>(_country);
+	_region = doc["region"].as<std::string>(_region);
 }
 
 /**
@@ -190,13 +199,13 @@ size_t SoldierNamePool::genLook(size_t numLooks)
 	}
 
 	int random = RNG::generate(0, _totalWeight);
-	for (std::vector<int>::iterator i = _lookWeights.begin(); i != _lookWeights.end(); ++i)
+	for (int lw : _lookWeights)
 	{
-		if (random <= *i)
+		if (random <= lw)
 		{
 			return look;
 		}
-		random -= *i;
+		random -= lw;
 		++look;
 	}
 

@@ -539,7 +539,7 @@ void SaveConverter::loadDatActs()
 	}
 
 	YAML::Node node;
-	for (std::map < std::string, std::map<std::string, int> >::iterator i = chances.begin(); i != chances.end(); ++i)
+	for (auto i = chances.begin(); i != chances.end(); ++i)
 	{
 		YAML::Node subnode;
 		subnode["region"] = i->first;
@@ -760,7 +760,7 @@ void SaveConverter::loadDatBase()
 		}
 	}
 
-	for (std::vector<Base*>::iterator i = bases.begin(); i != bases.end(); ++i)
+	for (auto i = bases.begin(); i != bases.end(); ++i)
 	{
 		if (*i != 0)
 		{
@@ -1082,7 +1082,7 @@ void SaveConverter::loadDatSoldier()
 			node["look"] = (int)load<Uint8>(sdata + _rules->getOffset("SOLDIER.DAT_LOOK"));
 			node["id"] = _save->getId("STR_SOLDIER");
 
-			Soldier *soldier = new Soldier(_mod->getSoldier(_mod->getSoldiersList().front(), true), 0);
+			Soldier *soldier = new Soldier(_mod->getSoldier(_mod->getSoldiersList().front(), true), nullptr, 0 /*nationality*/);
 			soldier->load(node, _mod, _save, _mod->getScriptGlobal());
 			if (base != 0xFFFF)
 			{
@@ -1155,10 +1155,9 @@ void SaveConverter::loadDatUp()
 			bool discovered = load<Uint8>(rdata + 0x08) == 2;
 			if (discovered)
 			{
-				std::vector<std::string> reqs = article->_requires;
-				for (std::vector<std::string>::const_iterator r = reqs.begin(); r != reqs.end(); ++r)
+				for (const auto& req : article->_requires)
 				{
-					RuleResearch *research = _mod->getResearch(*r);
+					RuleResearch *research = _mod->getResearch(req);
 					if (research && research->getCost() == 0)
 					{
 						_save->addFinishedResearch(research, _mod, 0, false);

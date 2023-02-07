@@ -22,7 +22,6 @@
 #include "../Engine/Screen.h"
 #include "../Engine/Action.h"
 #include "../Mod/Mod.h"
-#include "../Engine/LocalizedText.h"
 #include "../Engine/Surface.h"
 #include "../Interface/Window.h"
 #include "Globe.h"
@@ -365,12 +364,12 @@ void SelectDestinationState::btnCydoniaClick(Action *)
  */
 void SelectDestinationState::resize(int &dX, int &dY)
 {
-	for (std::vector<Surface*>::const_iterator i = _surfaces.begin(); i != _surfaces.end(); ++i)
+	for (auto* surface : _surfaces)
 	{
-		(*i)->setX((*i)->getX() + dX / 2);
-		if (*i != _window && *i != _btnCancel && *i != _txtTitle && *i != _btnCydonia)
+		surface->setX(surface->getX() + dX / 2);
+		if (surface != _window && surface != _btnCancel && surface != _txtTitle && surface != _btnCydonia)
 		{
-			(*i)->setY((*i)->getY() + dY / 2);
+			surface->setY(surface->getY() + dY / 2);
 		}
 	}
 }

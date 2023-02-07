@@ -29,7 +29,6 @@
 #include "../Mod/RuleItem.h"
 #include "../Mod/Armor.h"
 #include "SerializationHelper.h"
-#include "../Battlescape/Particle.h"
 #include "../Battlescape/BattlescapeGame.h"
 #include "../fmath.h"
 #include "SavedBattleGame.h"
@@ -98,7 +97,7 @@ void Tile::load(const YAML::Node &node)
 	{
 		for (int i = 0; i < 3; i++)
 		{
-			auto realTilePart = (i == 2 ? 0 : i - 1); //convert old convention to new one
+			int realTilePart = (i == 2 ? 0 : i - 1); //convert old convention to new one
 			_objectsCache[realTilePart].discovered = (Uint8)node["discovered"][i].as<bool>();
 		}
 	}
@@ -723,10 +722,10 @@ void Tile::updateSprite(TilePart part)
  */
 BattleUnit *Tile::getOverlappingUnit(const SavedBattleGame *saveBattleGame, TileUnitOverlapping range) const
 {
-	auto bu = getUnit();
+	auto* bu = getUnit();
 	if (!bu && _pos.z > 0 && hasNoFloor(saveBattleGame) && _objects[O_OBJECT] == nullptr)
 	{
-		auto tileBelow = saveBattleGame->getBelowTile(this);
+		auto* tileBelow = saveBattleGame->getBelowTile(this);
 		bu = tileBelow->getUnit();
 		if (bu && bu->getHeight() + bu->getFloatHeight() - tileBelow->getTerrainLevel() <= static_cast<int>(range))
 		{
@@ -830,11 +829,11 @@ void Tile::addItem(BattleItem *item, const RuleInventory *ground)
  */
 void Tile::removeItem(BattleItem *item)
 {
-	for (std::vector<BattleItem*>::iterator i = _inventory.begin(); i != _inventory.end(); ++i)
+	for (auto iter = _inventory.begin(); iter != _inventory.end(); ++iter)
 	{
-		if ((*i) == item)
+		if ((*iter) == item)
 		{
-			_inventory.erase(i);
+			_inventory.erase(iter);
 			break;
 		}
 	}
@@ -856,19 +855,19 @@ BattleItem* Tile::getTopItem()
 
 	int biggestWeight = -1;
 	BattleItem* biggestItem = 0;
-	for (std::vector<BattleItem*>::iterator i = _inventory.begin(); i != _inventory.end(); ++i)
+	for (auto* bi : _inventory)
 	{
 		// Note: floorOb drawing optimisation
-		if ((*i)->getUnit())
+		if (bi->getUnit())
 		{
 			// any unit has the highest priority (btw. this is still backwards-compatible with both xcom1/xcom2, where corpses are the heaviest items)
-			return *i;
+			return bi;
 		}
-		int temp = (*i)->getTotalWeight();
+		int temp = bi->getTotalWeight();
 		if (temp > biggestWeight)
 		{
 			biggestWeight = temp;
-			biggestItem = *i;
+			biggestItem = bi;
 		}
 	}
 	return biggestItem;
@@ -918,9 +917,9 @@ void Tile::prepareNewTurn(bool smokeDamage)
 	if (_smoke)
 	{
 		applyEnvi(_unit, _smoke, _fire, smokeDamage);
-		for (std::vector<BattleItem*>::iterator i = _inventory.begin(); i != _inventory.end(); ++i)
+		for (auto* bi : _inventory)
 		{
-			applyEnvi((*i)->getUnit(), _smoke, _fire, smokeDamage);
+			applyEnvi(bi->getUnit(), _smoke, _fire, smokeDamage);
 		}
 	}
 	_overlaps = 0;

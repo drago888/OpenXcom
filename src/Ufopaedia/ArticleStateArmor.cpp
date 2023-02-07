@@ -24,12 +24,11 @@
 #include "../Mod/Mod.h"
 #include "../Mod/Armor.h"
 #include "../Engine/Game.h"
-#include "../Engine/Palette.h"
 #include "../Engine/Surface.h"
 #include "../Engine/LocalizedText.h"
-#include "../Engine/CrossPlatform.h"
 #include "../Engine/FileMap.h"
 #include "../Engine/Unicode.h"
+#include "../Engine/Palette.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextButton.h"
 #include "../Interface/TextList.h"
@@ -47,7 +46,9 @@ namespace OpenXcom
 		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
 		int scaleY = Options::pediaBgResolutionY / Screen::ORIGINAL_HEIGHT;
 		Uint8 _textTitleColor;
-		SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
+		//SDL_Color* buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
+		SDL_Color *buttonTextPalette = _game->getMod()->getPalettes().find("PAL_BATTLEPEDIA")->second->getColors();
+		Palette *pal = _game->getMod()->getPalette("PAL_BATTLEPEDIA");
 
 		// Set palette
 		Surface* customArmorSprite = nullptr;
@@ -141,8 +142,8 @@ namespace OpenXcom
 		}
 		else if (armor->hasLayersDefinition())
 		{
-			// dummy default soldier (M0)f
-			Soldier *s = new Soldier(_game->getMod()->getSoldier(_game->getMod()->getSoldiersList().front(), true), armor, 0);
+			// dummy default soldier (M0)
+			Soldier *s = new Soldier(_game->getMod()->getSoldier(_game->getMod()->getSoldiersList().front(), true), armor, 0 /*nationality*/, 0 /*id*/);
 			s->setGender(GENDER_MALE);
 			s->setLook(LOOK_BLONDE);
 			s->setLookVariant(0);
@@ -161,6 +162,8 @@ namespace OpenXcom
 					get32Surf("32_"+layer, layer, &surf2, "PAL_BATTLESCAPE", true)->blitNShade32(_bg, 0, 0);
 				}
 			}
+			delete s;
+			s = nullptr;
 		}
 		else
 		{

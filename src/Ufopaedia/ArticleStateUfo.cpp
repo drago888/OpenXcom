@@ -17,7 +17,6 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <sstream>
 #include "ArticleStateUfo.h"
 #include "../Mod/ArticleDefinition.h"
 #include "../Mod/Mod.h"
@@ -114,7 +113,7 @@ namespace OpenXcom
 
 		RuleInterface *dogfightInterface = _game->getMod()->getInterface("dogfight");
 
-		auto crop = _game->getMod()->getSurface("INTERWIN.DAT")->getCrop();
+		SurfaceCrop crop = _game->getMod()->getSurface("INTERWIN.DAT")->getCrop();
 		crop.setX(0);
 		crop.setY(0);
 		crop.getCrop()->x = 0;

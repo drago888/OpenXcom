@@ -21,7 +21,6 @@
 #include "../Engine/FileMap.h"
 #include "../Engine/Game.h"
 #include "../Engine/InteractiveSurface.h"
-#include "../Engine/LocalizedText.h"
 #include "../Engine/Screen.h"
 #include "../Engine/Timer.h"
 #include "../Interface/Text.h"
@@ -46,7 +45,7 @@ SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std
 	int scaleY = Options::cutsceneResolutionY/Screen::ORIGINAL_HEIGHT;
 
 	// pre-render and queue up all the frames
-	for (std::vector<SlideshowSlide>::const_iterator it = _slideshowSlides->begin(); it != _slideshowSlides->end(); ++it)
+	for (const auto& def : *_slideshowSlides)
 	{
 		/*InteractiveSurface *slide =
 			new InteractiveSurface(Screen::ORIGINAL_WIDTH, Screen::ORIGINAL_HEIGHT, 0, 0);*/
@@ -55,16 +54,16 @@ SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std
 		add(slide);
 		if (_bpp == 8)
 		{
-			slide->loadImage(it->imagePath);
+			slide->loadImage(def.imagePath);
 		}
-		else if (OpenXcom::in32BitsFolder(it->imagePath))
+		else if (OpenXcom::in32BitsFolder(def.imagePath))
 		{
-			slide->loadImage(it->imagePath.substr(0, it->imagePath.find_last_of(".")) + "32"
-				+ it->imagePath.substr(it->imagePath.find_last_of("."), it->imagePath.npos));
+			slide->loadImage(def.imagePath.substr(0, def.imagePath.find_last_of(".")) + "32"
+				+ def.imagePath.substr(def.imagePath.find_last_of("."), def.imagePath.npos));
 		}
 		else // 32 bits but no 32 bits image
 		{
-			slide->loadImage(it->imagePath);
+			slide->loadImage(def.imagePath);
 			slide->setScale(scaleX, scaleY);
 			slide->doScale();
 			slide->convertTo32Bits(slide, _game->getMod()->getPalettes().find("PAL_BATTLESCAPE")->second->getColors());
@@ -79,13 +78,13 @@ SlideshowState::SlideshowState(const SlideshowHeader &slideshowHeader, const std
 
 		// initialize with default rect; may get overridden by
 		// category/id definition
-		Text *caption = new Text(it->w*scaleX, it->h*scaleY, it->x*scaleX, it->y*scaleY, slide->getSurface()->format->BitsPerPixel);
+		Text *caption = new Text(def.w*scaleX, def.h*scaleY, def.x*scaleX, def.y*scaleY, slide->getSurface()->format->BitsPerPixel);
 		caption->setScale(scaleX, scaleY);
 		add(caption);
-		caption->setColor(it->color);
-		caption->setText(tr(it->caption));
-		caption->setAlign(it->align);
-		caption->setVerticalAlign(it->valign);
+		caption->setColor(def.color);
+		caption->setText(tr(def.caption));
+		caption->setAlign(def.align);
+		caption->setVerticalAlign(def.valign);
 		caption->setWordWrap(true);
 		caption->setVisible(false);
 		_captions.push_back(caption);

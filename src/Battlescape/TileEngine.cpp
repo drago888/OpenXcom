@@ -365,7 +365,7 @@ void addBigWallDir(T& td, int dir, bool p)
 /**
  * Index to component of Pos
  */
-enum Axis : char
+enum Axis : signed char
 {
 	X = 0,
 	Y = 1,
@@ -378,7 +378,7 @@ enum Axis : char
 /**
  * Index to component of Box
  */
-enum BoxAxis : char
+enum BoxAxis : signed char
 {
 	B_X = X,
 	B_Y = Y,

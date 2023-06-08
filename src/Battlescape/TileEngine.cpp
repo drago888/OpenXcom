@@ -488,18 +488,20 @@ constexpr std::array diffToAxis =
 	AxisInvalid,
 };
 
+
 struct ConfigSide
 {
-	constexpr ConfigSide() = default;
-
-	constexpr ConfigSide(BoxVertex start, BoxVertex ii, BoxVertex jj)
+	constexpr static ConfigSide fill(BoxVertex start, BoxVertex ii, BoxVertex jj)
 	{
 		// `kk` is determined as vertex that lie on orthogonal line to surface defined by vertexes `start`, `ii` and `jj`.
 		const auto kk = BoxVertex(start ^ (V_111 - (start ^ jj) - (start ^ ii)));
 
-		i.fill(start, ii);
-		j.fill(start, jj);
-		k.fill(start, kk);
+		return ConfigSide
+		{
+			Direction::fill(start, ii),
+			Direction::fill(start, jj),
+			Direction::fill(start, kk),
+		};
 	}
 
 	struct Direction
@@ -509,15 +511,21 @@ struct ConfigSide
 		BoxAxis first = {};
 		BoxAxis last = {};
 
-		constexpr Direction() = default;
+		constexpr static Sint8 Plus = +1;
+		constexpr static Sint8 Minus = -1;
 
-		constexpr void fill(BoxVertex from, BoxVertex to)
+		constexpr static Direction fill(BoxVertex from, BoxVertex to)
 		{
 			const bool asc = from < to;
-			axis = diffToAxis[from ^ to];
-			dir = asc ? +1 : -1;
-			first = BoxAxis(axis + (asc ? 0 : AxisMax));
-			last = BoxAxis(axis + (asc ? AxisMax : 0));
+			const Axis axis = diffToAxis[from ^ to];
+
+			return Direction
+			{
+				axis,
+				asc ? Plus : Minus,
+				BoxAxis(axis + (asc ? 0 : AxisMax)),
+				BoxAxis(axis + (asc ? AxisMax : 0)),
+			};
 		}
 	};
 
@@ -562,21 +570,19 @@ constexpr std::array propagationSequence = ([]
 	};
 	for (int j = 0; j < SquareLoopSize; ++j, ++total)
 	{
-		s[total] = ConfigSide
-		{
+		s[total] = ConfigSide::fill(
 			curr(floor_loop, j),
 			next(floor_loop, j),
-			prev(floor_loop, j),
-		};
+			prev(floor_loop, j)
+		);
 	}
 	for (int j = 0; j < SquareLoopSize; ++j, ++total)
 	{
-		s[total] = ConfigSide
-		{
+		s[total] = ConfigSide::fill(
 			up(curr(floor_loop, j)),
 			up(next(floor_loop, j)),
-			up(prev(floor_loop, j)),
-		};
+			up(prev(floor_loop, j))
+		);
 	}
 	for (int i = 0; i < SquareLoopSize; ++i)
 	{
@@ -589,12 +595,11 @@ constexpr std::array propagationSequence = ([]
 		};
 		for (int j = 0; j < SquareLoopSize; ++j, ++total)
 		{
-			s[total] = ConfigSide
-			{
+			s[total] = ConfigSide::fill(
 				curr(side, j),
 				next(side, j),
-				prev(side, j),
-			};
+				prev(side, j)
+			);
 		}
 	}
 
@@ -2913,8 +2918,16 @@ bool TileEngine::awardExperience(BattleActionAttack attack, BattleUnit *target, 
 		// GRENADES AND PROXIES
 		if (weapon->getRules()->getBattleType() == BT_GRENADE || weapon->getRules()->getBattleType() == BT_PROXIMITYGRENADE)
 		{
-			expType = ETM_THROWING_100;
-			expFuncA = &BattleUnit::addThrowingExp; // e.g. acid grenade, stun grenade, HE grenade, smoke grenade, proxy grenade, ...
+			if (Mod::EXTENDED_EXPERIENCE_AWARD_SYSTEM)
+			{
+				expType = ETM_THROWING_100;
+				expFuncA = &BattleUnit::addThrowingExp; // e.g. acid grenade, stun grenade, HE grenade, smoke grenade, proxy grenade, ...
+			}
+			else
+			{
+				expType = ETM_FIRING_100;
+				expFuncA = &BattleUnit::addFiringExp; // vanilla compatibility
+			}
 		}
 		// MELEE
 		else if (weapon->getRules()->getBattleType() == BT_MELEE)
@@ -2935,6 +2948,11 @@ bool TileEngine::awardExperience(BattleActionAttack attack, BattleUnit *target, 
 			{
 				expType = ETM_MELEE_100;
 				expFuncA = &BattleUnit::addMeleeExp; // e.g. rifle/shotgun gun butt, ...
+			}
+			else if (!Mod::EXTENDED_EXPERIENCE_AWARD_SYSTEM)
+			{
+				expType = ETM_FIRING_100;
+				expFuncA = &BattleUnit::addFiringExp; // vanilla compatibility
 			}
 			else if (weapon->getArcingShot(attack.type))
 			{
@@ -2972,8 +2990,11 @@ bool TileEngine::awardExperience(BattleActionAttack attack, BattleUnit *target, 
 		// only enemies count, not friends or neutrals
 		if (target->getOriginalFaction() != FACTION_HOSTILE) expMultiply = 0;
 
-		// mind-controlled enemies don't count though!
-		if (target->getFaction() != FACTION_HOSTILE) expMultiply = 0;
+		if (Mod::EXTENDED_EXPERIENCE_AWARD_SYSTEM)
+		{
+			// mind-controlled enemies don't count though!
+			if (target->getFaction() != FACTION_HOSTILE) expMultiply = 0;
+		}
 	}
 
 	expMultiply = ModScript::scriptFunc2<ModScript::AwardExperience>(
@@ -4180,7 +4201,6 @@ int TileEngine::closeUfoDoors()
 int TileEngine::calculateLineTile(Position origin, Position target, std::vector<Position> &trajectory)
 {
 	Position lastPoint = origin;
-	bool bigWall = false;
 	int steps = 0;
 
 	bool hit = calculateLineHelper(origin, target,
@@ -4195,13 +4215,9 @@ int TileEngine::calculateLineTile(Position origin, Position target, std::vector<
 			bool result = getBlockDir(cache, dir, difference.z);
 			if (result && difference.z == 0 && getBigWallDir(cache, dir))
 			{
-				if (steps<2)
+				if (point == target)
 				{
 					result = false;
-				}
-				else
-				{
-					bigWall = true;
 				}
 			}
 
@@ -4216,7 +4232,7 @@ int TileEngine::calculateLineTile(Position origin, Position target, std::vector<
 	);
 	if (hit)
 	{
-		return bigWall ? 0 : 256;
+		return 256;
 	}
 	return 0;
 }
@@ -4432,9 +4448,9 @@ VoxelType TileEngine::voxelCheck(Position voxel, BattleUnit *excludeUnit, bool e
 		return V_EMPTY;
 	}
 
-	if (tile->getMapData(O_FLOOR) && tile->getMapData(O_FLOOR)->isGravLift() && (voxel.z % 24 == 0 || voxel.z % 24 == 1))
+	if (tile->hasGravLiftFloor() && (voxel.z % 24 == 0 || voxel.z % 24 == 1))
 	{
-		if ((tile->getPosition().z == 0) || (tileBelow && tileBelow->getMapData(O_FLOOR) && !tileBelow->getMapData(O_FLOOR)->isGravLift()))
+		if (!(tileBelow && tileBelow->hasGravLiftFloor()))
 		{
 			return V_FLOOR;
 		}

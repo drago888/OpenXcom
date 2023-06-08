@@ -855,7 +855,7 @@ void BattlescapeGame::checkForCasualties(const RuleDamageType *damageType, Battl
 					int winnerMod = _save->getFactionMoraleModifier(victim->getOriginalFaction() == FACTION_HOSTILE);
 					for (auto* bu : *_save->getUnits())
 					{
-						if (!bu->isOut() && bu->isSmallUnit())
+						if (!bu->isOut() && (bu->isSmallUnit() || bu->getGeoscapeSoldier())) // soldier in 2x2 armors should feel dread too
 						{
 							// the losing squad all get a morale loss
 							if (bu->getOriginalFaction() == victim->getOriginalFaction())
@@ -2154,11 +2154,19 @@ void BattlescapeGame::spawnNewUnit(BattleActionAttack attack, Position position)
 		return;
 
 	const RuleItem *item = attack.damage_item->getRules();
-	Unit *type = getMod()->getUnit(item->getSpawnUnit(), true);
+	const Unit *type = item->getSpawnUnit();
+
+	if (!type)
+		return;
+
+	if (!RNG::percent(item->getSpawnUnitChance()))
+	{
+		return;
+	}
 
 	// Check which faction the new unit will be
 	UnitFaction faction;
-	if (item->getSpawnUnitFaction() == -1 && attack.attacker)
+	if (item->getSpawnUnitFaction() == FACTION_NONE && attack.attacker)
 	{
 		faction = attack.attacker->getFaction();
 	}
@@ -2216,26 +2224,7 @@ void BattlescapeGame::spawnNewUnit(BattleActionAttack attack, Position position)
 		}
 
 		// Pick the item sets if the unit has builtInWeaponSets
-		int monthsPassed = _parentState->getGame()->getSavedGame()->getMonthsPassed();
-		size_t alienItemLevels = getMod()->getAlienItemLevels().size();
-		int month;
-		if (monthsPassed != -1)
-		{
-			if ((size_t)monthsPassed > alienItemLevels - 1)
-			{
-				month = alienItemLevels - 1;
-			}
-			else
-			{
-				month = monthsPassed;
-			}
-		}
-		else // For "New Battle" saves
-		{
-			// We don't have access to the BattlescapeGenerator or the alienItemLevel set on generation at this point, so pick a random one
-			month = RNG::generate(0, alienItemLevels - 1);
-		}
-		size_t itemLevel = (size_t)(getMod()->getAlienItemLevels().at(month).at(RNG::generate(0,9)));
+		size_t itemLevel = (size_t)(getMod()->getAlienItemLevels().at(_save->getAlienItemLevel()).at(RNG::generate(0,9)));
 
 		// Initialize the unit and its position
 		newUnit->setTile(_save->getTile(position), _save);
@@ -2247,12 +2236,63 @@ void BattlescapeGame::spawnNewUnit(BattleActionAttack attack, Position position)
 		newUnit->setVisible(visible);
 		getSave()->initUnit(newUnit, itemLevel);
 
-		getTileEngine()->calculateFOV(newUnit->getPosition());  //happens fairly rarely, so do a full recalc for units in range to handle the potential unit visible cache issues.
 		getTileEngine()->applyGravity(newUnit->getTile());
+		getTileEngine()->calculateFOV(newUnit->getPosition());  //happens fairly rarely, so do a full recalc for units in range to handle the potential unit visible cache issues.
 	}
 	else
 	{
 		delete newUnit;
+	}
+}
+
+/**
+ * Spawns a new item mid-battle
+ * @param attack BattleActionAttack that calls to spawn the item
+ * @param position Tile position to try and spawn item on
+ */
+void BattlescapeGame::spawnNewItem(BattleItem *item)
+{
+	spawnNewItem(BattleActionAttack{ BA_NONE, nullptr, item, item, }, item->getTile()->getPosition());
+}
+
+void BattlescapeGame::spawnNewItem(BattleActionAttack attack, Position position)
+{
+	if (!attack.damage_item) // no idea how this happened, but make sure we have an item
+		return;
+
+	const RuleItem *item = attack.damage_item->getRules();
+	const RuleItem *type = item->getSpawnItem();
+
+	if (!type)
+		return;
+
+	if (!RNG::percent(item->getSpawnItemChance()))
+	{
+		return;
+	}
+
+	// Create the item
+	auto* newItem = _save->createTempItem(type);
+
+	auto* tile  = _save->getTile(position);
+
+	if (tile) // Place the item and initialize it in the battlescape
+	{
+		tile->addItem(newItem, getMod()->getInventoryGround());
+		_save->getItems()->push_back(newItem);
+		_save->initItem(newItem, attack.attacker);
+
+		getTileEngine()->applyGravity(newItem->getTile());
+		if (newItem->getGlow())
+		{
+			tile = newItem->getTile(); //item could drop down
+			getTileEngine()->calculateLighting(LL_ITEMS, tile->getPosition());
+			getTileEngine()->calculateFOV(tile->getPosition(), newItem->getVisibilityUpdateRange(), false);
+		}
+	}
+	else
+	{
+		delete newItem;
 	}
 }
 
@@ -2269,7 +2309,7 @@ void BattlescapeGame::spawnFromPrimedItems()
 		{
 			continue;
 		}
-		if (!bi->getRules()->getSpawnUnit().empty() && !bi->getXCOMProperty() && !bi->isSpecialWeapon())
+		if ((bi->getRules()->getSpawnUnit() || bi->getRules()->getSpawnItem()) && !bi->getXCOMProperty() && !bi->isSpecialWeapon())
 		{
 			if (bi->getRules()->getBattleType() == BT_GRENADE && bi->getFuseTimer() == 0 && bi->isFuseEnabled())
 			{
@@ -2281,6 +2321,7 @@ void BattlescapeGame::spawnFromPrimedItems()
 	for (auto* item : itemsSpawningUnits)
 	{
 		spawnNewUnit(item);
+		spawnNewItem(item);
 		_save->removeItem(item);
 	}
 }

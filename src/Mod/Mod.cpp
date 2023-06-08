@@ -152,6 +152,7 @@ bool Mod::EXTENDED_HWP_LOAD_ORDER;
 int Mod::EXTENDED_MELEE_REACTIONS;
 int Mod::EXTENDED_TERRAIN_MELEE;
 int Mod::EXTENDED_UNDERWATER_THROW_FACTOR;
+bool Mod::EXTENDED_EXPERIENCE_AWARD_SYSTEM;
 
 constexpr size_t MaxDifficultyLevels = 5;
 
@@ -284,6 +285,7 @@ void Mod::resetGlobalStatics()
 	EXTENDED_MELEE_REACTIONS = 0;
 	EXTENDED_TERRAIN_MELEE = 0;
 	EXTENDED_UNDERWATER_THROW_FACTOR = 0;
+	EXTENDED_EXPERIENCE_AWARD_SYSTEM = true; // FIXME: change default to false in OXCE v8.0+ ?
 }
 
 /**
@@ -399,7 +401,7 @@ Mod::Mod() :
 	_ufoGlancingHitThreshold(0), _ufoBeamWidthParameter(1000),
 	_escortRange(20), _drawEnemyRadarCircles(1), _escortsJoinFightAgainstHK(true), _hunterKillerFastRetarget(true),
 	_crewEmergencyEvacuationSurvivalChance(100), _pilotsEmergencyEvacuationSurvivalChance(100),
-	_soldiersPerSergeant(5), _soldiersPerCaptain(11), _soldiersPerColonel(23), _soldiersPerCommander(30),
+	_soldiersPerRank({-1, -1, 5, 11, 23, 30}),
 	_pilotAccuracyZeroPoint(55), _pilotAccuracyRange(40), _pilotReactionsZeroPoint(55), _pilotReactionsRange(60),
 	_performanceBonusFactor(0), _enableNewResearchSorting(false), _displayCustomCategories(0), _shareAmmoCategories(false), _showDogfightDistanceInKm(false), _showFullNameInAlienInventory(false),
 	_alienInventoryOffsetX(80), _alienInventoryOffsetBigUnit(32),
@@ -1069,7 +1071,12 @@ void Mod::verifySpriteOffset(const std::string &parent, const int& sprite, const
 		return;
 	}
 
-	checkForSoftError(sprite != Mod::NO_SURFACE && s->getFrame(sprite) == nullptr, parent, "Wrong index " + std::to_string(sprite) + " for surface set " + set, LOG_ERROR);
+	checkForSoftError(
+		sprite != Mod::NO_SURFACE && s->getFrame(sprite) == nullptr,
+		parent,
+		"Wrong index " + std::to_string(sprite) + " for surface set " + set + " (please note that the index in the ruleset is smaller, by several thousands)",
+		LOG_ERROR
+	);
 }
 
 /**
@@ -1096,7 +1103,12 @@ void Mod::verifySpriteOffset(const std::string &parent, const std::vector<int>& 
 
 	for (int sprite : sprites)
 	{
-		checkForSoftError(sprite != Mod::NO_SURFACE && s->getFrame(sprite) == nullptr, parent, "Wrong index " + std::to_string(sprite) + " for surface set " + set, LOG_ERROR);
+		checkForSoftError(
+			sprite != Mod::NO_SURFACE && s->getFrame(sprite) == nullptr,
+			parent,
+			"Wrong index " + std::to_string(sprite) + " for surface set " + set + " (please note that the index in the ruleset is smaller, by several thousands)",
+			LOG_ERROR
+		);
 	}
 }
 
@@ -1113,7 +1125,12 @@ void Mod::verifySoundOffset(const std::string &parent, const int& sound, const s
 
 	auto* s = getSoundSet(set);
 
-	checkForSoftError(sound != Mod::NO_SOUND && s->getSound(sound) == nullptr, parent, "Wrong index " + std::to_string(sound) + " for sound set " + set, LOG_ERROR);
+	checkForSoftError(
+		sound != Mod::NO_SOUND && s->getSound(sound) == nullptr,
+		parent,
+		"Wrong index " + std::to_string(sound) + " for sound set " + set + " (please note that the index in the ruleset is smaller, by several thousands)",
+		LOG_ERROR
+	);
 }
 
 /**
@@ -1131,7 +1148,12 @@ void Mod::verifySoundOffset(const std::string &parent, const std::vector<int>& s
 
 	for (int sound : sounds)
 	{
-		checkForSoftError(sound != Mod::NO_SOUND && s->getSound(sound) == nullptr, parent, "Wrong index " + std::to_string(sound) + " for sound set " + set, LOG_ERROR);
+		checkForSoftError(
+			sound != Mod::NO_SOUND && s->getSound(sound) == nullptr,
+			parent,
+			"Wrong index " + std::to_string(sound) + " for sound set " + set + " (please note that the index in the ruleset is smaller, by several thousands)",
+			LOG_ERROR
+		);
 	}
 }
 
@@ -1497,6 +1519,28 @@ void loadHelper(const std::string &parent, std::vector<std::pair<K, V>>& v, cons
 		{
 			throwOnBadMapHelper(parent, node);
 		}
+	}
+}
+
+
+
+const std::string YamlRuleNodeDelete = "delete";
+const std::string YamlRuleNodeNew = "new";
+const std::string YamlRuleNodeOverride = "override";
+const std::string YamlRuleNodeUpdate = "update";
+
+
+void loadRuleInfoHelper(const YAML::Node &node, const char* nodeName, const char* type)
+{
+	if (node.Tag() == InfoTag)
+	{
+		Logger info;
+		info.get() << "Main node names available for '" << nodeName << ":' at line " << node.Mark().line << " are: ";
+		info.get() << " '" << YamlRuleNodeDelete << ":',";
+		info.get() << " '" << YamlRuleNodeNew << ":',";
+		info.get() << " '" << YamlRuleNodeOverride << ":',";
+		info.get() << " '" << YamlRuleNodeUpdate << ":',";
+		info.get() << " '" << type << ":'";
 	}
 }
 
@@ -2199,6 +2243,26 @@ void Mod::loadAll()
 	Collections::sortVectorMakeUnique(_craftWeaponStorageItemsCache);
 
 
+	for (auto& r : _research)
+	{
+		if (r.second->unlockFinalMission())
+		{
+			if (_finalResearch != nullptr)
+			{
+				checkForSoftError(true, "mod", "Both '" + _finalResearch->getName() + "' and '" + r.second->getName() + "' research are marked as 'unlockFinalMission: true'", LOG_INFO);
+
+				// to make old mods semi-compatible with new code we decide that last updated rule will be consider final research. This could make false-positive as last update could not touch this flag.
+				if (getModLastUpdatingRule(r.second)->offset < getModLastUpdatingRule(_finalResearch)->offset)
+				{
+					continue;
+				}
+			}
+			_finalResearch = r.second;
+		}
+	}
+	checkForSoftError(_finalResearch == nullptr, "mod", "Missing final research with 'unlockFinalMission: true'", LOG_INFO);
+
+
 	// check unique listOrder
 	{
 		std::vector<int> tmp;
@@ -2425,19 +2489,61 @@ void Mod::loadResourceConfigFile(const FileMap::FileRecord &filerec)
 			const YAML::Node& c = (*i)["colors"];
 			if (c.IsSequence())
 			{
-				for (YAML::const_iterator j = c.begin(); j != c.end(); ++j)
+				for (YAML::const_iterator j = c.begin(); j != c.end(); ++j, ++curr)
 				{
 					if (curr == limit)
 					{
 						throw Exception("transparencyLUTs mod limit reach");
 					}
-					SDL_Color color;
-					color.r = (*j)[0].as<int>(0);
-					color.g = (*j)[1].as<int>(0);
-					color.b = (*j)[2].as<int>(0);
-					color.unused = (*j)[3].as<int>(2);
-					// technically it's a breaking change as it always overwrites from offset `start + 0` but no two mods could work correctly before this change.
-					_transparencies[start + curr++] = color;
+
+					auto loadByteValue = [&](const YAML::Node& n)
+					{
+						int v = n.as<int>(-1);
+						checkForSoftError(v < 0 || v > 255, "transparencyLUTs", n, "value outside allowed range");
+						return Clamp(v, 0, 255);
+					};
+
+					if ((*j)[0].IsScalar())
+					{
+						SDL_Color color;
+						color.r = loadByteValue((*j)[0]);
+						color.g = loadByteValue((*j)[1]);
+						color.b = loadByteValue((*j)[2]);
+						color.unused = (*j)[3] ? loadByteValue((*j)[3]): 2;
+
+
+						for (int opacity = 0; opacity < TransparenciesOpacityLevels; ++opacity)
+						{
+							// pseudo interpolation of palette color with tint
+							// for small values `op` its should behave same as original TFTD
+							// but for bigger values it make result closer to tint color
+							const int op = Clamp((opacity+1) * color.unused, 0, 64);
+							const float co = 1.0f - Sqr(op / 64.0f); // 1.0 -> 0.0
+							const float to = op * 1.0f; // 0.0 -> 64.0
+
+							SDL_Color taint;
+							taint.r = Clamp((int)(color.r * to), 0, 255);
+							taint.g = Clamp((int)(color.g * to), 0, 255);
+							taint.b = Clamp((int)(color.b * to), 0, 255);
+							taint.unused = 255 * co;
+							_transparencies[start + curr][opacity] = taint;
+						};
+					}
+					else
+					{
+						for (int opacity = 0; opacity < TransparenciesOpacityLevels; ++opacity)
+						{
+							const YAML::Node& n = (*j)[opacity];
+
+							SDL_Color taint;
+							taint.r = loadByteValue(n[0]);
+							taint.g = loadByteValue(n[1]);
+							taint.b = loadByteValue(n[2]);
+							taint.unused = 255 - loadByteValue(n[3]);
+							_transparencies[start + curr][opacity] = taint;
+						};
+						std::reverse(std::begin(_transparencies[start + curr]), std::end(_transparencies[start + curr]));
+					}
 				}
 			}
 			else
@@ -2505,6 +2611,7 @@ void Mod::loadConstants(const YAML::Node &node)
 	EXTENDED_MELEE_REACTIONS = node["extendedMeleeReactions"].as<int>(EXTENDED_MELEE_REACTIONS);
 	EXTENDED_TERRAIN_MELEE = node["extendedTerrainMelee"].as<int>(EXTENDED_TERRAIN_MELEE);
 	EXTENDED_UNDERWATER_THROW_FACTOR = node["extendedUnderwaterThrowFactor"].as<int>(EXTENDED_UNDERWATER_THROW_FACTOR);
+	EXTENDED_EXPERIENCE_AWARD_SYSTEM = node["extendedExperienceAwardSystem"].as<bool>(EXTENDED_EXPERIENCE_AWARD_SYSTEM);
 }
 
 
@@ -2518,7 +2625,18 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 {
 	auto doc = filerec.getYAML();
 
-	if (const YAML::Node &extended = doc["extended"])
+	auto loadDocInfoHelper = [&](const char* nodeName)
+	{
+		if (doc.Tag() == InfoTag)
+		{
+			Logger info;
+			info.get() << "Available rule '" << nodeName << ":'";
+		}
+
+		return doc[nodeName];
+	};
+
+	if (const YAML::Node &extended = loadDocInfoHelper("extended"))
 	{
 		if (const YAML::Node& t = extended["tagsFile"])
 		{
@@ -2539,23 +2657,42 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		_scriptGlobal->load(extended);
 		_scriptGlobal->getScriptValues().load(extended, parsers.getShared(), "globals");
 	}
-	for (YAML::const_iterator i = doc["countries"].begin(); i != doc["countries"].end(); ++i)
+
+	auto iterateRules = [&](const char* nodeName, const char* type)
+	{
+		const YAML::Node& node = loadDocInfoHelper(nodeName);
+
+		loadRuleInfoHelper(node, nodeName, type);
+
+		return Collections::rangeValueUncheck(node.begin(), node.end());
+	};
+
+	auto iterateRulesSpecific = [&](const char* nodeName)
+	{
+		const YAML::Node& node = loadDocInfoHelper(nodeName);
+
+		return Collections::rangeValueUncheck(node.begin(), node.end());
+	};
+
+
+
+	for (YAML::const_iterator i : iterateRules("countries", "type"))
 	{
 		RuleCountry *rule = loadRule(*i, &_countries, &_countriesIndex);
 		if (rule != 0)
 		{
-			rule->load(*i);
+			rule->load(*i, parsers);
 		}
 	}
-	for (YAML::const_iterator i = doc["extraGlobeLabels"].begin(); i != doc["extraGlobeLabels"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("extraGlobeLabels", "type"))
 	{
 		RuleCountry *rule = loadRule(*i, &_extraGlobeLabels, &_extraGlobeLabelsIndex);
 		if (rule != 0)
 		{
-			rule->load(*i);
+			rule->load(*i, parsers);
 		}
 	}
-	for (YAML::const_iterator i = doc["regions"].begin(); i != doc["regions"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("regions", "type"))
 	{
 		RuleRegion *rule = loadRule(*i, &_regions, &_regionsIndex);
 		if (rule != 0)
@@ -2563,25 +2700,23 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			rule->load(*i);
 		}
 	}
-	for (YAML::const_iterator i = doc["facilities"].begin(); i != doc["facilities"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("facilities", "type"))
 	{
-		RuleBaseFacility *rule = loadRule(*i, &_facilities, &_facilitiesIndex);
+		RuleBaseFacility *rule = loadRule(*i, &_facilities, &_facilitiesIndex, "type", RuleListOrderedFactory<RuleBaseFacility>{ _facilityListOrder, 100 });
 		if (rule != 0)
 		{
-			_facilityListOrder += 100;
-			rule->load(*i, this, _facilityListOrder);
+			rule->load(*i, this);
 		}
 	}
-	for (YAML::const_iterator i = doc["crafts"].begin(); i != doc["crafts"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("crafts", "type"))
 	{
-		RuleCraft *rule = loadRule(*i, &_crafts, &_craftsIndex);
+		RuleCraft *rule = loadRule(*i, &_crafts, &_craftsIndex, "type", RuleListOrderedFactory<RuleCraft>{ _craftListOrder, 100 });
 		if (rule != 0)
 		{
-			_craftListOrder += 100;
-			rule->load(*i, this, _craftListOrder, parsers);
+			rule->load(*i, this, parsers);
 		}
 	}
-	for (YAML::const_iterator i = doc["craftWeapons"].begin(); i != doc["craftWeapons"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("craftWeapons", "type"))
 	{
 		RuleCraftWeapon *rule = loadRule(*i, &_craftWeapons, &_craftWeaponsIndex);
 		if (rule != 0)
@@ -2589,42 +2724,39 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			rule->load(*i, this);
 		}
 	}
-	for (YAML::const_iterator i = doc["itemCategories"].begin(); i != doc["itemCategories"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("itemCategories", "type"))
 	{
-		RuleItemCategory *rule = loadRule(*i, &_itemCategories, &_itemCategoriesIndex);
+		RuleItemCategory *rule = loadRule(*i, &_itemCategories, &_itemCategoriesIndex, "type", RuleListOrderedFactory<RuleItemCategory>{ _itemCategoryListOrder, 100 });
 		if (rule != 0)
 		{
-			_itemCategoryListOrder += 100;
-			rule->load(*i, this, _itemCategoryListOrder);
+			rule->load(*i, this);
 		}
 	}
-	for (YAML::const_iterator i = doc["items"].begin(); i != doc["items"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("items", "type"))
 	{
-		RuleItem *rule = loadRule(*i, &_items, &_itemsIndex);
+		RuleItem *rule = loadRule(*i, &_items, &_itemsIndex, "type", RuleListOrderedFactory<RuleItem>{ _itemListOrder, 100 });
 		if (rule != 0)
 		{
-			_itemListOrder += 100;
-			rule->load(*i, this, _itemListOrder, parsers);
+			rule->load(*i, this, parsers);
 		}
 	}
-	for (YAML::const_iterator i = doc["ufos"].begin(); i != doc["ufos"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("ufos", "type"))
 	{
 		RuleUfo *rule = loadRule(*i, &_ufos, &_ufosIndex);
 		if (rule != 0)
 		{
-			rule->load(*i, parsers, this);
+			rule->load(*i, this, parsers);
 		}
 	}
-	for (YAML::const_iterator i = doc["invs"].begin(); i != doc["invs"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("invs", "id"))
 	{
-		RuleInventory *rule = loadRule(*i, &_invs, &_invsIndex, "id");
+		RuleInventory *rule = loadRule(*i, &_invs, &_invsIndex, "id", RuleListOrderedFactory<RuleInventory>{ _invListOrder, 10 });
 		if (rule != 0)
 		{
-			_invListOrder += 10;
-			rule->load(*i, _invListOrder);
+			rule->load(*i);
 		}
 	}
-	for (YAML::const_iterator i = doc["terrains"].begin(); i != doc["terrains"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("terrains", "name"))
 	{
 		RuleTerrain *rule = loadRule(*i, &_terrains, &_terrainIndex, "name");
 		if (rule != 0)
@@ -2633,15 +2765,15 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		}
 	}
 
-	for (YAML::const_iterator i = doc["armors"].begin(); i != doc["armors"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("armors", "type"))
 	{
 		Armor *rule = loadRule(*i, &_armors, &_armorsIndex);
 		if (rule != 0)
 		{
-			rule->load(*i, parsers, this);
+			rule->load(*i, this, parsers);
 		}
 	}
-	for (YAML::const_iterator i = doc["skills"].begin(); i != doc["skills"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("skills", "type"))
 	{
 		RuleSkill *rule = loadRule(*i, &_skills, &_skillsIndex);
 		if (rule != 0)
@@ -2649,16 +2781,15 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			rule->load(*i, this, parsers);
 		}
 	}
-	for (YAML::const_iterator i = doc["soldiers"].begin(); i != doc["soldiers"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("soldiers", "type"))
 	{
-		RuleSoldier *rule = loadRule(*i, &_soldiers, &_soldiersIndex);
+		RuleSoldier *rule = loadRule(*i, &_soldiers, &_soldiersIndex, "type", RuleListOrderedFactory<RuleSoldier>{ _soldierListOrder, 1 });
 		if (rule != 0)
 		{
-			_soldierListOrder += 1;
-			rule->load(*i, this, _soldierListOrder, parsers);
+			rule->load(*i, this, parsers);
 		}
 	}
-	for (YAML::const_iterator i = doc["units"].begin(); i != doc["units"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("units", "type"))
 	{
 		Unit *rule = loadRule(*i, &_units);
 		if (rule != 0)
@@ -2666,7 +2797,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			rule->load(*i, this);
 		}
 	}
-	for (YAML::const_iterator i = doc["alienRaces"].begin(); i != doc["alienRaces"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("alienRaces", "id"))
 	{
 		AlienRace *rule = loadRule(*i, &_alienRaces, &_aliensIndex, "id");
 		if (rule != 0)
@@ -2674,7 +2805,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			rule->load(*i);
 		}
 	}
-	for (YAML::const_iterator i = doc["enviroEffects"].begin(); i != doc["enviroEffects"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("enviroEffects", "type"))
 	{
 		RuleEnviroEffects* rule = loadRule(*i, &_enviroEffects, &_enviroEffectsIndex);
 		if (rule != 0)
@@ -2682,7 +2813,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			rule->load(*i, this);
 		}
 	}
-	for (YAML::const_iterator i = doc["startingConditions"].begin(); i != doc["startingConditions"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("startingConditions", "type"))
 	{
 		RuleStartingCondition *rule = loadRule(*i, &_startingConditions, &_startingConditionsIndex);
 		if (rule != 0)
@@ -2690,7 +2821,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			rule->load(*i, this);
 		}
 	}
-	for (YAML::const_iterator i = doc["alienDeployments"].begin(); i != doc["alienDeployments"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("alienDeployments", "type"))
 	{
 		AlienDeployment *rule = loadRule(*i, &_alienDeployments, &_deploymentsIndex);
 		if (rule != 0)
@@ -2698,29 +2829,23 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			rule->load(*i, this);
 		}
 	}
-	for (YAML::const_iterator i = doc["research"].begin(); i != doc["research"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("research", "name"))
 	{
-		RuleResearch *rule = loadRule(*i, &_research, &_researchIndex, "name");
+		RuleResearch *rule = loadRule(*i, &_research, &_researchIndex, "name", RuleListOrderedFactory<RuleResearch>{ _researchListOrder, 100 });
 		if (rule != 0)
 		{
-			_researchListOrder += 100;
-			rule->load(*i, this, parsers, _researchListOrder);
-			if ((*i)["unlockFinalMission"].as<bool>(false))
-			{
-				_finalResearch = (*i)["name"].as<std::string>(_finalResearch);
-			}
+			rule->load(*i, this, parsers);
 		}
 	}
-	for (YAML::const_iterator i = doc["manufacture"].begin(); i != doc["manufacture"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("manufacture", "name"))
 	{
-		RuleManufacture *rule = loadRule(*i, &_manufacture, &_manufactureIndex, "name");
+		RuleManufacture *rule = loadRule(*i, &_manufacture, &_manufactureIndex, "name", RuleListOrderedFactory<RuleManufacture>{ _manufactureListOrder, 100 });
 		if (rule != 0)
 		{
-			_manufactureListOrder += 100;
-			rule->load(*i, this, _manufactureListOrder);
+			rule->load(*i, this);
 		}
 	}
-	for (YAML::const_iterator i = doc["manufactureShortcut"].begin(); i != doc["manufactureShortcut"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("manufactureShortcut", "name"))
 	{
 		RuleManufactureShortcut *rule = loadRule(*i, &_manufactureShortcut, 0, "name");
 		if (rule != 0)
@@ -2728,25 +2853,106 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			rule->load(*i);
 		}
 	}
-	for (YAML::const_iterator i = doc["soldierBonuses"].begin(); i != doc["soldierBonuses"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("soldierBonuses", "name"))
 	{
-		RuleSoldierBonus *rule = loadRule(*i, &_soldierBonus, &_soldierBonusIndex, "name");
+		RuleSoldierBonus *rule = loadRule(*i, &_soldierBonus, &_soldierBonusIndex, "name", RuleListOrderedFactory<RuleSoldierBonus>{ _soldierBonusListOrder, 100 });
 		if (rule != 0)
 		{
-			_soldierBonusListOrder += 100;
-			rule->load(*i, parsers, _soldierBonusListOrder);
+			rule->load(*i, this, parsers);
 		}
 	}
-	for (YAML::const_iterator i = doc["soldierTransformation"].begin(); i != doc["soldierTransformation"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("soldierTransformation", "name"))
 	{
-		RuleSoldierTransformation *rule = loadRule(*i, &_soldierTransformation, &_soldierTransformationIndex, "name");
+		RuleSoldierTransformation *rule = loadRule(*i, &_soldierTransformation, &_soldierTransformationIndex, "name", RuleListOrderedFactory<RuleSoldierTransformation>{ _transformationListOrder, 100 });
 		if (rule != 0)
 		{
-			_transformationListOrder += 100;
-			rule->load(*i, this, _transformationListOrder);
+			rule->load(*i, this);
 		}
 	}
-	for (YAML::const_iterator i = doc["ufopaedia"].begin(); i != doc["ufopaedia"].end(); ++i)
+	for (YAML::const_iterator i : iterateRules("commendations", "type"))
+	{
+		RuleCommendations *rule = loadRule(*i, &_commendations);
+		if (rule != 0)
+		{
+			rule->load(*i, this);
+		}
+	}
+
+
+
+	for (YAML::const_iterator i : iterateRules("ufoTrajectories", "id"))
+	{
+		UfoTrajectory *rule = loadRule(*i, &_ufoTrajectories, 0, "id");
+		if (rule != 0)
+		{
+			rule->load(*i);
+		}
+	}
+	for (YAML::const_iterator i : iterateRules("alienMissions", "type"))
+	{
+		RuleAlienMission *rule = loadRule(*i, &_alienMissions, &_alienMissionsIndex);
+		if (rule != 0)
+		{
+			rule->load(*i);
+		}
+	}
+	for (YAML::const_iterator i : iterateRules("arcScripts", "type"))
+	{
+		RuleArcScript* rule = loadRule(*i, &_arcScripts, &_arcScriptIndex, "type");
+		if (rule != 0)
+		{
+			rule->load(*i);
+		}
+	}
+	for (YAML::const_iterator i : iterateRules("eventScripts", "type"))
+	{
+		RuleEventScript* rule = loadRule(*i, &_eventScripts, &_eventScriptIndex, "type");
+		if (rule != 0)
+		{
+			rule->load(*i);
+		}
+	}
+	for (YAML::const_iterator i : iterateRules("events", "name"))
+	{
+		RuleEvent* rule = loadRule(*i, &_events, &_eventIndex, "name");
+		if (rule != 0)
+		{
+			rule->load(*i);
+		}
+	}
+	for (YAML::const_iterator i : iterateRules("missionScripts", "type"))
+	{
+		RuleMissionScript *rule = loadRule(*i, &_missionScripts, &_missionScriptIndex, "type");
+		if (rule != 0)
+		{
+			rule->load(*i);
+		}
+	}
+
+
+
+	for (YAML::const_iterator i : iterateRulesSpecific("mapScripts"))
+	{
+		std::string type = (*i)["type"].as<std::string>();
+		if ((*i)["delete"])
+		{
+			type = (*i)["delete"].as<std::string>(type);
+		}
+		if (_mapScripts.find(type) != _mapScripts.end())
+		{
+			Collections::deleteAll(_mapScripts[type]);
+		}
+		for (YAML::const_iterator j = (*i)["commands"].begin(); j != (*i)["commands"].end(); ++j)
+		{
+			MapScript *mapScript = new MapScript();
+			mapScript->load(*j);
+			_mapScripts[type].push_back(mapScript);
+		}
+	}
+
+
+
+	for (YAML::const_iterator i : iterateRulesSpecific("ufopaedia"))
 	{
 		if ((*i)["id"])
 		{
@@ -2807,10 +3013,13 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			}
 		}
 	}
-	auto loadStartingBase = [](YAML::Node &docRef, const std::string &startingBaseType, YAML::Node &destRef)
+
+
+
+	auto loadStartingBase = [&](const char* startingBaseType, YAML::Node &destRef)
 	{
 		// Bases can't be copied, so for savegame purposes we store the node instead
-		YAML::Node base = docRef[startingBaseType];
+		YAML::Node base = loadDocInfoHelper(startingBaseType);
 		if (base)
 		{
 			if (isMapHelper(base))
@@ -2826,12 +3035,12 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			}
 		}
 	};
-	loadStartingBase(doc, "startingBase", _startingBaseDefault);
-	loadStartingBase(doc, "startingBaseBeginner", _startingBaseBeginner);
-	loadStartingBase(doc, "startingBaseExperienced", _startingBaseExperienced);
-	loadStartingBase(doc, "startingBaseVeteran", _startingBaseVeteran);
-	loadStartingBase(doc, "startingBaseGenius", _startingBaseGenius);
-	loadStartingBase(doc, "startingBaseSuperhuman", _startingBaseSuperhuman);
+	loadStartingBase("startingBase", _startingBaseDefault);
+	loadStartingBase("startingBaseBeginner", _startingBaseBeginner);
+	loadStartingBase("startingBaseExperienced", _startingBaseExperienced);
+	loadStartingBase("startingBaseVeteran", _startingBaseVeteran);
+	loadStartingBase("startingBaseGenius", _startingBaseGenius);
+	loadStartingBase("startingBaseSuperhuman", _startingBaseSuperhuman);
 
 	if (doc["startingTime"])
 	{
@@ -2861,7 +3070,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 
 	_aiUseDelayGrenade = doc["turnAIUseGrenade"].as<int>(_aiUseDelayGrenade);
 	_aiUseDelayBlaster = doc["turnAIUseBlaster"].as<int>(_aiUseDelayBlaster);
-	if (const YAML::Node &nodeAI = doc["ai"])
+	if (const YAML::Node &nodeAI = loadDocInfoHelper("ai"))
 	{
 		_aiUseDelayBlaster = nodeAI["useDelayBlaster"].as<int>(_aiUseDelayBlaster);
 		_aiUseDelayFirearm = nodeAI["useDelayFirearm"].as<int>(_aiUseDelayFirearm);
@@ -2902,7 +3111,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 	_bughuntTimeUnitsLeft = doc["bughuntTimeUnitsLeft"].as<int>(_bughuntTimeUnitsLeft);
 
 
-	if (const YAML::Node &nodeMana = doc["mana"])
+	if (const YAML::Node &nodeMana = loadDocInfoHelper("mana"))
 	{
 		_manaEnabled = nodeMana["enabled"].as<bool>(_manaEnabled);
 		_manaBattleUI = nodeMana["battleUI"].as<bool>(_manaBattleUI);
@@ -2913,14 +3122,14 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		_manaMissingWoundThreshold = nodeMana["woundThreshold"].as<int>(_manaMissingWoundThreshold);
 		_manaReplenishAfterMission = nodeMana["replenishAfterMission"].as<bool>(_manaReplenishAfterMission);
 	}
-	if (const YAML::Node &nodeHealth = doc["health"])
+	if (const YAML::Node &nodeHealth = loadDocInfoHelper("health"))
 	{
 		_healthMissingWoundThreshold = nodeHealth["woundThreshold"].as<int>(_healthMissingWoundThreshold);
 		_healthReplenishAfterMission = nodeHealth["replenishAfterMission"].as<bool>(_healthReplenishAfterMission);
 	}
 
 
-	if (const YAML::Node &nodeGameOver = doc["gameOver"])
+	if (const YAML::Node &nodeGameOver = loadDocInfoHelper("gameOver"))
 	{
 		_loseMoney = nodeGameOver["loseMoney"].as<std::string>(_loseMoney);
 		_loseRating = nodeGameOver["loseRating"].as<std::string>(_loseRating);
@@ -2943,10 +3152,10 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 	_hunterKillerFastRetarget = doc["hunterKillerFastRetarget"].as<bool>(_hunterKillerFastRetarget);
 	_crewEmergencyEvacuationSurvivalChance = doc["crewEmergencyEvacuationSurvivalChance"].as<int>(_crewEmergencyEvacuationSurvivalChance);
 	_pilotsEmergencyEvacuationSurvivalChance = doc["pilotsEmergencyEvacuationSurvivalChance"].as<int>(_pilotsEmergencyEvacuationSurvivalChance);
-	_soldiersPerSergeant = doc["soldiersPerSergeant"].as<int>(_soldiersPerSergeant);
-	_soldiersPerCaptain = doc["soldiersPerCaptain"].as<int>(_soldiersPerCaptain);
-	_soldiersPerColonel = doc["soldiersPerColonel"].as<int>(_soldiersPerColonel);
-	_soldiersPerCommander = doc["soldiersPerCommander"].as<int>(_soldiersPerCommander);
+	_soldiersPerRank[RANK_SERGEANT] = doc["soldiersPerSergeant"].as<int>(_soldiersPerRank[RANK_SERGEANT]);
+	_soldiersPerRank[RANK_CAPTAIN] = doc["soldiersPerCaptain"].as<int>(_soldiersPerRank[RANK_CAPTAIN]);
+	_soldiersPerRank[RANK_COLONEL] = doc["soldiersPerColonel"].as<int>(_soldiersPerRank[RANK_COLONEL]);
+	_soldiersPerRank[RANK_COMMANDER] = doc["soldiersPerCommander"].as<int>(_soldiersPerRank[RANK_COMMANDER]);
 	_pilotAccuracyZeroPoint = doc["pilotAccuracyZeroPoint"].as<int>(_pilotAccuracyZeroPoint);
 	_pilotAccuracyRange = doc["pilotAccuracyRange"].as<int>(_pilotAccuracyRange);
 	_pilotReactionsZeroPoint = doc["pilotReactionsZeroPoint"].as<int>(_pilotReactionsZeroPoint);
@@ -2990,7 +3199,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 	loadUnorderedNames("mod", _operationNamesLast, doc["operationNamesLast"]);
 	_disableUnderwaterSounds = doc["disableUnderwaterSounds"].as<bool>(_disableUnderwaterSounds);
 	_enableUnitResponseSounds = doc["enableUnitResponseSounds"].as<bool>(_enableUnitResponseSounds);
-	for (YAML::const_iterator i = doc["unitResponseSounds"].begin(); i != doc["unitResponseSounds"].end(); ++i)
+	for (YAML::const_iterator i : iterateRulesSpecific("unitResponseSounds"))
 	{
 		std::string type = (*i)["name"].as<std::string>();
 		if ((*i)["selectUnitSound"])
@@ -3004,13 +3213,18 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 	}
 	loadSoundOffset("global", _selectBaseSound, doc["selectBaseSound"], "BATTLE.CAT");
 	loadSoundOffset("global", _startDogfightSound, doc["startDogfightSound"], "BATTLE.CAT");
-	_flagByKills = doc["flagByKills"].as<std::vector<int> >(_flagByKills);
+	if (doc["flagByKills"])
+	{
+		_flagByKills = doc["flagByKills"].as<std::vector<int> >(_flagByKills);
+	}
+
+
 
 	_defeatScore = doc["defeatScore"].as<int>(_defeatScore);
 	_defeatFunds = doc["defeatFunds"].as<int>(_defeatFunds);
 	_difficultyDemigod = doc["difficultyDemigod"].as<bool>(_difficultyDemigod);
 
-	if (const YAML::Node& difficultyCoefficientOverrides = doc["difficultyCoefficientOverrides"])
+	if (const YAML::Node& difficultyCoefficientOverrides = loadDocInfoHelper("difficultyCoefficientOverrides"))
 	{
 		_monthlyRatingThresholds = difficultyCoefficientOverrides["monthlyRatingThresholds"].as< std::vector<int> >(_monthlyRatingThresholds);
 		_ufoFiringRateCoefficients = difficultyCoefficientOverrides["ufoFiringRateCoefficients"].as< std::vector<int> >(_ufoFiringRateCoefficients);
@@ -3057,24 +3271,14 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			++num;
 		}
 	}
-	for (YAML::const_iterator i = doc["ufoTrajectories"].begin(); i != doc["ufoTrajectories"].end(); ++i)
+	if (doc["alienItemLevels"])
 	{
-		UfoTrajectory *rule = loadRule(*i, &_ufoTrajectories, 0, "id");
-		if (rule != 0)
-		{
-			rule->load(*i);
-		}
+		_alienItemLevels = doc["alienItemLevels"].as< std::vector< std::vector<int> > >();
 	}
-	for (YAML::const_iterator i = doc["alienMissions"].begin(); i != doc["alienMissions"].end(); ++i)
-	{
-		RuleAlienMission *rule = loadRule(*i, &_alienMissions, &_alienMissionsIndex);
-		if (rule != 0)
-		{
-			rule->load(*i);
-		}
-	}
-	_alienItemLevels = doc["alienItemLevels"].as< std::vector< std::vector<int> > >(_alienItemLevels);
-	for (YAML::const_iterator i = doc["MCDPatches"].begin(); i != doc["MCDPatches"].end(); ++i)
+
+
+
+	for (YAML::const_iterator i = doc["MCDPatches"].begin(); i != doc["MCDPatches"].end(); ++i) //this should not be used by mods
 	{
 		std::string type = (*i)["type"].as<std::string>();
 		if (_MCDPatches.find(type) != _MCDPatches.end())
@@ -3088,7 +3292,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			_MCDPatches[type] = patch;
 		}
 	}
-	for (YAML::const_iterator i = doc["extraSprites"].begin(); i != doc["extraSprites"].end(); ++i)
+	for (YAML::const_iterator i : iterateRulesSpecific("extraSprites"))
 	{
 		if ((*i)["type"] || (*i)["typeSingle"])
 		{
@@ -3136,7 +3340,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			}
 		}
 	}
-	for (YAML::const_iterator i = doc["customPalettes"].begin(); i != doc["customPalettes"].end(); ++i)
+	for (YAML::const_iterator i : iterateRulesSpecific("customPalettes"))
 	{
 		CustomPalettes *rule = loadRule(*i, &_customPalettes, &_customPalettesIndex);
 		if (rule != 0)
@@ -3144,14 +3348,14 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			rule->load(*i);
 		}
 	}
-	for (YAML::const_iterator i = doc["extraSounds"].begin(); i != doc["extraSounds"].end(); ++i)
+	for (YAML::const_iterator i : iterateRulesSpecific("extraSounds"))
 	{
 		std::string type = (*i)["type"].as<std::string>();
 		ExtraSounds *extraSounds = new ExtraSounds();
 		extraSounds->load(*i, _modCurrent);
 		_extraSounds.push_back(std::make_pair(type, extraSounds));
 	}
-	for (YAML::const_iterator i = doc["extraStrings"].begin(); i != doc["extraStrings"].end(); ++i)
+	for (YAML::const_iterator i : iterateRulesSpecific("extraStrings"))
 	{
 		std::string type = (*i)["type"].as<std::string>();
 		if (_extraStrings.find(type) != _extraStrings.end())
@@ -3166,14 +3370,14 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		}
 	}
 
-	for (YAML::const_iterator i = doc["statStrings"].begin(); i != doc["statStrings"].end(); ++i)
+	for (YAML::const_iterator i : iterateRulesSpecific("statStrings"))
 	{
 		StatString *statString = new StatString();
 		statString->load(*i);
 		_statStrings.push_back(statString);
 	}
 
-	for (YAML::const_iterator i = doc["interfaces"].begin(); i != doc["interfaces"].end(); ++i)
+	for (YAML::const_iterator i : iterateRulesSpecific("interfaces"))
 	{
 		RuleInterface *rule = loadRule(*i, &_interfaces);
 		if (rule != 0)
@@ -3181,6 +3385,24 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			rule->load(*i, this);
 		}
 	}
+
+	for (YAML::const_iterator i : iterateRulesSpecific("cutscenes"))
+	{
+		RuleVideo *rule = loadRule(*i, &_videos);
+		if (rule != 0)
+		{
+			rule->load(*i);
+		}
+	}
+	for (YAML::const_iterator i : iterateRulesSpecific("musics"))
+	{
+		RuleMusic *rule = loadRule(*i, &_musicDefs);
+		if (rule != 0)
+		{
+			rule->load(*i);
+		}
+	}
+
 	if (doc["globe"])
 	{
 		_globe->load(doc["globe"]);
@@ -3204,56 +3426,6 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			loadConstants(constants);
 		}
 	}
-	for (YAML::const_iterator i = doc["mapScripts"].begin(); i != doc["mapScripts"].end(); ++i)
-	{
-		std::string type = (*i)["type"].as<std::string>();
-		if ((*i)["delete"])
-		{
-			type = (*i)["delete"].as<std::string>(type);
-		}
-		if (_mapScripts.find(type) != _mapScripts.end())
-		{
-			Collections::deleteAll(_mapScripts[type]);
-		}
-		for (YAML::const_iterator j = (*i)["commands"].begin(); j != (*i)["commands"].end(); ++j)
-		{
-			MapScript *mapScript = new MapScript();
-			mapScript->load(*j);
-			_mapScripts[type].push_back(mapScript);
-		}
-	}
-	for (YAML::const_iterator i = doc["arcScripts"].begin(); i != doc["arcScripts"].end(); ++i)
-	{
-		RuleArcScript* rule = loadRule(*i, &_arcScripts, &_arcScriptIndex, "type");
-		if (rule != 0)
-		{
-			rule->load(*i);
-		}
-	}
-	for (YAML::const_iterator i = doc["eventScripts"].begin(); i != doc["eventScripts"].end(); ++i)
-	{
-		RuleEventScript* rule = loadRule(*i, &_eventScripts, &_eventScriptIndex, "type");
-		if (rule != 0)
-		{
-			rule->load(*i);
-		}
-	}
-	for (YAML::const_iterator i = doc["events"].begin(); i != doc["events"].end(); ++i)
-	{
-		RuleEvent* rule = loadRule(*i, &_events, &_eventIndex, "name");
-		if (rule != 0)
-		{
-			rule->load(*i);
-		}
-	}
-	for (YAML::const_iterator i = doc["missionScripts"].begin(); i != doc["missionScripts"].end(); ++i)
-	{
-		RuleMissionScript *rule = loadRule(*i, &_missionScripts, &_missionScriptIndex, "type");
-		if (rule != 0)
-		{
-			rule->load(*i);
-		}
-	}
 
 	// refresh _psiRequirements for psiStrengthEval
 	for (const auto& facType : _facilitiesIndex)
@@ -3272,30 +3444,6 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		_psiRequirements.push_back(_psiUnlockResearch);
 	}
 
-	for (YAML::const_iterator i = doc["cutscenes"].begin(); i != doc["cutscenes"].end(); ++i)
-	{
-		RuleVideo *rule = loadRule(*i, &_videos);
-		if (rule != 0)
-		{
-			rule->load(*i);
-		}
-	}
-	for (YAML::const_iterator i = doc["musics"].begin(); i != doc["musics"].end(); ++i)
-	{
-		RuleMusic *rule = loadRule(*i, &_musicDefs);
-		if (rule != 0)
-		{
-			rule->load(*i);
-		}
-	}
-	for (YAML::const_iterator i = doc["commendations"].begin(); i != doc["commendations"].end(); ++i)
-	{
-		RuleCommendations *rule = loadRule(*i, &_commendations);
-		if (rule != 0)
-		{
-			rule->load(*i, this);
-		}
-	}
 	size_t count = 0;
 	for (YAML::const_iterator i = doc["aimAndArmorMultipliers"].begin(); i != doc["aimAndArmorMultipliers"].end() && count < MaxDifficultyLevels; ++i)
 	{
@@ -3323,7 +3471,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			_statAdjustment[i].statGrowth = _statAdjustment[0].statGrowth;
 		}
 	}
-	if (const YAML::Node &lighting = doc["lighting"])
+	if (const YAML::Node &lighting = loadDocInfoHelper("lighting"))
 	{
 		_maxStaticLightDistance = lighting["maxStatic"].as<int>(_maxStaticLightDistance);
 		_maxDynamicLightDistance = lighting["maxDynamic"].as<int>(_maxDynamicLightDistance);
@@ -3366,27 +3514,81 @@ static void refNodeTestDeepth(const YAML::Node &node, const std::string &name, i
  * @param key Rule key name.
  * @return Pointer to new rule if one was created, or NULL if one was removed.
  */
-template <typename T>
-T *Mod::loadRule(const YAML::Node &node, std::map<std::string, T*> *map, std::vector<std::string> *index, const std::string &key) const
+template <typename T, typename F>
+T *Mod::loadRule(const YAML::Node &node, std::map<std::string, T*> *map, std::vector<std::string> *index, const std::string &key, F&& factory)
 {
 	T *rule = 0;
-	if (node[key])
+
+	auto getNode = [&](const YAML::Node& i, const std::string& nodeName)
 	{
-		std::string type = node[key].as<std::string>();
-
-		if (isEmptyRuleName(type))
+		const auto& n = i[nodeName];
+		return std::make_tuple(nodeName, n, !!n);
+	};
+	auto haveNode = [&](const std::tuple<std::string, YAML::Node, bool>& nn)
+	{
+		return std::get<bool>(nn);
+	};
+	auto getDescriptionNode = [&](const std::tuple<std::string, YAML::Node, bool>& nn)
+	{
+		return std::string("'") + std::get<std::string>(nn) + "' at line " + std::to_string(std::get<YAML::Node>(nn).Mark().line);
+	};
+	auto getNameFromNode = [&](const std::tuple<std::string, YAML::Node, bool>& nn)
+	{
+		auto name = std::get<YAML::Node>(nn).as<std::string>();
+		if (isEmptyRuleName(name))
 		{
-			throw Exception("Invalid value for '" + key + "' at line " + std::to_string(node[key].Mark().line));
+			throw Exception("Invalid value for main node '" + key + "' at line " + std::to_string(node[key].Mark().line));
 		}
+		return name;
+	};
+	auto addTracking = [&](std::unordered_map<const void*, const ModData*>& track, const auto* t)
+	{
+		track[static_cast<const void*>(t)] = _modCurrent;
+	};
+	auto removeTracking = [&]( std::unordered_map<const void*, const ModData*>& track, const auto* t)
+	{
+		track.erase(static_cast<const void*>(t));
+	};
 
-		typename std::map<std::string, T*>::const_iterator i = map->find(type);
+	const auto defaultNode = getNode(node, key);
+	const auto deleteNode = getNode(node, YamlRuleNodeDelete);
+	const auto newNode = getNode(node, YamlRuleNodeNew);
+	const auto overrideNode = getNode(node, YamlRuleNodeOverride);
+	const auto updateNode = getNode(node, YamlRuleNodeUpdate);
+
+	{
+		// check for duplicates
+		const std::tuple<std::string, YAML::Node, bool>* last = nullptr;
+		for (auto* p : { &defaultNode, &deleteNode, &newNode, &updateNode, &overrideNode })
+		{
+			if (haveNode(*p))
+			{
+				if (last)
+				{
+					throw Exception("Conflict of main node " + getDescriptionNode(*last) + " and " + getDescriptionNode(*p));
+				}
+				else
+				{
+					last = p;
+				}
+			}
+		}
+	}
+
+	if (haveNode(defaultNode))
+	{
+		std::string type = getNameFromNode(defaultNode);
+
+
+		auto i = map->find(type);
 		if (i != map->end())
 		{
 			rule = i->second;
 		}
 		else
 		{
-			rule = new T(type);
+			rule = factory(type);
+			addTracking(_ruleCreationTracking, rule);
 			(*map)[type] = rule;
 			if (index != 0)
 			{
@@ -3396,19 +3598,18 @@ T *Mod::loadRule(const YAML::Node &node, std::map<std::string, T*> *map, std::ve
 
 		// protection from self referencing refNode node
 		refNodeTestDeepth(node, type, 0);
+		addTracking(_ruleLastUpdateTracking, rule);
 	}
-	else if (node["delete"])
+	else if (haveNode(deleteNode))
 	{
-		std::string type = node["delete"].as<std::string>();
+		std::string type = getNameFromNode(deleteNode);
 
-		if (isEmptyRuleName(type))
-		{
-			throw Exception("Invalid value for 'delete' at line " +  std::to_string(node["delete"].Mark().line));
-		}
-
-		typename std::map<std::string, T*>::iterator i = map->find(type);
+		auto i = map->find(type);
 		if (i != map->end())
 		{
+			removeTracking(_ruleCreationTracking, i->second);
+			removeTracking(_ruleLastUpdateTracking, i->second);
+			delete i->second;
 			map->erase(i);
 		}
 		if (index != 0)
@@ -3420,6 +3621,71 @@ T *Mod::loadRule(const YAML::Node &node, std::map<std::string, T*> *map, std::ve
 			}
 		}
 	}
+	else if (haveNode(newNode))
+	{
+		std::string type = getNameFromNode(newNode);
+
+		auto i = map->find(type);
+		if (i != map->end())
+		{
+			checkForSoftError(true, type, "Rule named '" + type  + "' already used for " + getDescriptionNode(newNode), LOG_ERROR);
+		}
+		else
+		{
+			rule = factory(type);
+			addTracking(_ruleCreationTracking, rule);
+			(*map)[type] = rule;
+			if (index != 0)
+			{
+				index->push_back(type);
+			}
+
+			// protection from self referencing refNode node
+			refNodeTestDeepth(node, type, 0);
+			addTracking(_ruleLastUpdateTracking, rule);
+		}
+	}
+	else if (haveNode(overrideNode))
+	{
+		std::string type = getNameFromNode(overrideNode);
+
+		auto i = map->find(type);
+		if (i != map->end())
+		{
+			rule = i->second;
+
+			// protection from self referencing refNode node
+			refNodeTestDeepth(node, type, 0);
+			addTracking(_ruleLastUpdateTracking, rule);
+		}
+		else
+		{
+			checkForSoftError(true, type, "Rule named '" + type  + "' do not exist for " + getDescriptionNode(overrideNode), LOG_ERROR);
+		}
+	}
+	else if (haveNode(updateNode))
+	{
+		std::string type = getNameFromNode(updateNode);
+
+		auto i = map->find(type);
+		if (i != map->end())
+		{
+			rule = i->second;
+
+			// protection from self referencing refNode node
+			refNodeTestDeepth(node, type, 0);
+			addTracking(_ruleLastUpdateTracking, rule);
+		}
+		else
+		{
+			Log(LOG_INFO) << "Rule named '" << type  << "' do not exist for " << getDescriptionNode(updateNode);
+		}
+	}
+	else
+	{
+		//no correct id throw exception?
+	}
+
 	return rule;
 }
 
@@ -4762,11 +5028,6 @@ const std::map<std::string, SoundDefinition *> *Mod::getSoundDefinitions() const
 	return &_soundDefs;
 }
 
-const std::vector<SDL_Color> *Mod::getTransparencies() const
-{
-	return &_transparencies;
-}
-
 const std::vector<MapScript*> *Mod::getMapScript(const std::string& id) const
 {
 	auto i = _mapScripts.find(id);
@@ -4842,7 +5103,7 @@ ScriptGlobal *Mod::getScriptGlobal() const
 
 RuleResearch *Mod::getFinalResearch() const
 {
-	return getResearch(_finalResearch, true);
+	return _finalResearch;
 }
 
 RuleBaseFacility *Mod::getDestroyedFacility() const
@@ -6035,39 +6296,31 @@ Music* Mod::loadMusic(MusicFormat fmt, RuleMusic* rule, CatFile* adlibcat, CatFi
  */
 void Mod::createTransparencyLUT(Palette *pal)
 {
-	const int opacityMax = 4;
 	const SDL_Color* palColors = pal->getColors(0);
 	std::vector<Uint8> lookUpTable;
 	// start with the color sets
-	lookUpTable.reserve(_transparencies.size() * 256 * opacityMax);
-	for (const auto& tint : _transparencies)
+	lookUpTable.reserve(_transparencies.size() * TransparenciesPaletteColors * TransparenciesOpacityLevels);
+	for (const auto& tintLevels : _transparencies)
 	{
 		// then the opacity levels, using the alpha channel as the step
-		for (int opacity = 1; opacity <= opacityMax; ++opacity)
+		for (const SDL_Color& tint : tintLevels)
 		{
-			// pseudo interpolation of palette color with tint
-			// for small values `op` its should behave same as original TFTD
-			// but for bigger values it make result closer to tint color
-			const int op = Clamp(opacity * tint.unused, 0, 64);
-			const float co = 1.0f - Sqr(op / 64.0f); // 1.0 -> 0.0
-			const float to = op * 1.0f; // 0.0 -> 64.0
-
 			// then the palette itself
-			for (int currentColor = 0; currentColor < 256; ++currentColor)
+			for (int currentColor = 0; currentColor < TransparenciesPaletteColors; ++currentColor)
 			{
 				SDL_Color desiredColor;
 
-				desiredColor.r = std::min(255, (int)Round((palColors[currentColor].r * co) + (tint.r * to)));
-				desiredColor.g = std::min(255, (int)Round((palColors[currentColor].g * co) + (tint.g * to)));
-				desiredColor.b = std::min(255, (int)Round((palColors[currentColor].b * co) + (tint.b * to)));
+				desiredColor.r = std::min(255, (palColors[currentColor].r * tint.unused / 255) + tint.r);
+				desiredColor.g = std::min(255, (palColors[currentColor].g * tint.unused / 255) + tint.g);
+				desiredColor.b = std::min(255, (palColors[currentColor].b * tint.unused / 255) + tint.b);
 
 				Uint8 closest = currentColor;
 				int lowestDifference = INT_MAX;
-				// if opacity is zero then we stay with current color, transparet color will stay same too
-				if (op != 0 && currentColor != 0)
+				// if opacity is zero then we stay with current color, transparent color will stay same too
+				if (tint.unused != 0 && currentColor != 0)
 				{
 					// now compare each color in the palette to find the closest match to our desired one
-					for (int comparator = 1; comparator < 256; ++comparator)
+					for (int comparator = 1; comparator < TransparenciesPaletteColors; ++comparator)
 					{
 						int currentDifference = Sqr(desiredColor.r - palColors[comparator].r) +
 							Sqr(desiredColor.g - palColors[comparator].g) +
@@ -6084,7 +6337,7 @@ void Mod::createTransparencyLUT(Palette *pal)
 			}
 		}
 	}
-	_transparencyLUTs.push_back(lookUpTable);
+	_transparencyLUTs.push_back(std::move(lookUpTable));
 }
 
 StatAdjustment *Mod::getStatAdjustment(int difficulty)

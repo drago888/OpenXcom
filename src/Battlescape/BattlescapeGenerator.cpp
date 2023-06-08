@@ -585,7 +585,7 @@ void BattlescapeGenerator::nextStage()
 				if (transformedArmor)
 				{
 					// change battleunit's armor
-					bu->updateArmorFromNonSoldier(_game->getMod(), transformedArmor, _save->getDepth(), _save->getStartingCondition());
+					bu->updateArmorFromNonSoldier(_game->getMod(), transformedArmor, _save->getDepth(), true, _save->getStartingCondition());
 				}
 			}
 		}
@@ -825,6 +825,23 @@ void BattlescapeGenerator::run()
 		_worldShade = ruleDeploy->getMaxShade();
 	}
 
+	{
+		int month;
+		if (_game->getSavedGame()->getMonthsPassed() != -1)
+		{
+			month =
+			((size_t) _game->getSavedGame()->getMonthsPassed()) > _game->getMod()->getAlienItemLevels().size() - 1 ?  // if
+			_game->getMod()->getAlienItemLevels().size() - 1 : // then
+			_game->getSavedGame()->getMonthsPassed() ;  // else
+		}
+		else
+		{
+			month = _alienItemLevel;
+		}
+
+		_save->setAlienItemLevel(month);
+	}
+
 	auto& terrainMapScript = _terrain->getRandomMapScript();
 	const std::vector<MapScript*> *script = _game->getMod()->getMapScript(terrainMapScript);
 	_save->setLastUsedMapScript(terrainMapScript);
@@ -973,7 +990,22 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
 			for (auto* vehicle : *_craft->getVehicles())
 			{
 				RuleItem *item = vehicle->getRules();
-				if (startingCondition != 0 && !startingCondition->isVehiclePermitted(item->getType()))
+				bool hwpDisabled = false;
+				if (startingCondition)
+				{
+					if (!startingCondition->isVehiclePermitted(item->getType()))
+					{
+						hwpDisabled = true; // HWP is disabled
+					}
+					else if (item->getVehicleClipAmmo())
+					{
+						if (!startingCondition->isItemPermitted(item->getVehicleClipAmmo()->getType(), _game->getMod(), _craft))
+						{
+							hwpDisabled = true; // HWP's ammo is disabled
+						}
+					}
+				}
+				if (hwpDisabled)
 				{
 					// send disabled vehicles back to base
 					_base->getStorageItems()->addItem(item, 1);
@@ -1090,7 +1122,22 @@ void BattlescapeGenerator::deployXCOM(const RuleStartingCondition* startingCondi
 			for (auto* vehicle : *_craft->getVehicles())
 			{
 				RuleItem *item = vehicle->getRules();
-				if (startingCondition != 0 && !startingCondition->isVehiclePermitted(item->getType()))
+				bool hwpDisabled = false;
+				if (startingCondition)
+				{
+					if (!startingCondition->isVehiclePermitted(item->getType()))
+					{
+						hwpDisabled = true; // HWP is disabled
+					}
+					else if (item->getVehicleClipAmmo())
+					{
+						if (!startingCondition->isItemPermitted(item->getVehicleClipAmmo()->getType(), _game->getMod(), _craft))
+						{
+							hwpDisabled = true; // HWP's ammo is disabled
+						}
+					}
+				}
+				if (hwpDisabled)
 				{
 					// skip, already done earlier
 				}
@@ -1609,23 +1656,10 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
 		throw Exception("Map generator encountered an error: Unknown race: " + _alienRace + " defined in deployment: " + deployment->getType());
 	}
 
-	int month;
-	if (_game->getSavedGame()->getMonthsPassed() != -1)
-	{
-		month =
-		((size_t) _game->getSavedGame()->getMonthsPassed()) > _game->getMod()->getAlienItemLevels().size() - 1 ?  // if
-		_game->getMod()->getAlienItemLevels().size() - 1 : // then
-		_game->getSavedGame()->getMonthsPassed() ;  // else
-	}
-	else
-	{
-		month = _alienItemLevel;
-	}
-
 	// save for later use
 	_save->setReinforcementsDeployment(deployment->getType());
 	_save->setReinforcementsRace(race->getId());
-	_save->setReinforcementsItemLevel(month);
+	_save->setReinforcementsItemLevel(_save->getAlienItemLevel());
 	// and reset memory at each stage
 	_save->getReinforcementsMemory().clear();
 
@@ -1673,7 +1707,7 @@ void BattlescapeGenerator::deployAliens(const AlienDeployment *deployment)
 				outside = false;
 			Unit *rule = _game->getMod()->getUnit(alienName, true);
 			BattleUnit *unit = addAlien(rule, dd.alienRank, outside);
-			size_t itemLevel = (size_t)(_game->getMod()->getAlienItemLevels().at(month).at(RNG::generate(0,9)));
+			size_t itemLevel = (size_t)(_game->getMod()->getAlienItemLevels().at(_save->getAlienItemLevel()).at(RNG::generate(0,9)));
 			if (unit)
 			{
 				_save->initUnit(unit, itemLevel);
@@ -2386,18 +2420,6 @@ void BattlescapeGenerator::deployCivilians(bool markAsVIP, int nodeRank, int max
 
 		if (number > 0)
 		{
-			int month;
-			if (_game->getSavedGame()->getMonthsPassed() != -1)
-			{
-				month =
-				((size_t) _game->getSavedGame()->getMonthsPassed()) > _game->getMod()->getAlienItemLevels().size() - 1 ?  // if
-				_game->getMod()->getAlienItemLevels().size() - 1 : // then
-				_game->getSavedGame()->getMonthsPassed() ;  // else
-			}
-			else
-			{
-				month = _alienItemLevel;
-			}
 			for (int i = 0; i < number; ++i)
 			{
 				Unit* rule = 0;
@@ -2414,7 +2436,7 @@ void BattlescapeGenerator::deployCivilians(bool markAsVIP, int nodeRank, int max
 				if (civ)
 				{
 					if (markAsVIP) civ->markAsVIP();
-					size_t itemLevel = (size_t)(_game->getMod()->getAlienItemLevels().at(month).at(RNG::generate(0,9)));
+					size_t itemLevel = (size_t)(_game->getMod()->getAlienItemLevels().at(_save->getAlienItemLevel()).at(RNG::generate(0,9)));
 					// Built in weapons: civilians may have levelled item lists with randomized distribution
 					// following the same basic rules as the alien item levels.
 					_save->initUnit(civ, itemLevel);

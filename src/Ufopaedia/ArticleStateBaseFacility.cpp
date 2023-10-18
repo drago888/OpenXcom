@@ -151,7 +151,7 @@ namespace OpenXcom
 				}
 
 
-				if (facility->getSize()==1)
+				if (facility->getSpriteEnabled())
 				{
 					frame = graphic->getFrame(facility->getSpriteFacility() + num);
 

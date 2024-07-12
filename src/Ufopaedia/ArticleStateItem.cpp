@@ -29,6 +29,7 @@
 #include "../Engine/LocalizedText.h"
 #include "../Engine/Unicode.h"
 #include "../Engine/Palette.h"
+#include "../Interface/NumberText.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextButton.h"
 #include "../Interface/TextList.h"
@@ -41,7 +42,11 @@ namespace OpenXcom
 
 	ArticleStateItem::ArticleStateItem(ArticleDefinitionItem *defs, std::shared_ptr<ArticleCommonState> state) : ArticleState(defs->id, std::move(state)), _lstInfo(nullptr)
 	{
-		RuleItem *item = _game->getMod()->getItem(defs->id, true);
+		RuleItem *item = _game->getMod()->getItem(defs->weapon, false);
+		if (!item)
+		{
+			item = _game->getMod()->getItem(defs->id, true);
+		}
 
 		int bpp = Options::pediaBgResolutionX == Screen::ORIGINAL_WIDTH ? 8 : 32;
 		int scaleX = Options::pediaBgResolutionX / Screen::ORIGINAL_WIDTH;
@@ -238,13 +243,13 @@ namespace OpenXcom
 
 		_txtWeight = new Text(88 * scaleX, 8 * scaleY, 104 * scaleX, 55 * scaleY, bpp);
 		_txtWeight->setScale(scaleX, scaleY);
-		add(_txtWeight);
+		add(_txtWeight, "weightText", "articleItem", _bg);
 		_txtWeight->setColor(_textColor);
 		_txtWeight->setAlign(ALIGN_RIGHT);
 
 		// IMAGE
 		_image = new Surface(32 * scaleX, 48 * scaleY, 157 * scaleX, 5 * scaleY, bpp);
-		//add(_image);
+		//add(_image, "image", "articleItem", _bg);
 
 		if (bpp == 8)
 		{
@@ -256,8 +261,15 @@ namespace OpenXcom
 			item->drawHandSprite(_game->getMod()->getSurfaceSet32(getTypeId("BIGOBS.PCK", bpp)), _image, 0, 0, 0, bpp);
 		}
 
-		add(_image);
+		add(_image, "image", "articleItem", _bg);
 
+		_txtWeaponClipSize = new NumberText(30, 5, 157, 5);
+		add(_txtWeaponClipSize, "image", "articleItem", _bg);
+
+		_txtWeaponClipSize->setX(_txtWeaponClipSize->getX() + 2);
+		_txtWeaponClipSize->setColor(_textColor);
+		_txtWeaponClipSize->setValue(item->getClipSize());
+		_txtWeaponClipSize->setVisible(Options::oxcePediaShowClipSize && item->getClipSize() > 0);
 
 		int ammoSlot = defs->getAmmoSlotForPage(_state->current_page);
 		int ammoSlotPrevUsage = defs->getAmmoSlotPrevUsageForPage(_state->current_page);
@@ -424,6 +436,11 @@ namespace OpenXcom
 
 			_imageAmmo[i] = new Surface(32 * scaleX, 48 * scaleY, 280 * scaleX, (16 + i*49) * scaleY, bpp);
 			add(_imageAmmo[i]);
+
+			_txtAmmoClipSize[i] = new NumberText(30, 5, 2 + 280, 2 + 16 + i*49);
+			add(_txtAmmoClipSize[i]);
+			_txtAmmoClipSize[i]->setColor(_textColor);
+			_txtAmmoClipSize[i]->setVisible(false);
 		}
 
 		auto addAmmoDamagePower = [&](int pos, const RuleItem *rule)
@@ -490,6 +507,8 @@ namespace OpenXcom
 								type->drawHandSprite(_game->getMod()->getSurfaceSet(getTypeId("BIGOBS.PCK", bpp)), _imageAmmo[currShow], 0, 0, 0, bpp);
 							}
 
+							_txtAmmoClipSize[currShow]->setValue(type->getClipSize());
+							_txtAmmoClipSize[currShow]->setVisible(Options::oxcePediaShowClipSize && type->getClipSize() > 0);
 
 							++currShow;
 							if (currShow == maxShow)

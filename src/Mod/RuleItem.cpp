@@ -22,9 +22,11 @@
 #include "Armor.h"
 #include "Unit.h"
 #include "RuleItem.h"
+#include "RuleItemCategory.h"
 #include "RuleInventory.h"
 #include "RuleDamageType.h"
 #include "RuleSoldier.h"
+#include "../Savegame/SavedGame.h"
 #include "../Savegame/BattleUnit.h"
 #include "../Engine/Exception.h"
 #include "../Engine/Collections.h"
@@ -171,7 +173,7 @@ RuleItem::RuleItem(const std::string &type, int listOrder) :
 	_experienceTrainingMode(ETM_DEFAULT), _manaExperience(0), _listOrder(listOrder),
 	_maxRange(200), _minRange(0), _dropoff(2), _bulletSpeed(0), _explosionSpeed(0), _shotgunPellets(0), _shotgunBehaviorType(0), _shotgunSpread(100), _shotgunChoke(100),
 	_spawnUnitFaction(FACTION_NONE), _zombieUnitFaction(FACTION_HOSTILE),
-	_targetMatrix(7),
+	_targetMatrix(7), _convertToCivilian(false),
 	_LOSRequired(false), _underwaterOnly(false), _landOnly(false), _psiReqiured(false), _manaRequired(false),
 	_meleePower(0), _specialType(-1), _vaporColor(-1), _vaporDensity(0), _vaporProbability(15),
 	_vaporColorSurface(-1), _vaporDensitySurface(0), _vaporProbabilitySurface(15),
@@ -643,6 +645,7 @@ void RuleItem::load(const YAML::Node &node, Mod *mod, const ModScript& parsers)
 		_targetMatrix = node["psiTargetMatrix"].as<int>(_targetMatrix);
 	}
 	_targetMatrix = node["targetMatrix"].as<int>(_targetMatrix);
+	_convertToCivilian = node["convertToCivilian"].as<bool>(_convertToCivilian);
 	_LOSRequired = node["LOSRequired"].as<bool>(_LOSRequired);
 	_meleePower = node["meleePower"].as<int>(_meleePower);
 	_underwaterOnly = node["underwaterOnly"].as<bool>(_underwaterOnly);
@@ -887,6 +890,22 @@ bool RuleItem::belongsToCategory(const std::string &category) const
 }
 
 /**
+ * Returns the first item category that has a non-empty invOrder, if it exists.
+ */
+const RuleItemCategory* RuleItem::getFirstCategoryWithInvOrder(const Mod* mod) const
+{
+	for (auto& catName : _categories)
+	{
+		auto* cat = mod->getItemCategory(catName, false);
+		if (cat && !cat->getInvOrder().empty())
+		{
+			return cat;
+		}
+	}
+	return nullptr;
+}
+
+/**
  * Gets unit rule if the item is vehicle weapon.
  */
 Unit* RuleItem::getVehicleUnit() const
@@ -915,6 +934,25 @@ int RuleItem::getBuyCost() const
 }
 
 /**
+ * Gets the item's purchase cost.
+ * @param base Current base from where item is bought
+ * @param save Game
+ * @return Current cost
+ */
+int RuleItem::getBuyCostAdjusted(const Base* base, const SavedGame* save) const
+{
+	(void)base; //TODO: not exposed to scripts yet
+
+	int buyPriceCoefficient = save->getBuyPriceCoefficient();
+	int cost = getBuyCost();
+	int adjusted = ((int64_t)cost) * buyPriceCoefficient / 100;
+
+	adjusted = ModScript::scriptFunc2<ModScript::BuyCostItem>(this, adjusted, cost, this, save, buyPriceCoefficient);
+
+	return adjusted;
+}
+
+/**
  * Gets the amount of money this item
  * is worth to sell.
  * @return The sell cost.
@@ -922,6 +960,25 @@ int RuleItem::getBuyCost() const
 int RuleItem::getSellCost() const
 {
 	return _costSell;
+}
+
+/**
+ * Gets the item's sale cost.
+ * @param base Current base from where item is sold
+ * @param save Game
+ * @return Current cost
+ */
+int RuleItem::getSellCostAdjusted(const Base* base, const SavedGame* save) const
+{
+	(void)base; //TODO: not exposed to scripts yet
+
+	int sellPriceCoefficient = save->getSellPriceCoefficient();
+	int cost = getSellCost();
+	int adjusted = ((int64_t)cost) * sellPriceCoefficient / 100;
+
+	adjusted = ModScript::scriptFunc2<ModScript::SellCostItem>(this, adjusted, cost, this, save, sellPriceCoefficient);
+
+	return adjusted;
 }
 
 /**

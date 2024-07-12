@@ -109,7 +109,12 @@ namespace OpenXcom
 
 		// build preview image
 		int tile_size = 32;
-		_image = new Surface(tile_size * 2 * scaleX, tile_size * 2 * scaleY, 232 * scaleX, 16 * scaleY, bpp);
+		_image = new Surface(
+			tile_size * std::max(1, Mod::PEDIA_FACILITY_RENDER_PARAMETERS[0]) * scaleX,
+			tile_size * std::max(1, Mod::PEDIA_FACILITY_RENDER_PARAMETERS[1]) * scaleY,
+			232 + Mod::PEDIA_FACILITY_RENDER_PARAMETERS[2] * scaleX,
+			16 + Mod::PEDIA_FACILITY_RENDER_PARAMETERS[3] * scaleY,
+			bpp);
 		add(_image);
 
 		SurfaceSet *graphic = _game->getMod()->getSurfaceSet("BASEBITS.PCK");
@@ -118,22 +123,17 @@ namespace OpenXcom
 		int x_pos, y_pos;
 		int num;
 
-		if (facility->getSize()==1)
-		{
-			x_offset = tile_size/2 * scaleX;
-			y_offset = tile_size / 2 * scaleY;
-		}
-		else
-		{
-			x_offset = y_offset = 0;
-		}
+		// calculate preview offset
+		x_offset = ((tile_size * std::max(0, Mod::PEDIA_FACILITY_RENDER_PARAMETERS[0] - facility->getSizeX())) / 2) * scaleX;
+		y_offset = ((tile_size * std::max(0, Mod::PEDIA_FACILITY_RENDER_PARAMETERS[1] - facility->getSizeY())) / 2) * scaleY;
 
+		// render build preview
 		num = 0;
 		y_pos = y_offset;
-		for (int y = 0; y < facility->getSize(); ++y)
+		for (int y = 0; y < facility->getSizeY(); ++y)
 		{
 			x_pos = x_offset;
-			for (int x = 0; x < facility->getSize(); ++x)
+			for (int x = 0; x < facility->getSizeX(); ++x)
 			{
 				frame = graphic->getFrame(facility->getSpriteShape() + num);
 				if (bpp == 8)

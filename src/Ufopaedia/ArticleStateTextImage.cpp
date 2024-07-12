@@ -128,8 +128,7 @@ namespace OpenXcom
 
 		if (defs->rect_text.width == 0)
 		{
-			int txtInfoHeight = defs->align_bottom ? 200 - 2 - 23 - text_height : 162;
-			_txtInfo = new Text(defs->text_width * scaleX, txtInfoHeight * scaleY, 5 * scaleX, 23 * scaleY + text_height, bpp);
+			_txtInfo = new Text(defs->text_width * scaleX, (176 - text_height) * scaleY, 5 * scaleX, 23 * scaleY + text_height, bpp);
 		}
 		else
 		{

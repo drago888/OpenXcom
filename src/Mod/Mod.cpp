@@ -185,10 +185,14 @@ std::string Mod::DEBRIEF_MUSIC_GOOD;
 std::string Mod::DEBRIEF_MUSIC_BAD;
 int Mod::DIFFICULTY_COEFFICIENT[5];
 int Mod::SELL_PRICE_COEFFICIENT[5];
+int Mod::BUY_PRICE_COEFFICIENT[5];
 int Mod::DIFFICULTY_BASED_RETAL_DELAY[5];
 int Mod::UNIT_RESPONSE_SOUNDS_FREQUENCY[4];
+int Mod::PEDIA_FACILITY_RENDER_PARAMETERS[4];
 bool Mod::EXTENDED_ITEM_RELOAD_COST;
+bool Mod::EXTENDED_INVENTORY_SLOT_SORTING;
 bool Mod::EXTENDED_RUNNING_COST;
+int Mod::EXTENDED_MOVEMENT_COST_ROUNDING;
 bool Mod::EXTENDED_HWP_LOAD_ORDER;
 int Mod::EXTENDED_MELEE_REACTIONS;
 int Mod::EXTENDED_TERRAIN_MELEE;
@@ -309,6 +313,12 @@ void Mod::resetGlobalStatics()
 	SELL_PRICE_COEFFICIENT[3] = 100;
 	SELL_PRICE_COEFFICIENT[4] = 100;
 
+	BUY_PRICE_COEFFICIENT[0] = 100;
+	BUY_PRICE_COEFFICIENT[1] = 100;
+	BUY_PRICE_COEFFICIENT[2] = 100;
+	BUY_PRICE_COEFFICIENT[3] = 100;
+	BUY_PRICE_COEFFICIENT[4] = 100;
+
 	DIFFICULTY_BASED_RETAL_DELAY[0] = 0;
 	DIFFICULTY_BASED_RETAL_DELAY[1] = 0;
 	DIFFICULTY_BASED_RETAL_DELAY[2] = 0;
@@ -320,8 +330,15 @@ void Mod::resetGlobalStatics()
 	UNIT_RESPONSE_SOUNDS_FREQUENCY[2] = 100; // select weapon
 	UNIT_RESPONSE_SOUNDS_FREQUENCY[3] = 20;  // annoyed
 
+	PEDIA_FACILITY_RENDER_PARAMETERS[0] = 2; // pedia facility max width
+	PEDIA_FACILITY_RENDER_PARAMETERS[1] = 2; // pedia facility max height
+	PEDIA_FACILITY_RENDER_PARAMETERS[2] = 0; // pedia facility X offset
+	PEDIA_FACILITY_RENDER_PARAMETERS[3] = 0; // pedia facility Y offset
+
 	EXTENDED_ITEM_RELOAD_COST = false;
+	EXTENDED_INVENTORY_SLOT_SORTING = false;
 	EXTENDED_RUNNING_COST = false;
+	EXTENDED_MOVEMENT_COST_ROUNDING = 0;
 	EXTENDED_HWP_LOAD_ORDER = false;
 	EXTENDED_MELEE_REACTIONS = 0;
 	EXTENDED_TERRAIN_MELEE = 0;
@@ -1606,6 +1623,7 @@ const std::string YamlRuleNodeDelete = "delete";
 const std::string YamlRuleNodeNew = "new";
 const std::string YamlRuleNodeOverride = "override";
 const std::string YamlRuleNodeUpdate = "update";
+const std::string YamlRuleNodeIgnore = "ignore";
 
 
 void loadRuleInfoHelper(const YAML::Node &node, const char* nodeName, const char* type)
@@ -1618,6 +1636,7 @@ void loadRuleInfoHelper(const YAML::Node &node, const char* nodeName, const char
 		info.get() << " '" << YamlRuleNodeNew << ":',";
 		info.get() << " '" << YamlRuleNodeOverride << ":',";
 		info.get() << " '" << YamlRuleNodeUpdate << ":',";
+		info.get() << " '" << YamlRuleNodeIgnore << ":',";
 		info.get() << " '" << type << ":'";
 	}
 }
@@ -2468,6 +2487,7 @@ void Mod::loadMod(const std::vector<FileMap::FileRecord> &rulesetFiles, ModScrip
 		Log(LOG_VERBOSE) << "- " << filerec.fullpath;
 		try
 		{
+			_scriptGlobal->fileLoad(filerec.fullpath);
 			loadFile(filerec, parsers);
 		}
 		catch (Exception &e)
@@ -2683,8 +2703,19 @@ void Mod::loadConstants(const YAML::Node &node)
 	}
 	DEBRIEF_MUSIC_GOOD = node["goodDebriefingMusic"].as<std::string>(DEBRIEF_MUSIC_GOOD);
 	DEBRIEF_MUSIC_BAD = node["badDebriefingMusic"].as<std::string>(DEBRIEF_MUSIC_BAD);
+	if (node["extendedPediaFacilityParams"])
+	{
+		int k = 0;
+		for (YAML::const_iterator j = node["extendedPediaFacilityParams"].begin(); j != node["extendedPediaFacilityParams"].end() && k < 4; ++j)
+		{
+			PEDIA_FACILITY_RENDER_PARAMETERS[k] = (*j).as<int>(PEDIA_FACILITY_RENDER_PARAMETERS[k]);
+			++k;
+		}
+	}
 	EXTENDED_ITEM_RELOAD_COST = node["extendedItemReloadCost"].as<bool>(EXTENDED_ITEM_RELOAD_COST);
+	EXTENDED_INVENTORY_SLOT_SORTING = node["extendedInventorySlotSorting"].as<bool>(EXTENDED_INVENTORY_SLOT_SORTING);
 	EXTENDED_RUNNING_COST = node["extendedRunningCost"].as<bool>(EXTENDED_RUNNING_COST);
+	EXTENDED_MOVEMENT_COST_ROUNDING = node["extendedMovementCostRounding"].as<int>(EXTENDED_MOVEMENT_COST_ROUNDING);
 	EXTENDED_HWP_LOAD_ORDER = node["extendedHwpLoadOrder"].as<bool>(EXTENDED_HWP_LOAD_ORDER);
 	EXTENDED_MELEE_REACTIONS = node["extendedMeleeReactions"].as<int>(EXTENDED_MELEE_REACTIONS);
 	EXTENDED_TERRAIN_MELEE = node["extendedTerrainMelee"].as<int>(EXTENDED_TERRAIN_MELEE);
@@ -2759,7 +2790,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		RuleCountry *rule = loadRule(*i, &_countries, &_countriesIndex);
 		if (rule != 0)
 		{
-			rule->load(*i, parsers);
+			rule->load(*i, parsers, this);
 		}
 	}
 	for (YAML::const_iterator i : iterateRules("extraGlobeLabels", "type"))
@@ -2767,7 +2798,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		RuleCountry *rule = loadRule(*i, &_extraGlobeLabels, &_extraGlobeLabelsIndex);
 		if (rule != 0)
 		{
-			rule->load(*i, parsers);
+			rule->load(*i, parsers, this);
 		}
 	}
 	for (YAML::const_iterator i : iterateRules("regions", "type"))
@@ -2775,7 +2806,7 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 		RuleRegion *rule = loadRule(*i, &_regions, &_regionsIndex);
 		if (rule != 0)
 		{
-			rule->load(*i);
+			rule->load(*i, this);
 		}
 	}
 	for (YAML::const_iterator i : iterateRules("facilities", "type"))
@@ -3331,6 +3362,15 @@ void Mod::loadFile(const FileMap::FileRecord &filerec, ModScript &parsers)
 			++num;
 		}
 	}
+	if (doc["buyPriceCoefficient"])
+	{
+		size_t num = 0;
+		for (YAML::const_iterator i = doc["buyPriceCoefficient"].begin(); i != doc["buyPriceCoefficient"].end() && num < MaxDifficultyLevels; ++i)
+		{
+			BUY_PRICE_COEFFICIENT[num] = (*i).as<int>(BUY_PRICE_COEFFICIENT[num]);
+			++num;
+		}
+	}
 	if (doc["difficultyBasedRetaliationDelay"])
 	{
 		size_t num = 0;
@@ -3645,11 +3685,12 @@ T *Mod::loadRule(const YAML::Node &node, std::map<std::string, T*> *map, std::ve
 	const auto newNode = getNode(node, YamlRuleNodeNew);
 	const auto overrideNode = getNode(node, YamlRuleNodeOverride);
 	const auto updateNode = getNode(node, YamlRuleNodeUpdate);
+	const auto ignoreNode = getNode(node, YamlRuleNodeIgnore);
 
 	{
 		// check for duplicates
 		const std::tuple<std::string, YAML::Node, bool>* last = nullptr;
-		for (auto* p : { &defaultNode, &deleteNode, &newNode, &updateNode, &overrideNode })
+		for (auto* p : { &defaultNode, &deleteNode, &newNode, &updateNode, &overrideNode, &ignoreNode })
 		{
 			if (haveNode(*p))
 			{
@@ -3771,9 +3812,13 @@ T *Mod::loadRule(const YAML::Node &node, std::map<std::string, T*> *map, std::ve
 			Log(LOG_INFO) << "Rule named '" << type  << "' do not exist for " << getDescriptionNode(updateNode);
 		}
 	}
+	else if (haveNode(ignoreNode))
+	{
+		// nothing to see there...
+	}
 	else
 	{
-		//no correct id throw exception?
+		checkForObsoleteErrorByYear("Mod", node, "Missing main node", 2025);
 	}
 
 	return rule;
@@ -3828,10 +3873,10 @@ SavedGame *Mod::newSave(GameDifficulty diff) const
 		save->getId(craft->getRules()->getType());
 	}
 
-	// Remove craft weapons if needed (if they decrease cargo capacity below zero)
+	// Remove craft weapons if needed
 	for (auto* craft : *base->getCrafts())
 	{
-		if (craft->getCraftStats().soldiers < 0 && craft->getRules()->getMaxUnitsLimit() > 0) // access raw stats instead of Craft::getMaxUnits()
+		if (craft->getMaxUnitsRaw() < 0 || craft->getMaxVehiclesAndLargeSoldiersRaw() < 0)
 		{
 			size_t weaponIndex = 0;
 			for (auto* current : *craft->getWeapons())
@@ -3839,7 +3884,6 @@ SavedGame *Mod::newSave(GameDifficulty diff) const
 				base->getStorageItems()->addItem(current->getRules()->getLauncherItem());
 				base->getStorageItems()->addItem(current->getRules()->getClipItem(), current->getClipsLoaded());
 				craft->addCraftStats(-current->getRules()->getBonusStats());
-				// Make sure any extra shield is removed from craft too when the shield capacity decreases (exploit protection)
 				craft->setShield(craft->getShield());
 				delete current;
 				craft->getWeapons()->at(weaponIndex) = 0;
@@ -3924,12 +3968,13 @@ SavedGame *Mod::newSave(GameDifficulty diff) const
 				Craft *found = 0;
 				for (auto* craft : *base->getCrafts())
 				{
-					if (!found && craft->getRules()->getAllowLanding() && craft->getSpaceAvailable() > 0)
+					CraftPlacementErrors err = craft->validateAddingSoldier(craft->getSpaceAvailable(), soldier);
+					if (!found && craft->getRules()->getAllowLanding() && err == CPE_None)
 					{
 						// Remember transporter as fall-back, but search further for interceptors
 						found = craft;
 					}
-					if (!craft->getRules()->getAllowLanding() && craft->getSpaceUsed() < craft->getRules()->getPilots())
+					if (!craft->getRules()->getAllowLanding() && err == CPE_None && craft->getSpaceUsed() < craft->getRules()->getPilots())
 					{
 						// Fill interceptors with minimum amount of pilots necessary
 						found = craft;
@@ -3942,7 +3987,8 @@ SavedGame *Mod::newSave(GameDifficulty diff) const
 				Craft *found = 0;
 				for (auto* craft : *base->getCrafts())
 				{
-					if (craft->getRules()->getAllowLanding() && craft->getSpaceAvailable() > 0)
+					CraftPlacementErrors err = craft->validateAddingSoldier(craft->getSpaceAvailable(), soldier);
+					if (craft->getRules()->getAllowLanding() && err == CPE_None)
 					{
 						// First available transporter will do
 						found = craft;
@@ -4812,10 +4858,6 @@ const std::vector<StatString *> &Mod::getStatStrings() const
 template <typename T>
 struct compareRule
 {
-	typedef const std::string& first_argument_type;
-	typedef const std::string& second_argument_type;
-	typedef bool result_type;
-
 	Mod *_mod;
 	typedef T*(Mod::*RuleLookup)(const std::string &id, bool error) const;
 	RuleLookup _lookup;
@@ -4838,10 +4880,6 @@ struct compareRule
 template <>
 struct compareRule<RuleCraftWeapon>
 {
-	typedef const std::string& first_argument_type;
-	typedef const std::string& second_argument_type;
-	typedef bool result_type;
-
 	Mod *_mod;
 
 	compareRule(Mod *mod) : _mod(mod)
@@ -4863,10 +4901,6 @@ struct compareRule<RuleCraftWeapon>
 template <>
 struct compareRule<Armor>
 {
-	typedef const std::string& first_argument_type;
-	typedef const std::string& second_argument_type;
-	typedef bool result_type;
-
 	Mod *_mod;
 
 	compareRule(Mod *mod) : _mod(mod)
@@ -4901,10 +4935,6 @@ struct compareRule<Armor>
 template <>
 struct compareRule<ArticleDefinition>
 {
-	typedef const std::string& first_argument_type;
-	typedef const std::string& second_argument_type;
-	typedef bool result_type;
-
 	Mod *_mod;
 	const std::map<std::string, int> &_sections;
 
@@ -4928,10 +4958,6 @@ struct compareRule<ArticleDefinition>
  */
 struct compareSection
 {
-	typedef const std::string& first_argument_type;
-	typedef const std::string& second_argument_type;
-	typedef bool result_type;
-
 	Mod *_mod;
 	const std::map<std::string, int> &_sections;
 
@@ -5222,7 +5248,7 @@ RuleBaseFacility *Mod::getDestroyedFacility() const
 		return 0;
 
 	auto* temp = getBaseFacility(_destroyedFacility, true);
-	if (temp->getSize() != 1)
+	if (!temp->isSmall())
 	{
 		throw Exception("Destroyed base facility definition must have size: 1");
 	}
